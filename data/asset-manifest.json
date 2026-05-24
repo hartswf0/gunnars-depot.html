@@ -1,0 +1,163 @@
+{
+  "brand": "Gunnar's Depot",
+  "version": "1.0.0",
+  "tagline": "Build the Vision. Command the Job.",
+  "unit": "inch",
+  "assetPolicy": {
+    "sourcePreference": "dae",
+    "productionRuntimeTarget": "glb",
+    "offlineFallback": "stl",
+    "reason": "DAE preserves better names/material intent than STL; GLB is the production web target; STL remains the bounded offline fallback."
+  },
+  "stage": { "width": 72, "length": 144, "height": 84 },
+  "modules": [
+    {
+      "id": "foundation",
+      "name": "Foundation / Base",
+      "file": "assets/models/modules/foundation-base.dae",
+      "glb": "assets/models/modules/foundation-base.glb",
+      "runtimeFile": "assets/models/modules/foundation-base.stl",
+      "editable": true,
+      "visible": true,
+      "locked": false,
+      "category": "structure",
+      "material": "steel",
+      "color": "#242424",
+      "costCategory": "low",
+      "snapPoints": [
+        { "id": "front-center", "type": "centerline", "position": [0, -72, 0] },
+        { "id": "rear-center", "type": "centerline", "position": [0, 72, 0] },
+        { "id": "left-rail", "type": "edge", "position": [-36, 0, 0] },
+        { "id": "right-rail", "type": "edge", "position": [36, 0, 0] }
+      ],
+      "notes": "Trailer frame, wheels, axle, hitch, and deck. This is the build datum."
+    },
+    {
+      "id": "frame",
+      "name": "Structural Frame",
+      "file": "assets/models/modules/structural-frame.dae",
+      "glb": "assets/models/modules/structural-frame.glb",
+      "runtimeFile": "assets/models/modules/structural-frame.stl",
+      "editable": true,
+      "visible": true,
+      "locked": false,
+      "category": "structure",
+      "material": "treated_wood",
+      "color": "#C08457",
+      "costCategory": "low",
+      "snapPoints": [
+        { "id": "front-stud-line", "type": "edge", "position": [0, -72, 12] },
+        { "id": "rear-stud-line", "type": "edge", "position": [0, 72, 12] },
+        { "id": "roof-bearing-left", "type": "roof-bearing", "position": [-36, 0, 72] },
+        { "id": "roof-bearing-right", "type": "roof-bearing", "position": [36, 0, 72] }
+      ],
+      "notes": "Visible 2x logic and repairable framing."
+    },
+    {
+      "id": "walls",
+      "name": "Walls / Exterior Shell",
+      "file": "assets/models/modules/walls-exterior-shell.dae",
+      "glb": "assets/models/modules/walls-exterior-shell.glb",
+      "runtimeFile": "assets/models/modules/walls-exterior-shell.stl",
+      "editable": true,
+      "visible": true,
+      "locked": false,
+      "category": "enclosure",
+      "material": "plywood",
+      "color": "#C08457",
+      "costCategory": "low",
+      "snapPoints": [
+        { "id": "door-zone", "type": "door", "position": [0, 72, 30] },
+        { "id": "utility-wall", "type": "utility", "position": [-34, -28, 36] }
+      ],
+      "notes": "Plywood wall shell with stock windows and cheap door logic."
+    },
+    {
+      "id": "roof",
+      "name": "Roof / Cover System",
+      "file": "assets/models/modules/roof-cover-system.dae",
+      "glb": "assets/models/modules/roof-cover-system.glb",
+      "runtimeFile": "assets/models/modules/roof-cover-system.stl",
+      "editable": true,
+      "visible": true,
+      "locked": false,
+      "category": "enclosure",
+      "material": "corrugated_metal",
+      "color": "#A3A3A3",
+      "costCategory": "low",
+      "snapPoints": [
+        { "id": "roof-centerline", "type": "centerline", "position": [0, 0, 78] },
+        { "id": "front-eave", "type": "edge", "position": [0, -78, 76] },
+        { "id": "rear-eave", "type": "edge", "position": [0, 78, 76] }
+      ],
+      "notes": "Single-slope corrugated metal roof; cheap, legible, replaceable."
+    },
+    {
+      "id": "interior",
+      "name": "Interior / Finish Layer",
+      "file": "assets/models/modules/interior-finish-layer.dae",
+      "glb": "assets/models/modules/interior-finish-layer.glb",
+      "runtimeFile": "assets/models/modules/interior-finish-layer.stl",
+      "editable": true,
+      "visible": true,
+      "locked": false,
+      "category": "finish",
+      "material": "plywood",
+      "color": "#D09A5F",
+      "costCategory": "low",
+      "snapPoints": [
+        { "id": "sleeping-zone", "type": "centerline", "position": [0, 42, 18] },
+        { "id": "kitchen-utility", "type": "utility", "position": [-24, -32, 30] },
+        { "id": "central-path", "type": "centerline", "position": [0, 0, 0] }
+      ],
+      "notes": "Plywood bed, simple kitchenette, utility cabinet, bins, fold-down work/eating flap."
+    }
+  ],
+  "conceptStudies": [
+    {
+      "id": "wright-usonian",
+      "name": "Wright / Usonian Trailer",
+      "file": "assets/models/concepts/wright-usonian-trailer.dae",
+      "glb": "assets/models/concepts/wright-usonian-trailer.glb",
+      "runtimeFile": "assets/models/concepts/wright-usonian-trailer.stl",
+      "color": "#C08457",
+      "philosophy": "Low, horizontal, warm, integrated built-ins, compressed dignity."
+    },
+    {
+      "id": "shigeru-ban",
+      "name": "Shigeru Ban Shelter Trailer",
+      "file": "assets/models/concepts/shigeru-ban-shelter-trailer.dae",
+      "glb": "assets/models/concepts/shigeru-ban-shelter-trailer.glb",
+      "runtimeFile": "assets/models/concepts/shigeru-ban-shelter-trailer.stl",
+      "color": "#C7DDF7",
+      "philosophy": "Lightweight, modular, replaceable, emergency shelter logic."
+    },
+    {
+      "id": "lacaton-vassal",
+      "name": "Lacaton & Vassal Economy Trailer",
+      "file": "assets/models/concepts/lacaton-vassal-economy-trailer.dae",
+      "glb": "assets/models/concepts/lacaton-vassal-economy-trailer.glb",
+      "runtimeFile": "assets/models/concepts/lacaton-vassal-economy-trailer.stl",
+      "color": "#A3A3A3",
+      "philosophy": "Maximum usable space with minimum money and unfinished honesty."
+    },
+    {
+      "id": "alexander-pattern",
+      "name": "Alexander Pattern Cabin Trailer",
+      "file": "assets/models/concepts/alexander-pattern-cabin-trailer.dae",
+      "glb": "assets/models/concepts/alexander-pattern-cabin-trailer.glb",
+      "runtimeFile": "assets/models/concepts/alexander-pattern-cabin-trailer.stl",
+      "color": "#D4BFA5",
+      "philosophy": "Entrance transition, sleeping nook, thick storage edge, warm center."
+    },
+    {
+      "id": "contractor-reality",
+      "name": "Contractor Reality Trailer",
+      "file": "assets/models/concepts/contractor-reality-trailer.dae",
+      "glb": "assets/models/concepts/contractor-reality-trailer.glb",
+      "runtimeFile": "assets/models/concepts/contractor-reality-trailer.stl",
+      "color": "#F97316",
+      "philosophy": "Cheapest plausible build with off-the-shelf material logic."
+    }
+  ]
+}

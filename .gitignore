@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__/
+*.blend
+6x12_trailer_tiny_home_five_design_studies_for_sketchup_web*.dae
+6x12_trailer_tiny_home_five_design_studies_source.blend
+6x12_trailer_tiny_home_five_design_studies_WEBSAFE_source.blend
+websafe_upload_package/
+websafe_label_textures/
+*.log
+node_modules/

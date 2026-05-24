@@ -1,0 +1,19 @@
+{
+  "brand": "Gunnar's Depot",
+  "version": "1.0.0",
+  "materials": {
+    "concrete": { "name": "Concrete", "color": "#A3A3A3", "category": "foundation", "costTier": "low", "notes": "Plain slab/block logic; durable, heavy, cheap when simple." },
+    "steel": { "name": "Simple Steel", "color": "#242424", "category": "structure", "costTier": "medium", "notes": "Angle, tube, brackets, trailer frame, hardware." },
+    "treated_wood": { "name": "Treated Wood", "color": "#8B5E34", "category": "structure", "costTier": "low", "notes": "Use where weather exposure is likely." },
+    "engineered_lumber": { "name": "Engineered Lumber", "color": "#C08457", "category": "structure", "costTier": "medium", "notes": "Predictable spans, straighter frame, higher cost." },
+    "plywood": { "name": "Plywood", "color": "#C08457", "category": "finish", "costTier": "low", "notes": "Primary cheap editable surface and built-in system." },
+    "siding": { "name": "Utility Siding", "color": "#6B7280", "category": "enclosure", "costTier": "low", "notes": "Repairable exterior skin." },
+    "polycarbonate": { "name": "Polycarbonate", "color": "#C7DDF7", "category": "enclosure", "costTier": "medium", "notes": "Light, generous, translucent, useful for budget space." },
+    "corrugated_metal": { "name": "Corrugated Metal", "color": "#A3A3A3", "category": "roof", "costTier": "low", "notes": "Cheap roof/wall skin; easy to replace." },
+    "standing_seam": { "name": "Standing Seam", "color": "#7A7F87", "category": "roof", "costTier": "premium", "notes": "Cleaner premium version of metal roof logic." },
+    "stone": { "name": "Stone", "color": "#B8AEA1", "category": "finish", "costTier": "premium", "notes": "Luxury finish; use as selected surface, not everywhere." },
+    "tile": { "name": "Tile", "color": "#E5E7EB", "category": "finish", "costTier": "medium", "notes": "Wet zones and durable client-facing finish." },
+    "paint": { "name": "Paint", "color": "#F4EFE7", "category": "finish", "costTier": "low", "notes": "Low-cost transformation layer." },
+    "fabric": { "name": "Canvas / Fabric", "color": "#D4BFA5", "category": "partition", "costTier": "low", "notes": "Curtains, privacy, replaceable soft partitions." }
+  }
+}

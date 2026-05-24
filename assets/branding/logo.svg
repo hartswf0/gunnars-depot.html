@@ -1,0 +1,11 @@
+<svg width="720" height="160" viewBox="0 0 720 160" xmlns="http://www.w3.org/2000/svg">
+  <rect width="720" height="160" rx="20" fill="#111111"/>
+  <g transform="translate(24 24)">
+    <rect width="112" height="112" rx="18" fill="#242424"/>
+    <path d="M18 61V37L56 15L94 37V61H80V44L56 30L32 44V61H18Z" fill="#F97316"/>
+    <path d="M30 78H82V92H30V78Z" fill="#F97316"/>
+    <path d="M48 54H67C80 54 89 63 89 76C89 89 80 98 67 98H48V82H67C70 82 73 79 73 76C73 73 70 70 67 70H48V54Z" fill="#F4EFE7"/>
+  </g>
+  <text x="160" y="74" fill="#F4EFE7" font-family="Inter, Arial, sans-serif" font-size="44" font-weight="900">Gunnar's Depot</text>
+  <text x="162" y="112" fill="#F97316" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700">Build the Vision. Command the Job.</text>
+</svg>

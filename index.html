@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Gunnar's Depot - Build the Vision. Command the Job.</title>
+  <link rel="icon" type="image/svg+xml" href="assets/branding/favicon.svg">
+  <style>
+    :root {
+      --black: #111111;
+      --charcoal: #242424;
+      --orange: #F97316;
+      --blue: #2563EB;
+      --gray: #A3A3A3;
+      --plywood: #C08457;
+      --bone: #F4EFE7;
+      --line: rgba(244,239,231,0.2);
+      --font: Inter, IBM Plex Sans, Source Sans 3, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { background: var(--black); color: var(--bone); font-family: var(--font); }
+    body { margin: 0; min-height: 100vh; background:
+      linear-gradient(90deg, rgba(37,99,235,0.08) 1px, transparent 1px),
+      linear-gradient(rgba(37,99,235,0.08) 1px, transparent 1px),
+      radial-gradient(circle at 70% 10%, rgba(249,115,22,0.22), transparent 34rem),
+      var(--black);
+      background-size: 30px 30px, 30px 30px, auto, auto;
+    }
+    a { color: inherit; }
+    .shell { width: min(1180px, 100%); margin: 0 auto; padding: 22px; }
+    header {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 18px;
+      align-items: center;
+      padding: 18px 0 28px;
+      border-bottom: 1px solid var(--line);
+    }
+    .mark {
+      width: 74px;
+      height: 74px;
+      border: 1px solid var(--orange);
+      border-radius: 14px;
+      background: var(--black);
+      display: grid;
+      place-items: center;
+      color: var(--orange);
+      font-size: 25px;
+      font-weight: 1000;
+    }
+    h1 { margin: 0; font-size: clamp(38px, 8vw, 82px); line-height: 0.92; letter-spacing: 0; }
+    .tagline { margin: 10px 0 0; color: var(--orange); font-weight: 900; font-size: clamp(18px, 3vw, 28px); }
+    .subhead { max-width: 850px; margin: 20px 0 0; color: var(--bone); font-size: 18px; line-height: 1.45; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 24px 0 10px; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 12px 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--charcoal);
+      text-decoration: none;
+      font-weight: 900;
+    }
+    .button.primary { background: var(--orange); color: var(--black); border-color: var(--orange); }
+    main { display: grid; gap: 24px; padding: 26px 0; }
+    section { display: grid; gap: 14px; }
+    h2 { margin: 0; color: var(--orange); font-size: 18px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .card {
+      display: grid;
+      gap: 10px;
+      min-height: 170px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(17,17,17,0.86);
+    }
+    .card strong { font-size: 19px; }
+    .card p { margin: 0; color: #D9D1C6; line-height: 1.42; }
+    .card .links { display: flex; flex-wrap: wrap; gap: 8px; align-self: end; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--bone);
+      text-decoration: none;
+      font-family: var(--mono);
+      font-size: 12px;
+      background: rgba(36,36,36,0.88);
+    }
+    .manifest {
+      font-family: var(--mono);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      color: #D9D1C6;
+      line-height: 1.45;
+    }
+    footer { padding: 22px 0 34px; border-top: 1px solid var(--line); color: var(--gray); }
+    @media (max-width: 860px) {
+      .shell { padding: 16px; }
+      header { grid-template-columns: 1fr; }
+      .grid,
+      .grid.two { grid-template-columns: 1fr; }
+      .hero-actions .button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="mark">GD</div>
+      <div>
+        <h1>Gunnar's Depot</h1>
+        <p class="tagline">Build the Vision. Command the Job.</p>
+        <p class="subhead">A browser-based modular structure forge for builders, contractors, designers, and clients who need to see it, split it, change it, explain it, and build it.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="gunnars-depot.html">Open Gunnar's Depot</a>
+          <a class="button" href="gunnar-trailer-configurer.html">Open Trailer Configurer</a>
+          <a class="button" href="thors-forge.html">Open Thor's Forge</a>
+          <a class="button" href="README.md">Read The Build Notes</a>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section>
+        <h2>Applications</h2>
+        <div class="grid">
+          <article class="card">
+            <strong>Gunnar's Depot</strong>
+            <p>The main branded command center. Loads five build modules independently, edits transforms/materials/visibility/locks, exports plans and STL.</p>
+            <div class="links"><a class="chip" href="gunnars-depot.html">launch</a><a class="chip" href="data/asset-manifest.json">manifest</a></div>
+          </article>
+          <article class="card">
+            <strong>Gunnar Trailer Configurer</strong>
+            <p>The earlier working forge for 6x12 trailer concept iteration. Useful as a simple DAE/STL/OBJ workspace.</p>
+            <div class="links"><a class="chip" href="gunnar-trailer-configurer.html">launch</a></div>
+          </article>
+          <article class="card">
+            <strong>Thor's Forge</strong>
+            <p>Single-file STL editor/viewer with primitive builder parts, project save/load, and STL export.</p>
+            <div class="links"><a class="chip" href="thors-forge.html">launch</a></div>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>Five Depot Modules</h2>
+        <div class="grid">
+          <article class="card"><strong>Foundation / Base</strong><p>Frame, deck, wheels, axle, hitch, and build datum.</p><div class="links"><a class="chip" href="assets/models/modules/foundation-base.dae">DAE</a><a class="chip" href="assets/models/modules/foundation-base.glb">GLB</a><a class="chip" href="assets/models/modules/foundation-base.stl">STL</a></div></article>
+          <article class="card"><strong>Structural Frame</strong><p>Visible 2x framing logic, repairable and replaceable.</p><div class="links"><a class="chip" href="assets/models/modules/structural-frame.dae">DAE</a><a class="chip" href="assets/models/modules/structural-frame.glb">GLB</a><a class="chip" href="assets/models/modules/structural-frame.stl">STL</a></div></article>
+          <article class="card"><strong>Walls / Exterior Shell</strong><p>Plywood shell with door and stock window logic.</p><div class="links"><a class="chip" href="assets/models/modules/walls-exterior-shell.dae">DAE</a><a class="chip" href="assets/models/modules/walls-exterior-shell.glb">GLB</a><a class="chip" href="assets/models/modules/walls-exterior-shell.stl">STL</a></div></article>
+          <article class="card"><strong>Roof / Cover System</strong><p>Simple corrugated metal roof as cheap replaceable cover.</p><div class="links"><a class="chip" href="assets/models/modules/roof-cover-system.dae">DAE</a><a class="chip" href="assets/models/modules/roof-cover-system.glb">GLB</a><a class="chip" href="assets/models/modules/roof-cover-system.stl">STL</a></div></article>
+          <article class="card"><strong>Interior / Finish Layer</strong><p>Bed, kitchenette, bins, utility cabinet, and fold-down surface.</p><div class="links"><a class="chip" href="assets/models/modules/interior-finish-layer.dae">DAE</a><a class="chip" href="assets/models/modules/interior-finish-layer.glb">GLB</a><a class="chip" href="assets/models/modules/interior-finish-layer.stl">STL</a></div></article>
+        </div>
+      </section>
+
+      <section>
+        <h2>Five Trailer Studies</h2>
+        <div class="grid">
+          <article class="card"><strong>Wright / Usonian</strong><p>Low, horizontal, warm, built-in, architectural dignity.</p><div class="links"><a class="chip" href="assets/models/concepts/wright-usonian-trailer.dae">DAE</a><a class="chip" href="assets/models/concepts/wright-usonian-trailer.glb">GLB</a><a class="chip" href="assets/models/concepts/wright-usonian-trailer.stl">STL</a></div></article>
+          <article class="card"><strong>Shigeru Ban Shelter</strong><p>Lightweight, modular, replaceable emergency shelter logic.</p><div class="links"><a class="chip" href="assets/models/concepts/shigeru-ban-shelter-trailer.dae">DAE</a><a class="chip" href="assets/models/concepts/shigeru-ban-shelter-trailer.glb">GLB</a><a class="chip" href="assets/models/concepts/shigeru-ban-shelter-trailer.stl">STL</a></div></article>
+          <article class="card"><strong>Lacaton & Vassal</strong><p>Maximum usable space with minimum money and honest materials.</p><div class="links"><a class="chip" href="assets/models/concepts/lacaton-vassal-economy-trailer.dae">DAE</a><a class="chip" href="assets/models/concepts/lacaton-vassal-economy-trailer.glb">GLB</a><a class="chip" href="assets/models/concepts/lacaton-vassal-economy-trailer.stl">STL</a></div></article>
+          <article class="card"><strong>Alexander Pattern Cabin</strong><p>Entrance transition, sleeping nook, thick storage edge, warm center.</p><div class="links"><a class="chip" href="assets/models/concepts/alexander-pattern-cabin-trailer.dae">DAE</a><a class="chip" href="assets/models/concepts/alexander-pattern-cabin-trailer.glb">GLB</a><a class="chip" href="assets/models/concepts/alexander-pattern-cabin-trailer.stl">STL</a></div></article>
+          <article class="card"><strong>Contractor Reality</strong><p>Cheapest plausible build with off-the-shelf repair logic.</p><div class="links"><a class="chip" href="assets/models/concepts/contractor-reality-trailer.dae">DAE</a><a class="chip" href="assets/models/concepts/contractor-reality-trailer.glb">GLB</a><a class="chip" href="assets/models/concepts/contractor-reality-trailer.stl">STL</a></div></article>
+        </div>
+      </section>
+
+      <section>
+        <h2>Data Layer</h2>
+        <div class="grid two">
+          <article class="card">
+            <strong>Manifests</strong>
+            <p>Future structure categories can be added by editing data, not rebuilding the app.</p>
+            <div class="links"><a class="chip" href="data/asset-manifest.json">asset-manifest.json</a><a class="chip" href="data/materials.json">materials.json</a><a class="chip" href="data/module-rules.json">module-rules.json</a></div>
+          </article>
+          <article class="card manifest">Pipeline:
+DAE/STL source
+  -> split into modules
+  -> GLB for production web
+  -> STL fallback for offline editing
+  -> manifest data for scaling</article>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      Gunnar's Depot is where high-end vision gets construction-grade muscle.
+    </footer>
+  </div>
+</body>
+</html>

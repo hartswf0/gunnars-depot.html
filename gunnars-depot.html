@@ -1,0 +1,2472 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Gunnar's Depot - Modular Structure Command Center</title>
+  <link rel="icon" type="image/svg+xml" href="assets/branding/favicon.svg">
+  <style>
+    :root {
+      --white: #F4EFE7;
+      --black: #111111;
+      --charcoal: #242424;
+      --hot: #F97316;
+      --blue: #2563EB;
+      --concrete: #A3A3A3;
+      --plywood: #C08457;
+      --green: #16A34A;
+      --red: #DC2626;
+      --line: #3A3A3A;
+      --font: Inter, IBM Plex Sans, Source Sans 3, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: var(--black);
+      color: var(--white);
+      font-family: var(--font);
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--charcoal);
+      color: var(--white);
+      cursor: pointer;
+      font-weight: 850;
+      letter-spacing: 0;
+    }
+
+    button:hover,
+    button.active {
+      background: var(--hot);
+      color: var(--black);
+      border-color: var(--hot);
+    }
+
+    button.primary {
+      background: var(--hot);
+      color: var(--black);
+      border-color: var(--hot);
+    }
+
+    button.primary:hover {
+      background: var(--blue);
+      color: var(--black);
+    }
+
+    button.danger:hover {
+      background: var(--red);
+      color: var(--white);
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #181818;
+      color: var(--white);
+      padding: 7px 8px;
+    }
+
+    input[type="color"] {
+      padding: 0;
+    }
+
+    textarea {
+      min-height: 84px;
+      resize: vertical;
+      line-height: 1.3;
+    }
+
+    label {
+      display: grid;
+      gap: 4px;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 340px minmax(0, 1fr) 360px;
+      grid-template-rows: 64px minmax(0, 1fr);
+      height: 100%;
+      min-height: 0;
+    }
+
+    .topbar {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+      min-height: 64px;
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--line);
+      background: #0B0B0B;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--hot);
+      background: var(--black);
+      color: var(--hot);
+      font-weight: 1000;
+      border-radius: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 2px 0 0;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #status {
+      min-width: 0;
+      font-family: var(--mono);
+      font-size: 12px;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .panel {
+      min-height: 0;
+      overflow: auto;
+      background: var(--white);
+      background: #141414;
+      border-right: 1px solid var(--line);
+    }
+
+    .right {
+      border-right: 0;
+      border-left: 1px solid var(--line);
+    }
+
+    .panel-inner {
+      display: grid;
+      gap: 12px;
+      padding: 10px;
+    }
+
+    .block {
+      display: grid;
+      gap: 9px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .block:last-child {
+      border-bottom: 0;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      color: var(--hot);
+    }
+
+    .hint {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.35;
+      font-weight: 650;
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .grid3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .row > * {
+      flex: 1 1 90px;
+    }
+
+    .viewport-wrap {
+      position: relative;
+      min-width: 0;
+      min-height: 0;
+      background:
+        linear-gradient(90deg, rgba(37,99,235,0.16) 1px, transparent 1px),
+        linear-gradient(rgba(37,99,235,0.16) 1px, transparent 1px),
+        radial-gradient(circle at 50% 18%, #242424, #0A0A0A 66%);
+      background-size: 28px 28px;
+      touch-action: none;
+    }
+
+    #viewport {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    .hud {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      display: grid;
+      gap: 6px;
+      max-width: min(520px, calc(100% - 20px));
+      pointer-events: none;
+    }
+
+    .hud span {
+      display: inline-block;
+      width: fit-content;
+      padding: 5px 7px;
+      background: rgba(17,17,17,0.92);
+      color: var(--white);
+      border: 1px solid var(--line);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .drop {
+      display: grid;
+      place-items: center;
+      min-height: 92px;
+      border: 1px dashed var(--hot);
+      text-align: center;
+      font-weight: 900;
+      padding: 10px;
+    }
+
+    .drop.hot {
+      background: rgba(249,115,22,0.18);
+    }
+
+    .list {
+      display: grid;
+      gap: 7px;
+      max-height: 280px;
+      overflow: auto;
+    }
+
+    .item {
+      display: grid;
+      gap: 4px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      background: #1A1A1A;
+      color: var(--white);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .item.selected {
+      background: var(--hot);
+      color: var(--black);
+      border-color: var(--hot);
+    }
+
+    .item strong,
+    .item small {
+      overflow-wrap: anywhere;
+    }
+
+    .item small {
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    .module-card {
+      display: grid;
+      gap: 7px;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #191919;
+    }
+
+    .module-card.selected {
+      border-color: var(--hot);
+      box-shadow: inset 0 0 0 1px var(--hot);
+    }
+
+    .module-head {
+      display: grid;
+      grid-template-columns: 24px 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .module-head input {
+      min-height: auto;
+      width: auto;
+    }
+
+    .module-title {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .module-title strong,
+    .module-title span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .module-title span,
+    .pill {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--concrete);
+    }
+
+    .pill {
+      width: fit-content;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 3px 7px;
+      background: #101010;
+      color: var(--white);
+    }
+
+    .module-actions {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 5px;
+    }
+
+    .module-actions button {
+      min-height: 30px;
+      padding: 4px;
+      font-size: 11px;
+    }
+
+    .snap-list {
+      display: grid;
+      gap: 5px;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--concrete);
+    }
+
+    .client-mode .panel,
+    .client-mode .top-actions {
+      display: none;
+    }
+
+    .client-mode .app {
+      grid-template-columns: 1fr;
+      grid-template-rows: 64px minmax(0, 1fr);
+    }
+
+    .client-mode .viewport-wrap {
+      grid-column: 1;
+    }
+
+    .readout {
+      padding: 8px;
+      border: 1px solid var(--line);
+      background: #181818;
+      color: var(--white);
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.35;
+      white-space: pre-wrap;
+    }
+
+    .log {
+      display: grid;
+      gap: 5px;
+      max-height: 180px;
+      overflow: auto;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .log li {
+      padding: 5px 6px;
+      border-left: 6px solid var(--line);
+      background: #181818;
+    }
+
+    .log .bad {
+      border-left-color: var(--red);
+    }
+
+    .log .good {
+      border-left-color: var(--green);
+    }
+
+    .log .warn {
+      border-left-color: var(--hot);
+    }
+
+    .hidden-file {
+      display: none;
+    }
+
+    @media (max-width: 980px) {
+      html,
+      body {
+        overflow: auto;
+      }
+
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto minmax(56vh, 70vh) auto auto;
+      }
+
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .panel,
+      .right {
+        border: 0;
+        border-bottom: 3px solid var(--black);
+      }
+
+      .viewport-wrap {
+        grid-row: 2;
+      }
+
+      .left {
+        grid-row: 3;
+      }
+
+      .right {
+        grid-row: 4;
+      }
+
+      .panel-inner {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .panel-inner,
+      .grid2,
+      .grid3 {
+        grid-template-columns: 1fr;
+      }
+
+      .top-actions .primary {
+        flex-basis: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">GD</div>
+        <div>
+          <h1>Gunnar's Depot</h1>
+          <p class="subtitle">Build the Vision. Command the Job.</p>
+        </div>
+      </div>
+      <div id="status">Loading the depot.</div>
+      <div class="top-actions">
+        <button id="openFilesBtn" class="primary" type="button">Load Module</button>
+        <button id="loadModulesBtn" type="button">Load Depot Starter</button>
+        <button id="loadConceptsBtn" type="button">Load Five Studies</button>
+        <button id="openProjectBtn" type="button">Open Project</button>
+        <button id="saveProjectBtn" type="button">Export Plan</button>
+        <button id="exportSelectedBtn" type="button">Export Selected STL</button>
+        <button id="exportAllBtn" class="primary" type="button">Export Build STL</button>
+        <button id="clientViewBtn" type="button">Show Client View</button>
+      </div>
+    </header>
+
+    <aside class="panel left">
+      <div class="panel-inner">
+        <section class="block">
+          <h2>1 / Structure Modules</h2>
+          <div id="dropZone" class="drop">Drop .dae .stl .obj here<br>then assign it to a module</div>
+          <div class="grid2">
+            <label>Target Module
+              <select id="moduleTarget">
+                <option value="foundation">Foundation / Base</option>
+                <option value="frame">Structural Frame</option>
+                <option value="walls">Walls / Exterior Shell</option>
+                <option value="roof">Roof / Cover System</option>
+                <option value="interior">Interior / Finish Layer</option>
+                <option value="custom">Custom Expansion Part</option>
+              </select>
+            </label>
+            <label>Import Units
+              <select id="importUnits">
+                <option value="1" selected>Inches / exported STL</option>
+                <option value="39.37007874">Meters / DAE source</option>
+                <option value="0.03937007874">Millimeters</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid2">
+            <label>Auto Fit
+              <select id="autoFit">
+                <option value="on">On</option>
+                <option value="off" selected>Off</option>
+              </select>
+            </label>
+            <label>Runtime Preference
+              <select id="runtimePreference">
+                <option value="glb" selected>Use GLB production asset</option>
+                <option value="runtime">Use STL fallback</option>
+                <option value="dae">Use DAE source</option>
+              </select>
+            </label>
+          </div>
+          <p class="hint">Source asset rule: DAE is preserved for stronger names/material intent. Runtime rule: GLB is the web target and STL remains the bounded fallback.</p>
+        </section>
+
+        <section class="block">
+          <h2>2 / Module Board</h2>
+          <div id="moduleBoard" class="list"></div>
+        </section>
+
+        <section class="block">
+          <h2>3 / Envelope</h2>
+          <div class="grid3">
+            <label>Width ft<input id="stageW" type="number" min="1" step="0.5" value="6"></label>
+            <label>Length ft<input id="stageD" type="number" min="1" step="0.5" value="12"></label>
+            <label>Height ft<input id="stageH" type="number" min="1" step="0.5" value="7"></label>
+          </div>
+          <button id="applyStageBtn" type="button">Rebuild Build Envelope</button>
+        </section>
+
+        <section class="block">
+          <h2>4 / Add Builder Parts</h2>
+          <div class="grid2">
+            <button data-add="block" type="button">Block</button>
+            <button data-add="panel" type="button">Panel</button>
+            <button data-add="stud" type="button">2x Stud</button>
+            <button data-add="deck" type="button">6x12 Deck</button>
+            <button data-add="wheel" type="button">Wheel</button>
+            <button data-add="roof" type="button">Roof Sheet</button>
+          </div>
+        </section>
+
+        <section class="block">
+          <h2>5 / Loaded Parts</h2>
+          <div id="modelList" class="list"></div>
+          <div class="row">
+            <button id="duplicateBtn" type="button">Duplicate</button>
+            <button id="removeBtn" class="danger" type="button">Remove</button>
+          </div>
+        </section>
+
+        <section class="block">
+          <h2>6 / View Tools</h2>
+          <div class="grid2">
+            <button id="toggleGridBtn" type="button">Hide Grid</button>
+            <button id="toggleXrayBtn" type="button">X-Ray View</button>
+            <button id="toggleExplodeBtn" type="button">Exploded View</button>
+            <button id="isolateBtn" type="button">Isolate Selected</button>
+          </div>
+        </section>
+      </div>
+    </aside>
+
+    <main class="viewport-wrap">
+      <canvas id="viewport"></canvas>
+      <div class="hud">
+        <span>Gunnar's Depot / modular build command center</span>
+        <span>click a part: bind geometry + edit panel / drag: orbit or move selected</span>
+        <span>1 unit = 1 inch / starter ring = 6 ft x 12 ft trailer logic</span>
+      </div>
+    </main>
+
+    <aside class="panel right">
+      <div class="panel-inner">
+        <section class="block">
+          <h2>Selected Part / Logic Surface</h2>
+          <div id="selectedReadout" class="readout">No model selected.</div>
+          <label>Name<input id="modelName" type="text"></label>
+          <label>Design Role
+            <select id="modelRole">
+              <option value="foundation">Foundation / base</option>
+              <option value="frame">Structural frame</option>
+              <option value="walls">Walls / exterior shell</option>
+              <option value="roof">Roof / cover system</option>
+              <option value="interior">Interior / finish layer</option>
+              <option value="usonian">Wright / Usonian study</option>
+              <option value="ban">Shigeru Ban shelter study</option>
+              <option value="lacaton">Lacaton & Vassal economy study</option>
+              <option value="alexander">Alexander pattern cabin study</option>
+              <option value="contractor">Contractor reality study</option>
+              <option value="custom">Custom expansion part</option>
+            </select>
+          </label>
+          <div class="grid2">
+            <label>Material
+              <select id="material">
+                <option value="steel">Simple steel</option>
+                <option value="treated_wood">Treated wood</option>
+                <option value="engineered_lumber">Engineered lumber</option>
+                <option value="plywood">Plywood</option>
+                <option value="polycarbonate">Polycarbonate</option>
+                <option value="corrugated_metal">Corrugated metal</option>
+                <option value="standing_seam">Standing seam</option>
+                <option value="concrete">Concrete</option>
+                <option value="stone">Stone</option>
+                <option value="tile">Tile</option>
+                <option value="paint">Paint</option>
+                <option value="fabric">Canvas / fabric</option>
+              </select>
+            </label>
+            <label>Cost Category
+              <select id="costCategory">
+                <option value="low">Low / field cheap</option>
+                <option value="medium">Medium / better spec</option>
+                <option value="premium">Premium / client-facing</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid3">
+            <label>X<input id="posX" type="number" step="1"></label>
+            <label>Y<input id="posY" type="number" step="1"></label>
+            <label>Z<input id="posZ" type="number" step="1"></label>
+          </div>
+          <div class="grid3">
+            <label>Rot Z<input id="rotZ" type="number" step="1"></label>
+            <label>Scale<input id="scale" type="number" step="0.01" min="0.001"></label>
+            <label>Opacity<input id="opacity" type="number" step="0.05" min="0.05" max="1"></label>
+          </div>
+          <div class="grid2">
+            <label>Color<input id="color" type="color" value="#9b6434"></label>
+            <label>Mode
+              <select id="mode">
+                <option value="orbit" selected>Orbit</option>
+                <option value="move">Move selected</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid2">
+            <label>Visible
+              <select id="visible">
+                <option value="true">Visible</option>
+                <option value="false">Hidden</option>
+              </select>
+            </label>
+            <label>Lock
+              <select id="locked">
+                <option value="false">Editable</option>
+                <option value="true">Locked</option>
+              </select>
+            </label>
+          </div>
+          <div id="snapReadout" class="snap-list"></div>
+          <div class="grid2">
+            <button id="fitBtn" type="button">Fit To Ring</button>
+            <button id="groundBtn" type="button">Ground</button>
+            <button id="centerBtn" type="button">Center</button>
+            <button id="focusBtn" type="button">Focus</button>
+          </div>
+          <label>Build Notes<textarea id="notes" placeholder="cost logic, material logic, what gets sacrificed, build sequence"></textarea></label>
+        </section>
+
+        <section class="block">
+          <h2>Cost / Material Logic</h2>
+          <div id="costReadout" class="readout">No material estimate yet.</div>
+        </section>
+
+        <section class="block">
+          <h2>Diagnostics</h2>
+          <div id="stats" class="readout">No geometry yet.</div>
+          <ul id="log" class="log"></ul>
+        </section>
+      </div>
+    </aside>
+  </div>
+
+  <input id="fileInput" class="hidden-file" type="file" multiple accept=".dae,.stl,.obj,.glb">
+  <input id="projectInput" class="hidden-file" type="file" accept=".gunnar.json,.json,application/json">
+
+  <script>
+  "use strict";
+
+  const Limits = Object.freeze({
+    maxFileBytes: 32 * 1024 * 1024,
+    maxFilesAtOnce: 24,
+    maxObjects: 420,
+    maxTrianglesPerModel: 240000,
+    maxExportTriangles: 420000,
+    maxDaeSources: 5000,
+    maxDaeNodes: 20000,
+    maxObjLines: 900000,
+    maxCoord: 50000,
+    minScale: 0.001,
+    maxScale: 10000
+  });
+
+  const Colors = Object.freeze({
+    grid: [0.16, 0.39, 0.92, 1],
+    selected: [0.98, 0.45, 0.09, 1],
+    imported: [0.96, 0.94, 0.91, 1],
+    block: [0.61, 0.39, 0.20, 1],
+    panel: [0.75, 0.52, 0.34, 1],
+    stud: [0.75, 0.52, 0.34, 1],
+    deck: [0.43, 0.31, 0.21, 1],
+    wheel: [0.02, 0.02, 0.02, 1],
+    roof: [0.64, 0.64, 0.64, 1],
+    ring: [0.98, 0.45, 0.09, 1],
+    steel: [0.14, 0.14, 0.14, 1],
+    bone: [0.96, 0.94, 0.91, 1]
+  });
+
+  const MATERIAL_COLORS = Object.freeze({
+    concrete: "#A3A3A3",
+    steel: "#242424",
+    treated_wood: "#8B5E34",
+    engineered_lumber: "#C08457",
+    plywood: "#C08457",
+    siding: "#6B7280",
+    polycarbonate: "#C7DDF7",
+    corrugated_metal: "#A3A3A3",
+    standing_seam: "#7A7F87",
+    stone: "#B8AEA1",
+    tile: "#E5E7EB",
+    paint: "#F4EFE7",
+    fabric: "#D4BFA5"
+  });
+
+  const DEPOT_MODULES = Object.freeze([
+    { id: "foundation", name: "Foundation / Base", file: "assets/models/modules/foundation-base.dae", glb: "assets/models/modules/foundation-base.glb", runtimeFile: "assets/models/modules/foundation-base.stl", role: "foundation", material: "steel", color: "#242424", costCategory: "low", notes: "Trailer frame, deck, wheels, axle, hitch, and jack. Build datum.", snapPoints: [{ id: "front-center", type: "centerline", position: [0, -72, 0] }, { id: "rear-center", type: "centerline", position: [0, 72, 0] }, { id: "left-rail", type: "edge", position: [-36, 0, 0] }, { id: "right-rail", type: "edge", position: [36, 0, 0] }] },
+    { id: "frame", name: "Structural Frame", file: "assets/models/modules/structural-frame.dae", glb: "assets/models/modules/structural-frame.glb", runtimeFile: "assets/models/modules/structural-frame.stl", role: "frame", material: "treated_wood", color: "#C08457", costCategory: "low", notes: "Visible 2x framing and repairable field logic.", snapPoints: [{ id: "front-stud-line", type: "edge", position: [0, -72, 12] }, { id: "rear-stud-line", type: "edge", position: [0, 72, 12] }, { id: "roof-bearing-left", type: "roof-bearing", position: [-36, 0, 72] }, { id: "roof-bearing-right", type: "roof-bearing", position: [36, 0, 72] }] },
+    { id: "walls", name: "Walls / Exterior Shell", file: "assets/models/modules/walls-exterior-shell.dae", glb: "assets/models/modules/walls-exterior-shell.glb", runtimeFile: "assets/models/modules/walls-exterior-shell.stl", role: "walls", material: "plywood", color: "#C08457", costCategory: "low", notes: "Plywood shell, stock windows, cheap door logic.", snapPoints: [{ id: "door-zone", type: "door", position: [0, 72, 30] }, { id: "utility-wall", type: "utility", position: [-34, -28, 36] }] },
+    { id: "roof", name: "Roof / Cover System", file: "assets/models/modules/roof-cover-system.dae", glb: "assets/models/modules/roof-cover-system.glb", runtimeFile: "assets/models/modules/roof-cover-system.stl", role: "roof", material: "corrugated_metal", color: "#A3A3A3", costCategory: "low", notes: "Single-slope corrugated roof; cheap and replaceable.", snapPoints: [{ id: "roof-centerline", type: "centerline", position: [0, 0, 78] }, { id: "front-eave", type: "edge", position: [0, -78, 76] }, { id: "rear-eave", type: "edge", position: [0, 78, 76] }] },
+    { id: "interior", name: "Interior / Finish Layer", file: "assets/models/modules/interior-finish-layer.dae", glb: "assets/models/modules/interior-finish-layer.glb", runtimeFile: "assets/models/modules/interior-finish-layer.stl", role: "interior", material: "plywood", color: "#D09A5F", costCategory: "low", notes: "Plywood bed, kitchenette, utility cabinet, bins, fold-down work surface.", snapPoints: [{ id: "sleeping-zone", type: "centerline", position: [0, 42, 18] }, { id: "kitchen-utility", type: "utility", position: [-24, -32, 30] }, { id: "central-path", type: "centerline", position: [0, 0, 0] }] }
+  ]);
+
+  const DEPOT_CONCEPTS = Object.freeze([
+    { id: "wright-usonian", name: "Wright / Usonian Trailer", runtimeFile: "assets/models/concepts/wright-usonian-trailer.stl", file: "assets/models/concepts/wright-usonian-trailer.dae", glb: "assets/models/concepts/wright-usonian-trailer.glb", role: "usonian", color: "#C08457", notes: "Low, horizontal, warm, integrated built-ins, compressed dignity." },
+    { id: "shigeru-ban", name: "Shigeru Ban Shelter Trailer", runtimeFile: "assets/models/concepts/shigeru-ban-shelter-trailer.stl", file: "assets/models/concepts/shigeru-ban-shelter-trailer.dae", glb: "assets/models/concepts/shigeru-ban-shelter-trailer.glb", role: "ban", color: "#C7DDF7", notes: "Lightweight, modular, replaceable, emergency shelter logic." },
+    { id: "lacaton-vassal", name: "Lacaton & Vassal Economy Trailer", runtimeFile: "assets/models/concepts/lacaton-vassal-economy-trailer.stl", file: "assets/models/concepts/lacaton-vassal-economy-trailer.dae", glb: "assets/models/concepts/lacaton-vassal-economy-trailer.glb", role: "lacaton", color: "#A3A3A3", notes: "Maximum usable space with minimum money and unfinished honesty." },
+    { id: "alexander-pattern", name: "Alexander Pattern Cabin Trailer", runtimeFile: "assets/models/concepts/alexander-pattern-cabin-trailer.stl", file: "assets/models/concepts/alexander-pattern-cabin-trailer.dae", glb: "assets/models/concepts/alexander-pattern-cabin-trailer.glb", role: "alexander", color: "#D4BFA5", notes: "Entrance transition, sleeping nook, thick storage edge, warm center." },
+    { id: "contractor-reality", name: "Contractor Reality Trailer", runtimeFile: "assets/models/concepts/contractor-reality-trailer.stl", file: "assets/models/concepts/contractor-reality-trailer.dae", glb: "assets/models/concepts/contractor-reality-trailer.glb", role: "contractor", color: "#F97316", notes: "Cheapest plausible build with off-the-shelf material logic." }
+  ]);
+
+  const canvas = document.getElementById("viewport");
+  const statusEl = document.getElementById("status");
+  const modelListEl = document.getElementById("modelList");
+  const moduleBoardEl = document.getElementById("moduleBoard");
+  const selectedReadoutEl = document.getElementById("selectedReadout");
+  const snapReadoutEl = document.getElementById("snapReadout");
+  const costReadoutEl = document.getElementById("costReadout");
+  const statsEl = document.getElementById("stats");
+  const logEl = document.getElementById("log");
+  const fileInput = document.getElementById("fileInput");
+  const projectInput = document.getElementById("projectInput");
+  const fields = {
+    name: document.getElementById("modelName"),
+    role: document.getElementById("modelRole"),
+    x: document.getElementById("posX"),
+    y: document.getElementById("posY"),
+    z: document.getElementById("posZ"),
+    rz: document.getElementById("rotZ"),
+    scale: document.getElementById("scale"),
+    opacity: document.getElementById("opacity"),
+    color: document.getElementById("color"),
+    material: document.getElementById("material"),
+    costCategory: document.getElementById("costCategory"),
+    visible: document.getElementById("visible"),
+    locked: document.getElementById("locked"),
+    mode: document.getElementById("mode"),
+    notes: document.getElementById("notes")
+  };
+
+  const state = {
+    gl: null,
+    program: null,
+    lineProgram: null,
+    models: [],
+    nextId: 1,
+    selectedId: null,
+    stage: { w: 72, d: 144, h: 84 },
+    camera: { yaw: -0.78, pitch: 0.72, distance: 820, target: [0, 0, 40] },
+    pointer: { active: false, id: null, x: 0, y: 0 },
+    gridBuffer: null,
+    ringBuffer: null,
+    renderPending: false,
+    mode: "orbit",
+    modules: DEPOT_MODULES.map((m) => ({ ...m, modelId: null, loaded: false, visible: m.visible !== false, locked: Boolean(m.locked) })),
+    view: { grid: true, xray: false, exploded: false, isolate: false }
+  };
+
+  function setStatus(message, tone) {
+    statusEl.textContent = message;
+    statusEl.style.color = tone === "bad" ? "#ff6b5f" : "#F4EFE7";
+  }
+
+  function log(message, tone) {
+    const li = document.createElement("li");
+    li.className = tone || "";
+    li.textContent = `${new Date().toLocaleTimeString()} ${message}`;
+    logEl.prepend(li);
+    while (logEl.children.length > 90) logEl.lastChild.remove();
+  }
+
+  function clamp(value, min, max) {
+    if (!Number.isFinite(value)) return min;
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function escapeText(value) {
+    return String(value).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" }[ch]));
+  }
+
+  function vecSub(a, b) { return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]; }
+  function vecCross(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+  function vecDot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+  function vecNormalize(v) {
+    const n = Math.hypot(v[0], v[1], v[2]);
+    if (n < 0.000001) return [0, 0, 1];
+    return [v[0] / n, v[1] / n, v[2] / n];
+  }
+  function faceNormal(a, b, c) { return vecNormalize(vecCross(vecSub(b, a), vecSub(c, a))); }
+
+  function matMul(a, b) {
+    const out = new Array(16);
+    for (let col = 0; col < 4; col += 1) {
+      for (let row = 0; row < 4; row += 1) {
+        out[col * 4 + row] =
+          a[row] * b[col * 4] +
+          a[4 + row] * b[col * 4 + 1] +
+          a[8 + row] * b[col * 4 + 2] +
+          a[12 + row] * b[col * 4 + 3];
+      }
+    }
+    return out;
+  }
+
+  function matPerspective(fovy, aspect, near, far) {
+    const f = 1 / Math.tan(fovy / 2);
+    const nf = 1 / (near - far);
+    return [f / aspect, 0, 0, 0, 0, f, 0, 0, 0, 0, (far + near) * nf, -1, 0, 0, 2 * far * near * nf, 0];
+  }
+
+  function matLookAt(eye, center, up) {
+    const z = vecNormalize(vecSub(eye, center));
+    const x = vecNormalize(vecCross(up, z));
+    const y = vecCross(z, x);
+    return [x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0, -vecDot(x, eye), -vecDot(y, eye), -vecDot(z, eye), 1];
+  }
+
+  function matPoint(m, p) {
+    const x = p[0], y = p[1], z = p[2];
+    const w = m[3] * x + m[7] * y + m[11] * z + m[15];
+    const safe = Math.abs(w) < 0.000001 ? 1 : w;
+    return [(m[0] * x + m[4] * y + m[8] * z + m[12]) / safe, (m[1] * x + m[5] * y + m[9] * z + m[13]) / safe, (m[2] * x + m[6] * y + m[10] * z + m[14]) / safe];
+  }
+
+  function modelMatrix(model) {
+    const rz = model.rotationZ;
+    const c = Math.cos(rz);
+    const s = Math.sin(rz);
+    const sc = model.scale;
+    return [c * sc, s * sc, 0, 0, -s * sc, c * sc, 0, 0, 0, 0, sc, 0, model.position[0], model.position[1], model.position[2], 1];
+  }
+
+  function renderMatrix(model) {
+    const matrix = modelMatrix(model);
+    if (!state.view.exploded || !model.moduleId) return matrix;
+    const order = ["foundation", "frame", "walls", "roof", "interior"];
+    const index = Math.max(0, order.indexOf(model.moduleId));
+    matrix[12] += (index - 2) * 18;
+    matrix[13] += index * 8;
+    matrix[14] += index * 4;
+    return matrix;
+  }
+
+  function createShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    if (!shader) throw new Error("shader allocation failed");
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      const message = gl.getShaderInfoLog(shader) || "shader compile failed";
+      gl.deleteShader(shader);
+      throw new Error(message);
+    }
+    return shader;
+  }
+
+  function createProgram(gl, vertex, fragment) {
+    const vs = createShader(gl, gl.VERTEX_SHADER, vertex);
+    const fs = createShader(gl, gl.FRAGMENT_SHADER, fragment);
+    const program = gl.createProgram();
+    if (!program) throw new Error("program allocation failed");
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    gl.deleteShader(vs);
+    gl.deleteShader(fs);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      const message = gl.getProgramInfoLog(program) || "program link failed";
+      gl.deleteProgram(program);
+      throw new Error(message);
+    }
+    return program;
+  }
+
+  function initGL() {
+    const gl = canvas.getContext("webgl", { antialias: true, alpha: false });
+    if (!gl) throw new Error("WebGL unavailable");
+    state.gl = gl;
+    state.program = createProgram(gl, `
+      attribute vec3 aPosition;
+      attribute vec3 aNormal;
+      uniform mat4 uViewProj;
+      uniform mat4 uModel;
+      varying vec3 vNormal;
+      varying vec3 vWorld;
+      void main() {
+        vec4 world = uModel * vec4(aPosition, 1.0);
+        vWorld = world.xyz;
+        vNormal = mat3(uModel) * aNormal;
+        gl_Position = uViewProj * world;
+      }
+    `, `
+      precision mediump float;
+      uniform vec4 uColor;
+      varying vec3 vNormal;
+      varying vec3 vWorld;
+      void main() {
+        vec3 n = normalize(vNormal);
+        float light = max(dot(n, normalize(vec3(-0.45, -0.7, 1.0))), 0.0);
+        float shade = 0.25 + light * 0.75;
+        gl_FragColor = vec4(uColor.rgb * shade, uColor.a);
+      }
+    `);
+    state.lineProgram = createProgram(gl, `
+      attribute vec3 aPosition;
+      uniform mat4 uViewProj;
+      void main() { gl_Position = uViewProj * vec4(aPosition, 1.0); }
+    `, `
+      precision mediump float;
+      uniform vec4 uColor;
+      void main() { gl_FragColor = uColor; }
+    `);
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.clearColor(0.06, 0.06, 0.06, 1);
+    rebuildStage();
+  }
+
+  function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    const scale = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(320, Math.floor(rect.width * scale));
+    const h = Math.max(240, Math.floor(rect.height * scale));
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+  }
+
+  function cameraEye() {
+    const c = state.camera;
+    const cp = Math.cos(c.pitch);
+    return [c.target[0] + Math.cos(c.yaw) * cp * c.distance, c.target[1] + Math.sin(c.yaw) * cp * c.distance, c.target[2] + Math.sin(c.pitch) * c.distance];
+  }
+
+  function viewProjection() {
+    const aspect = Math.max(1, canvas.width) / Math.max(1, canvas.height);
+    return matMul(matPerspective(Math.PI / 4, aspect, 1, 70000), matLookAt(cameraEye(), state.camera.target, [0, 0, 1]));
+  }
+
+  function requestRender() {
+    if (state.renderPending) return;
+    state.renderPending = true;
+    requestAnimationFrame(render);
+  }
+
+  function render() {
+    state.renderPending = false;
+    resizeCanvas();
+    const gl = state.gl;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    const vp = viewProjection();
+    if (state.view.grid) drawLines(state.gridBuffer, [0.16, 0.39, 0.92, 0.22], vp);
+    drawLines(state.ringBuffer, Colors.ring, vp);
+    for (let i = 0; i < state.models.length; i += 1) {
+      drawModel(state.models[i], vp);
+    }
+  }
+
+  function drawLines(lineBuffer, color, vp) {
+    const gl = state.gl;
+    if (!lineBuffer) return;
+    const p = state.lineProgram;
+    gl.useProgram(p);
+    const loc = gl.getAttribLocation(p, "aPosition");
+    gl.bindBuffer(gl.ARRAY_BUFFER, lineBuffer.buffer);
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, 3, gl.FLOAT, false, 0, 0);
+    gl.uniformMatrix4fv(gl.getUniformLocation(p, "uViewProj"), false, new Float32Array(vp));
+    gl.uniform4fv(gl.getUniformLocation(p, "uColor"), new Float32Array(color));
+    gl.drawArrays(gl.LINES, 0, lineBuffer.count);
+  }
+
+  function ensureGpu(model) {
+    if (model.gpu) return;
+    const gl = state.gl;
+    const pb = gl.createBuffer();
+    const nb = gl.createBuffer();
+    if (!pb || !nb) throw new Error("buffer allocation failed");
+    gl.bindBuffer(gl.ARRAY_BUFFER, pb);
+    gl.bufferData(gl.ARRAY_BUFFER, model.positions, gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ARRAY_BUFFER, nb);
+    gl.bufferData(gl.ARRAY_BUFFER, model.normals, gl.STATIC_DRAW);
+    model.gpu = { pb, nb, count: model.positions.length / 3 };
+  }
+
+  function drawModel(model, vp) {
+    if (!model.visible) return;
+    if (state.view.isolate && model.id !== state.selectedId) return;
+    ensureGpu(model);
+    const gl = state.gl;
+    const p = state.program;
+    gl.useProgram(p);
+    gl.bindBuffer(gl.ARRAY_BUFFER, model.gpu.pb);
+    const posLoc = gl.getAttribLocation(p, "aPosition");
+    gl.enableVertexAttribArray(posLoc);
+    gl.vertexAttribPointer(posLoc, 3, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, model.gpu.nb);
+    const nLoc = gl.getAttribLocation(p, "aNormal");
+    gl.enableVertexAttribArray(nLoc);
+    gl.vertexAttribPointer(nLoc, 3, gl.FLOAT, false, 0, 0);
+    gl.uniformMatrix4fv(gl.getUniformLocation(p, "uViewProj"), false, new Float32Array(vp));
+    gl.uniformMatrix4fv(gl.getUniformLocation(p, "uModel"), false, new Float32Array(renderMatrix(model)));
+    const base = model.id === state.selectedId ? Colors.selected : model.color;
+    const opacity = state.view.xray && model.id !== state.selectedId ? Math.min(model.opacity, 0.28) : model.opacity;
+    gl.uniform4fv(gl.getUniformLocation(p, "uColor"), new Float32Array([base[0], base[1], base[2], opacity]));
+    gl.drawArrays(gl.TRIANGLES, 0, model.gpu.count);
+  }
+
+  function makeLineBuffer(points) {
+    const gl = state.gl;
+    const b = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, b);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
+    return { buffer: b, count: points.length / 3 };
+  }
+
+  function rebuildStage() {
+    const grid = [];
+    const half = 900;
+    for (let i = -half; i <= half; i += 24) {
+      grid.push(-half, i, 0, half, i, 0, i, -half, 0, i, half, 0);
+    }
+    state.gridBuffer = makeLineBuffer(grid);
+
+    const w = state.stage.w / 2;
+    const d = state.stage.d / 2;
+    const h = state.stage.h;
+    const p = [
+      -w,-d,0, w,-d,0, w,-d,0, w,d,0, w,d,0, -w,d,0, -w,d,0, -w,-d,0,
+      -w,-d,h, w,-d,h, w,-d,h, w,d,h, w,d,h, -w,d,h, -w,d,h, -w,-d,h,
+      -w,-d,0, -w,-d,h, w,-d,0, w,-d,h, w,d,0, w,d,h, -w,d,0, -w,d,h
+    ];
+    state.ringBuffer = makeLineBuffer(p);
+    requestRender();
+  }
+
+  function pushTri(pos, norm, a, b, c) {
+    const n = faceNormal(a, b, c);
+    pos.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+    for (let i = 0; i < 3; i += 1) norm.push(n[0], n[1], n[2]);
+  }
+
+  function makeBox(w, d, h) {
+    const x = w / 2, y = d / 2, z = h / 2;
+    const v = [[-x,-y,-z], [x,-y,-z], [x,y,-z], [-x,y,-z], [-x,-y,z], [x,-y,z], [x,y,z], [-x,y,z]];
+    const faces = [[0,1,2,3], [4,7,6,5], [0,4,5,1], [1,5,6,2], [2,6,7,3], [3,7,4,0]];
+    const p = [], n = [];
+    for (let i = 0; i < faces.length; i += 1) {
+      const f = faces[i];
+      pushTri(p, n, v[f[0]], v[f[1]], v[f[2]]);
+      pushTri(p, n, v[f[0]], v[f[2]], v[f[3]]);
+    }
+    return meshResult(p, n, "primitive");
+  }
+
+  function makeCylinder(radius, depth, segments) {
+    const seg = Math.max(8, Math.min(40, Math.floor(segments)));
+    const p = [], n = [];
+    const half = depth / 2;
+    for (let i = 0; i < seg; i += 1) {
+      const a0 = i / seg * Math.PI * 2;
+      const a1 = (i + 1) / seg * Math.PI * 2;
+      const v0 = [-half, Math.cos(a0) * radius, Math.sin(a0) * radius];
+      const v1 = [half, Math.cos(a0) * radius, Math.sin(a0) * radius];
+      const v2 = [half, Math.cos(a1) * radius, Math.sin(a1) * radius];
+      const v3 = [-half, Math.cos(a1) * radius, Math.sin(a1) * radius];
+      pushTri(p, n, v0, v1, v2);
+      pushTri(p, n, v0, v2, v3);
+      pushTri(p, n, [-half, 0, 0], v3, v0);
+      pushTri(p, n, [half, 0, 0], v1, v2);
+    }
+    return meshResult(p, n, "primitive");
+  }
+
+  function meshResult(pos, norm, source) {
+    if (pos.length / 9 > Limits.maxTrianglesPerModel) throw new Error("triangle cap exceeded");
+    const positions = new Float32Array(pos);
+    const normals = new Float32Array(norm);
+    return { positions, normals, bounds: boundsForPositions(positions), source };
+  }
+
+  function boundsForPositions(positions) {
+    const min = [Infinity, Infinity, Infinity];
+    const max = [-Infinity, -Infinity, -Infinity];
+    for (let i = 0; i < positions.length; i += 3) {
+      min[0] = Math.min(min[0], positions[i]);
+      min[1] = Math.min(min[1], positions[i + 1]);
+      min[2] = Math.min(min[2], positions[i + 2]);
+      max[0] = Math.max(max[0], positions[i]);
+      max[1] = Math.max(max[1], positions[i + 1]);
+      max[2] = Math.max(max[2], positions[i + 2]);
+    }
+    if (!Number.isFinite(min[0])) return { min: [0, 0, 0], max: [0, 0, 0] };
+    return { min, max };
+  }
+
+  function worldBounds(model) {
+    const b = model.bounds;
+    const pts = [
+      [b.min[0],b.min[1],b.min[2]], [b.max[0],b.min[1],b.min[2]], [b.max[0],b.max[1],b.min[2]], [b.min[0],b.max[1],b.min[2]],
+      [b.min[0],b.min[1],b.max[2]], [b.max[0],b.min[1],b.max[2]], [b.max[0],b.max[1],b.max[2]], [b.min[0],b.max[1],b.max[2]]
+    ];
+    const m = modelMatrix(model);
+    const min = [Infinity, Infinity, Infinity];
+    const max = [-Infinity, -Infinity, -Infinity];
+    for (let i = 0; i < pts.length; i += 1) {
+      const p = matPoint(m, pts[i]);
+      min[0] = Math.min(min[0], p[0]);
+      min[1] = Math.min(min[1], p[1]);
+      min[2] = Math.min(min[2], p[2]);
+      max[0] = Math.max(max[0], p[0]);
+      max[1] = Math.max(max[1], p[1]);
+      max[2] = Math.max(max[2], p[2]);
+    }
+    return { min, max };
+  }
+
+  function selectedModel() {
+    if (state.selectedId === null) return null;
+    const model = state.models.find((m) => m.id === state.selectedId) || null;
+    if (!model) state.selectedId = null;
+    return model;
+  }
+
+  function addModel(name, type, mesh, color, role, options) {
+    if (state.models.length >= Limits.maxObjects) throw new Error("object cap reached");
+    const opts = options || {};
+    const model = {
+      id: state.nextId,
+      name,
+      fileName: name,
+      fileType: type,
+      role: role || "custom",
+      notes: opts.notes || "",
+      moduleId: opts.moduleId || null,
+      material: opts.material || "plywood",
+      costCategory: opts.costCategory || "low",
+      snapPoints: Array.isArray(opts.snapPoints) ? opts.snapPoints.slice() : [],
+      locked: Boolean(opts.locked),
+      positions: mesh.positions,
+      normals: mesh.normals,
+      bounds: mesh.bounds,
+      color: color.slice(),
+      opacity: opts.opacity !== undefined ? opts.opacity : 1,
+      position: [0, 0, 0],
+      rotationZ: 0,
+      scale: 1,
+      visible: opts.visible !== false,
+      gpu: null
+    };
+    state.nextId += 1;
+    if (!opts.preserveOrigin) normalizeModel(model, document.getElementById("autoFit").value === "on");
+    state.models.push(model);
+    if (model.moduleId) bindModelToModule(model.moduleId, model.id);
+    selectModel(model.id);
+    return model;
+  }
+
+  function bindModelToModule(moduleId, modelId) {
+    const module = state.modules.find((item) => item.id === moduleId);
+    if (!module) return;
+    module.modelId = modelId;
+    module.loaded = true;
+  }
+
+  function removeModuleModel(moduleId) {
+    const module = state.modules.find((item) => item.id === moduleId);
+    if (!module || !module.modelId) return;
+    const removeId = module.modelId;
+    state.models = state.models.filter((m) => m.id !== removeId);
+    module.modelId = null;
+    module.loaded = false;
+    if (state.selectedId === removeId) state.selectedId = state.models[0] ? state.models[0].id : null;
+  }
+
+  function normalizeModel(model, autoFit) {
+    const b = model.bounds;
+    const cx = (b.min[0] + b.max[0]) / 2;
+    const cy = (b.min[1] + b.max[1]) / 2;
+    const z = b.min[2];
+    for (let i = 0; i < model.positions.length; i += 3) {
+      model.positions[i] -= cx;
+      model.positions[i + 1] -= cy;
+      model.positions[i + 2] -= z;
+    }
+    model.bounds = boundsForPositions(model.positions);
+    if (autoFit) fitModelToStage(model, false);
+  }
+
+  function fitModelToStage(model, update) {
+    if (model.locked) return log(`${model.name} is locked`, "warn");
+    const b = model.bounds;
+    const sx = b.max[0] - b.min[0];
+    const sy = b.max[1] - b.min[1];
+    const sz = b.max[2] - b.min[2];
+    const ratio = Math.min(
+      sx > 0 ? state.stage.w * 0.92 / sx : Infinity,
+      sy > 0 ? state.stage.d * 0.92 / sy : Infinity,
+      sz > 0 ? state.stage.h * 0.92 / sz : Infinity
+    );
+    if (Number.isFinite(ratio) && ratio > 0) model.scale = clamp(ratio, Limits.minScale, Limits.maxScale);
+    model.position = [0, 0, 0];
+    if (update) refreshAll();
+  }
+
+  function selectModel(id) {
+    state.selectedId = id;
+    refreshAll();
+  }
+
+  function refreshAll() {
+    refreshModuleBoard();
+    refreshList();
+    refreshInspector();
+    refreshStats();
+    refreshCostReadout();
+    requestRender();
+  }
+
+  function refreshModuleBoard() {
+    moduleBoardEl.textContent = "";
+    for (let i = 0; i < state.modules.length; i += 1) {
+      const module = state.modules[i];
+      const model = module.modelId ? state.models.find((m) => m.id === module.modelId) : null;
+      const card = document.createElement("div");
+      card.className = "module-card" + (model && model.id === state.selectedId ? " selected" : "");
+      const loadedText = model ? `${Math.round(model.positions.length / 9)} tris` : "not loaded";
+      card.innerHTML = `
+        <div class="module-head">
+          <input data-module-visible="${escapeText(module.id)}" type="checkbox" ${module.visible ? "checked" : ""} aria-label="Visible">
+          <div class="module-title">
+            <strong>${escapeText(module.name)}</strong>
+            <span>${escapeText(module.material)} / ${escapeText(module.costCategory)} / ${loadedText}</span>
+          </div>
+          <span class="pill">${module.locked ? "LOCK" : "EDIT"}</span>
+        </div>
+        <div class="module-actions">
+          <button data-module-select="${escapeText(module.id)}" type="button">Edit</button>
+          <button data-module-load="${escapeText(module.id)}" type="button">Load</button>
+          <button data-module-duplicate="${escapeText(module.id)}" type="button">Duplicate</button>
+          <button data-module-lock="${escapeText(module.id)}" type="button">${module.locked ? "Unlock" : "Lock"}</button>
+        </div>`;
+      moduleBoardEl.appendChild(card);
+    }
+  }
+
+  function refreshList() {
+    modelListEl.textContent = "";
+    if (!state.models.length) {
+      const div = document.createElement("div");
+      div.className = "readout";
+      div.textContent = "No structure loaded yet. Drop in a module, split the build, and start commanding the vision.";
+      modelListEl.appendChild(div);
+      return;
+    }
+    for (let i = 0; i < state.models.length; i += 1) {
+      const m = state.models[i];
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "item" + (m.id === state.selectedId ? " selected" : "");
+      item.dataset.id = String(m.id);
+      const moduleLabel = m.moduleId ? `${m.moduleId} / ` : "";
+      item.innerHTML = `<strong>${escapeText(m.name)}</strong><small>${moduleLabel}${escapeText(m.fileType)} / ${escapeText(m.role)} / ${escapeText(m.material || "material")} / ${Math.round(m.positions.length / 9)} tris</small>`;
+      modelListEl.appendChild(item);
+    }
+  }
+
+  function refreshInspector() {
+    const m = selectedModel();
+    const disabled = !m;
+    Object.values(fields).forEach((el) => { el.disabled = disabled; });
+    if (!m) {
+      selectedReadoutEl.textContent = "No part selected.";
+      snapReadoutEl.textContent = "";
+      Object.values(fields).forEach((el) => { if ("value" in el) el.value = ""; });
+      return;
+    }
+    selectedReadoutEl.textContent = `${m.name}\n${m.moduleId || "custom part"} / ${m.fileType} / ${Math.round(m.positions.length / 9)} triangles\nText and geometry are bound: editing these fields mutates the selected build part.`;
+    fields.name.value = m.name;
+    fields.role.value = m.role;
+    fields.x.value = round(m.position[0]);
+    fields.y.value = round(m.position[1]);
+    fields.z.value = round(m.position[2]);
+    fields.rz.value = round(m.rotationZ * 180 / Math.PI);
+    fields.scale.value = round(m.scale, 4);
+    fields.opacity.value = round(m.opacity, 2);
+    fields.color.value = rgbToHex(m.color);
+    fields.material.value = m.material || "plywood";
+    fields.costCategory.value = m.costCategory || "low";
+    fields.visible.value = m.visible ? "true" : "false";
+    fields.locked.value = m.locked ? "true" : "false";
+    fields.mode.value = state.mode;
+    fields.notes.value = m.notes;
+    snapReadoutEl.innerHTML = m.snapPoints && m.snapPoints.length
+      ? m.snapPoints.map((p) => `<span>${escapeText(p.id)} / ${escapeText(p.type)} / ${p.position.map(round).join(", ")}</span>`).join("")
+      : "<span>No named snap points yet.</span>";
+  }
+
+  function refreshStats() {
+    const tris = totalTriangles();
+    const bounds = fullBounds();
+    if (!bounds) {
+      statsEl.textContent = "No geometry yet.";
+      return;
+    }
+    statsEl.textContent = `models: ${state.models.length}/${Limits.maxObjects}\ntriangles: ${tris}/${Limits.maxExportTriangles}\nbounds: ${round(bounds.max[0] - bounds.min[0])} x ${round(bounds.max[1] - bounds.min[1])} x ${round(bounds.max[2] - bounds.min[2])} in`;
+  }
+
+  function refreshCostReadout() {
+    if (!state.models.length) {
+      costReadoutEl.textContent = "No material estimate yet.";
+      return;
+    }
+    const counts = { low: 0, medium: 0, premium: 0 };
+    const materials = new Map();
+    for (let i = 0; i < state.models.length; i += 1) {
+      const m = state.models[i];
+      const tier = counts[m.costCategory] === undefined ? "low" : m.costCategory;
+      counts[tier] += Math.round(m.positions.length / 9);
+      materials.set(m.material || "unknown", (materials.get(m.material || "unknown") || 0) + 1);
+    }
+    const materialLine = Array.from(materials.entries()).map(([name, count]) => `${name}: ${count}`).join("\n");
+    costReadoutEl.textContent = `Cost signal by triangle weight:\nlow: ${counts.low}\nmedium: ${counts.medium}\npremium: ${counts.premium}\n\nMaterials in build:\n${materialLine}`;
+  }
+
+  function round(v, places) {
+    const p = Math.pow(10, places === undefined ? 2 : places);
+    return Math.round(Number(v || 0) * p) / p;
+  }
+
+  function rgbToHex(c) {
+    const r = Math.round(clamp(c[0], 0, 1) * 255).toString(16).padStart(2, "0");
+    const g = Math.round(clamp(c[1], 0, 1) * 255).toString(16).padStart(2, "0");
+    const b = Math.round(clamp(c[2], 0, 1) * 255).toString(16).padStart(2, "0");
+    return `#${r}${g}${b}`;
+  }
+
+  function hexToRgb(hex) {
+    const clean = String(hex).replace("#", "");
+    return [parseInt(clean.slice(0, 2), 16) / 255, parseInt(clean.slice(2, 4), 16) / 255, parseInt(clean.slice(4, 6), 16) / 255, 1];
+  }
+
+  function totalTriangles() {
+    let count = 0;
+    for (let i = 0; i < state.models.length; i += 1) count += state.models[i].positions.length / 9;
+    return count;
+  }
+
+  function fullBounds() {
+    if (!state.models.length) return null;
+    const min = [Infinity, Infinity, Infinity];
+    const max = [-Infinity, -Infinity, -Infinity];
+    for (let i = 0; i < state.models.length; i += 1) {
+      if (!state.models[i].visible) continue;
+      const b = worldBounds(state.models[i]);
+      min[0] = Math.min(min[0], b.min[0]);
+      min[1] = Math.min(min[1], b.min[1]);
+      min[2] = Math.min(min[2], b.min[2]);
+      max[0] = Math.max(max[0], b.max[0]);
+      max[1] = Math.max(max[1], b.max[1]);
+      max[2] = Math.max(max[2], b.max[2]);
+    }
+    if (!Number.isFinite(min[0])) return null;
+    return { min, max };
+  }
+
+  function projectedHit(model, vp, x, y, w, h) {
+    const b = worldBounds(model);
+    const pts = [[b.min[0],b.min[1],b.min[2]], [b.max[0],b.min[1],b.min[2]], [b.max[0],b.max[1],b.min[2]], [b.min[0],b.max[1],b.min[2]], [b.min[0],b.min[1],b.max[2]], [b.max[0],b.min[1],b.max[2]], [b.max[0],b.max[1],b.max[2]], [b.min[0],b.max[1],b.max[2]]];
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, depth = Infinity;
+    for (let i = 0; i < pts.length; i += 1) {
+      const p = matPoint(vp, pts[i]);
+      const sx = (p[0] * 0.5 + 0.5) * w;
+      const sy = (1 - (p[1] * 0.5 + 0.5)) * h;
+      minX = Math.min(minX, sx);
+      maxX = Math.max(maxX, sx);
+      minY = Math.min(minY, sy);
+      maxY = Math.max(maxY, sy);
+      depth = Math.min(depth, p[2]);
+    }
+    const pad = 10;
+    if (x < minX - pad || x > maxX + pad || y < minY - pad || y > maxY + pad) return null;
+    return { model, score: (maxX - minX) * (maxY - minY) + depth * 1000 };
+  }
+
+  function pick(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const vp = viewProjection();
+    let best = null;
+    for (let i = 0; i < state.models.length; i += 1) {
+      if (!state.models[i].visible) continue;
+      const hit = projectedHit(state.models[i], vp, x, y, rect.width, rect.height);
+      if (hit && (!best || hit.score < best.score)) best = hit;
+    }
+    return best ? best.model : null;
+  }
+
+  async function fetchMeshAsset(asset, preferDae) {
+    const preference = document.getElementById("runtimePreference").value;
+    let url = asset.runtimeFile || asset.file;
+    if (preference === "glb" && asset.glb) url = asset.glb;
+    if (preferDae && asset.file) url = asset.file;
+    const ext = extOf(url);
+    if (!["dae", "stl", "obj", "glb"].includes(ext)) throw new Error(`offline loader cannot open .${ext}; use DAE/STL/OBJ/GLB`);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`${url} returned ${response.status}`);
+    const scale = (ext === "dae" || ext === "glb") ? 39.37007874 : 1;
+    if (ext === "stl") return { mesh: parseStl(await response.arrayBuffer(), scale), ext, url };
+    if (ext === "obj") return { mesh: parseObj(await response.text(), scale), ext, url };
+    if (ext === "glb") return { mesh: parseGlb(await response.arrayBuffer(), scale), ext, url };
+    return { mesh: parseDae(await response.text(), scale), ext, url };
+  }
+
+  async function loadModuleAsset(module) {
+    const preferDae = document.getElementById("runtimePreference").value === "dae";
+    try {
+      const result = await fetchMeshAsset(module, preferDae);
+      removeModuleModel(module.id);
+      const model = addModel(module.name, result.ext, result.mesh, hexToRgb(module.color || MATERIAL_COLORS[module.material] || "#F4EFE7"), module.role, {
+        moduleId: module.id,
+        material: module.material,
+        costCategory: module.costCategory,
+        notes: module.notes,
+        snapPoints: module.snapPoints,
+        locked: module.locked,
+        visible: module.visible,
+        preserveOrigin: true
+      });
+      model.fileName = result.url;
+      model.visible = module.visible !== false;
+      log(`Loaded ${module.name} from ${result.url}`, "good");
+      return model;
+    } catch (error) {
+      log(`${module.name} failed: ${error.message}`, "bad");
+      return null;
+    }
+  }
+
+  async function loadDepotStarter() {
+    state.models = state.models.filter((model) => !model.moduleId);
+    state.modules.forEach((module) => { module.modelId = null; module.loaded = false; });
+    for (let i = 0; i < state.modules.length; i += 1) {
+      await loadModuleAsset(state.modules[i]);
+    }
+    if (!state.models.some((model) => model.moduleId)) {
+      log("Asset fetch unavailable; loading procedural offline starter instead", "warn");
+      loadStarter();
+      return;
+    }
+    focusAll();
+    refreshAll();
+    log("Depot starter loaded as five editable modules", "good");
+  }
+
+  async function loadConceptStudies() {
+    state.models = [];
+    state.modules.forEach((module) => { module.modelId = null; module.loaded = false; });
+    const preferDae = document.getElementById("runtimePreference").value === "dae";
+    for (let i = 0; i < DEPOT_CONCEPTS.length; i += 1) {
+      const concept = DEPOT_CONCEPTS[i];
+      try {
+        const result = await fetchMeshAsset(concept, preferDae);
+        const model = addModel(concept.name, result.ext, result.mesh, hexToRgb(concept.color), concept.role, {
+          material: concept.role === "ban" ? "polycarbonate" : "plywood",
+          costCategory: concept.role === "contractor" ? "low" : "medium",
+          notes: concept.notes,
+          preserveOrigin: false
+        });
+        model.fileName = result.url;
+        model.position[0] = (i - 2) * 118;
+        model.position[1] = 0;
+      } catch (error) {
+        log(`${concept.name} failed: ${error.message}`, "bad");
+      }
+    }
+    focusAll();
+    refreshAll();
+    log("Five trailer studies loaded separately for comparison", "good");
+  }
+
+  async function loadFiles(filesInput) {
+    const files = Array.from(filesInput || []);
+    if (!files.length) return;
+    if (files.length > Limits.maxFilesAtOnce) {
+      log(`Too many files. Limit ${Limits.maxFilesAtOnce}.`, "bad");
+      return;
+    }
+    for (let i = 0; i < files.length; i += 1) {
+      const file = files[i];
+      if (file.size > Limits.maxFileBytes) {
+        log(`${file.name} rejected: over file cap`, "bad");
+        continue;
+      }
+      const ext = extOf(file.name);
+      try {
+        let mesh;
+        if (ext === "stl") mesh = parseStl(await file.arrayBuffer(), Number(document.getElementById("importUnits").value || 1));
+        else if (ext === "obj") mesh = parseObj(await file.text(), Number(document.getElementById("importUnits").value || 1));
+        else if (ext === "dae") mesh = parseDae(await file.text(), Number(document.getElementById("importUnits").value || 1));
+        else if (ext === "glb") mesh = parseGlb(await file.arrayBuffer(), Number(document.getElementById("importUnits").value || 1));
+        else {
+          log(`${file.name} skipped: supported here is DAE/STL/OBJ/GLB.`, "warn");
+          continue;
+        }
+        const target = document.getElementById("moduleTarget").value;
+        const module = target === "custom" ? null : state.modules.find((item) => item.id === target);
+        if (module && i === 0) removeModuleModel(module.id);
+        const role = module ? module.role : guessRole(file.name);
+        const color = module ? hexToRgb(module.color || MATERIAL_COLORS[module.material] || "#F4EFE7") : Colors.imported;
+        addModel(stripExt(file.name), ext, mesh, color, role, {
+          moduleId: module ? module.id : null,
+          material: module ? module.material : "plywood",
+          costCategory: module ? module.costCategory : "low",
+          notes: module ? module.notes : "",
+          snapPoints: module ? module.snapPoints : []
+        });
+        log(`${file.name} loaded as separate ${ext.toUpperCase()} model`, "good");
+      } catch (error) {
+        log(`${file.name} failed: ${error.message}`, "bad");
+      }
+    }
+    fileInput.value = "";
+    focusAll();
+  }
+
+  function extOf(name) {
+    const parts = String(name).toLowerCase().split(".");
+    return parts.length > 1 ? parts.pop() : "";
+  }
+
+  function stripExt(name) {
+    return String(name).replace(/\.[^/.]+$/, "");
+  }
+
+  function guessRole(name) {
+    const n = name.toLowerCase();
+    if (n.includes("wright") || n.includes("usonian")) return "usonian";
+    if (n.includes("ban") || n.includes("shelter")) return "ban";
+    if (n.includes("lacaton")) return "lacaton";
+    if (n.includes("alexander") || n.includes("pattern")) return "alexander";
+    if (n.includes("contractor")) return "contractor";
+    return "custom";
+  }
+
+  function parseStl(buffer, scale) {
+    const view = new DataView(buffer);
+    if (buffer.byteLength >= 84) {
+      const count = view.getUint32(80, true);
+      if (count > 0 && count <= Limits.maxTrianglesPerModel && 84 + count * 50 <= buffer.byteLength) {
+        return parseBinaryStl(view, count, scale);
+      }
+    }
+    const text = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
+    return parseAsciiStl(text, scale);
+  }
+
+  function parseBinaryStl(view, count, scale) {
+    const p = new Float32Array(count * 9);
+    const n = new Float32Array(count * 9);
+    let offset = 84;
+    let out = 0;
+    for (let i = 0; i < count; i += 1) {
+      const normal = [view.getFloat32(offset, true), view.getFloat32(offset + 4, true), view.getFloat32(offset + 8, true)];
+      offset += 12;
+      for (let v = 0; v < 3; v += 1) {
+        p[out] = view.getFloat32(offset, true) * scale;
+        p[out + 1] = view.getFloat32(offset + 4, true) * scale;
+        p[out + 2] = view.getFloat32(offset + 8, true) * scale;
+        n[out] = normal[0];
+        n[out + 1] = normal[1];
+        n[out + 2] = normal[2];
+        offset += 12;
+        out += 3;
+      }
+      offset += 2;
+    }
+    repairNormals(p, n);
+    return { positions: p, normals: n, bounds: boundsForPositions(p), source: "stl" };
+  }
+
+  function parseAsciiStl(text, scale) {
+    const lines = text.split(/\r?\n/);
+    const p = [], n = [];
+    let tri = [];
+    const maxLines = Math.min(lines.length, Limits.maxTrianglesPerModel * 8);
+    for (let i = 0; i < maxLines; i += 1) {
+      const line = lines[i].trim();
+      if (!line.startsWith("vertex")) continue;
+      const parts = line.split(/\s+/);
+      tri.push([Number(parts[1]) * scale, Number(parts[2]) * scale, Number(parts[3]) * scale]);
+      if (tri.length === 3) {
+        pushTri(p, n, tri[0], tri[1], tri[2]);
+        tri = [];
+      }
+    }
+    if (!p.length) throw new Error("no ASCII STL triangles found");
+    return meshResult(p, n, "stl");
+  }
+
+  function repairNormals(p, n) {
+    for (let i = 0; i < p.length; i += 9) {
+      if (Math.hypot(n[i], n[i + 1], n[i + 2]) > 0.00001) continue;
+      const normal = faceNormal([p[i], p[i + 1], p[i + 2]], [p[i + 3], p[i + 4], p[i + 5]], [p[i + 6], p[i + 7], p[i + 8]]);
+      for (let k = 0; k < 9; k += 3) {
+        n[i + k] = normal[0];
+        n[i + k + 1] = normal[1];
+        n[i + k + 2] = normal[2];
+      }
+    }
+  }
+
+  function parseObj(text, scale) {
+    const verts = [];
+    const pos = [], norm = [];
+    const lines = text.split(/\r?\n/);
+    const max = Math.min(lines.length, Limits.maxObjLines);
+    for (let i = 0; i < max; i += 1) {
+      const line = lines[i].trim();
+      if (line.startsWith("v ")) {
+        const s = line.split(/\s+/);
+        verts.push([Number(s[1]) * scale, Number(s[2]) * scale, Number(s[3]) * scale]);
+      } else if (line.startsWith("f ")) {
+        const refs = line.slice(2).trim().split(/\s+/).map((r) => parseInt(r.split("/")[0], 10));
+        if (refs.length < 3) continue;
+        for (let k = 1; k < refs.length - 1; k += 1) {
+          const a = resolveObjVertex(verts, refs[0]);
+          const b = resolveObjVertex(verts, refs[k]);
+          const c = resolveObjVertex(verts, refs[k + 1]);
+          pushTri(pos, norm, a, b, c);
+          if (pos.length / 9 > Limits.maxTrianglesPerModel) throw new Error("OBJ triangle cap exceeded");
+        }
+      }
+    }
+    if (!pos.length) throw new Error("no OBJ faces found");
+    return meshResult(pos, norm, "obj");
+  }
+
+  function resolveObjVertex(verts, index) {
+    const resolved = index < 0 ? verts.length + index : index - 1;
+    if (!verts[resolved]) throw new Error("OBJ face references missing vertex");
+    return verts[resolved];
+  }
+
+  function parseDae(text, scale) {
+    const doc = new DOMParser().parseFromString(text, "application/xml");
+    const parserError = doc.querySelector("parsererror");
+    if (parserError) throw new Error("DAE XML parse failed");
+    const geomEls = Array.from(doc.querySelectorAll("library_geometries geometry"));
+    if (!geomEls.length) throw new Error("DAE has no library_geometries");
+    if (geomEls.length > Limits.maxDaeSources) throw new Error("DAE geometry count cap exceeded");
+    const allPos = [];
+    const allNorm = [];
+    for (let g = 0; g < geomEls.length; g += 1) {
+      parseDaeGeometry(geomEls[g], scale, allPos, allNorm);
+      if (allPos.length / 9 > Limits.maxTrianglesPerModel) throw new Error("DAE triangle cap exceeded");
+    }
+    if (!allPos.length) throw new Error("DAE parser found no supported triangles/polylist");
+    return meshResult(allPos, allNorm, "dae");
+  }
+
+  function parseDaeGeometry(geomEl, scale, outPos, outNorm) {
+    const mesh = geomEl.querySelector("mesh");
+    if (!mesh) return;
+    const sources = new Map();
+    const sourceEls = Array.from(mesh.querySelectorAll(":scope > source"));
+    for (let i = 0; i < sourceEls.length; i += 1) {
+      const source = sourceEls[i];
+      const id = source.getAttribute("id");
+      const floats = parseFloatArray(source.querySelector("float_array"));
+      const accessor = source.querySelector("technique_common accessor");
+      const stride = accessor ? Math.max(1, Number(accessor.getAttribute("stride") || 3)) : 3;
+      if (id && floats.length) sources.set(`#${id}`, { floats, stride });
+    }
+    const verticesMap = new Map();
+    Array.from(mesh.querySelectorAll(":scope > vertices")).forEach((v) => {
+      const id = v.getAttribute("id");
+      const input = v.querySelector("input[semantic='POSITION']");
+      if (id && input) verticesMap.set(`#${id}`, input.getAttribute("source"));
+    });
+    Array.from(mesh.querySelectorAll(":scope > triangles")).forEach((triangles) => parseDaePrimitive(triangles, sources, verticesMap, scale, outPos, outNorm, false));
+    Array.from(mesh.querySelectorAll(":scope > polylist")).forEach((polylist) => parseDaePrimitive(polylist, sources, verticesMap, scale, outPos, outNorm, true));
+  }
+
+  function parseFloatArray(el) {
+    if (!el || !el.textContent) return [];
+    return el.textContent.trim().split(/\s+/).map(Number);
+  }
+
+  function parseDaePrimitive(el, sources, verticesMap, scale, outPos, outNorm, isPolylist) {
+    const inputEls = Array.from(el.querySelectorAll(":scope > input"));
+    if (!inputEls.length) return;
+    let maxOffset = 0;
+    let positionInput = null;
+    for (let i = 0; i < inputEls.length; i += 1) {
+      const input = inputEls[i];
+      const semantic = input.getAttribute("semantic");
+      const offset = Number(input.getAttribute("offset") || 0);
+      maxOffset = Math.max(maxOffset, offset);
+      if (semantic === "VERTEX" || semantic === "POSITION") positionInput = { offset, source: input.getAttribute("source"), semantic };
+    }
+    if (!positionInput) return;
+    const posSourceKey = positionInput.semantic === "VERTEX" ? verticesMap.get(positionInput.source) : positionInput.source;
+    const posSource = sources.get(posSourceKey);
+    if (!posSource) return;
+    const stride = maxOffset + 1;
+    const pEl = el.querySelector(":scope > p");
+    if (!pEl || !pEl.textContent) return;
+    const indices = pEl.textContent.trim().split(/\s+/).map(Number);
+    if (isPolylist) {
+      const countsEl = el.querySelector(":scope > vcount");
+      if (!countsEl || !countsEl.textContent) return;
+      const counts = countsEl.textContent.trim().split(/\s+/).map(Number);
+      let cursor = 0;
+      for (let poly = 0; poly < counts.length; poly += 1) {
+        const count = counts[poly];
+        const verts = [];
+        for (let v = 0; v < count; v += 1) {
+          const base = cursor + v * stride;
+          verts.push(readDaeVertex(posSource, indices[base + positionInput.offset], scale));
+        }
+        cursor += count * stride;
+        for (let k = 1; k < verts.length - 1; k += 1) pushTri(outPos, outNorm, verts[0], verts[k], verts[k + 1]);
+      }
+    } else {
+      for (let i = 0; i + stride * 3 <= indices.length; i += stride * 3) {
+        const a = readDaeVertex(posSource, indices[i + positionInput.offset], scale);
+        const b = readDaeVertex(posSource, indices[i + stride + positionInput.offset], scale);
+        const c = readDaeVertex(posSource, indices[i + stride * 2 + positionInput.offset], scale);
+        pushTri(outPos, outNorm, a, b, c);
+      }
+    }
+  }
+
+  function readDaeVertex(source, index, scale) {
+    const base = index * source.stride;
+    return [Number(source.floats[base]) * scale, Number(source.floats[base + 1]) * scale, Number(source.floats[base + 2]) * scale];
+  }
+
+  function parseGlb(buffer, scale) {
+    const view = new DataView(buffer);
+    if (view.byteLength < 20) throw new Error("GLB too small");
+    if (view.getUint32(0, true) !== 0x46546C67) throw new Error("not a GLB file");
+    if (view.getUint32(4, true) !== 2) throw new Error("only GLB v2 is supported");
+    const declaredLength = view.getUint32(8, true);
+    if (declaredLength > view.byteLength) throw new Error("GLB declared length exceeds file size");
+    let offset = 12;
+    let jsonText = "";
+    let binBytes = null;
+    for (let chunk = 0; chunk < 4 && offset + 8 <= view.byteLength; chunk += 1) {
+      const chunkLength = view.getUint32(offset, true);
+      const chunkType = view.getUint32(offset + 4, true);
+      offset += 8;
+      if (offset + chunkLength > view.byteLength) throw new Error("GLB chunk exceeds file size");
+      const bytes = buffer.slice(offset, offset + chunkLength);
+      if (chunkType === 0x4E4F534A) jsonText = new TextDecoder("utf-8").decode(bytes).trim();
+      if (chunkType === 0x004E4942) binBytes = bytes;
+      offset += chunkLength;
+    }
+    if (!jsonText || !binBytes) throw new Error("GLB missing JSON or BIN chunk");
+    const gltf = JSON.parse(jsonText);
+    if (!Array.isArray(gltf.meshes) || !Array.isArray(gltf.accessors) || !Array.isArray(gltf.bufferViews)) throw new Error("GLB missing mesh/accessor data");
+    const pos = [];
+    const norm = [];
+    const roots = glbRootNodes(gltf);
+    if (roots.length) {
+      const stack = roots.map((nodeIndex) => ({ nodeIndex, parent: identityMatrix() }));
+      let visited = 0;
+      while (stack.length && visited < Limits.maxDaeNodes) {
+        const item = stack.pop();
+        const node = gltf.nodes[item.nodeIndex];
+        visited += 1;
+        if (!node) continue;
+        const world = matMul(item.parent, glbNodeMatrix(node));
+        if (node.mesh !== undefined) appendGlbMesh(gltf, binBytes, node.mesh, scale, world, pos, norm);
+        const children = Array.isArray(node.children) ? node.children : [];
+        for (let i = Math.min(children.length, 64) - 1; i >= 0; i -= 1) stack.push({ nodeIndex: children[i], parent: world });
+        if (pos.length / 9 > Limits.maxTrianglesPerModel) throw new Error("GLB triangle cap exceeded");
+      }
+      if (visited >= Limits.maxDaeNodes) throw new Error("GLB node cap exceeded");
+    } else {
+      const meshCount = Math.min(gltf.meshes.length, Limits.maxDaeSources);
+      for (let meshIndex = 0; meshIndex < meshCount; meshIndex += 1) {
+        appendGlbMesh(gltf, binBytes, meshIndex, scale, identityMatrix(), pos, norm);
+        if (pos.length / 9 > Limits.maxTrianglesPerModel) throw new Error("GLB triangle cap exceeded");
+      }
+    }
+    if (!pos.length) throw new Error("GLB parser found no supported triangles");
+    return meshResult(pos, norm, "glb");
+  }
+
+  function appendGlbMesh(gltf, binBytes, meshIndex, scale, transform, pos, norm) {
+    const mesh = gltf.meshes[meshIndex];
+    const primitives = mesh && Array.isArray(mesh.primitives) ? mesh.primitives : [];
+    for (let primitiveIndex = 0; primitiveIndex < primitives.length; primitiveIndex += 1) {
+      const primitive = primitives[primitiveIndex];
+      if (primitive.mode !== undefined && primitive.mode !== 4) continue;
+      const positionAccessor = primitive.attributes ? primitive.attributes.POSITION : undefined;
+      if (positionAccessor === undefined) continue;
+      appendGlbPrimitive(gltf, binBytes, positionAccessor, primitive.indices, scale, transform, pos, norm);
+    }
+  }
+
+  function appendGlbPrimitive(gltf, binBytes, positionAccessorIndex, indexAccessorIndex, scale, transform, pos, norm) {
+    const posAcc = gltf.accessors[positionAccessorIndex];
+    if (!posAcc || posAcc.componentType !== 5126 || posAcc.type !== "VEC3") return;
+    const vertexCount = Math.min(Number(posAcc.count || 0), Limits.maxTrianglesPerModel * 3);
+    if (indexAccessorIndex !== undefined) {
+      const indexAcc = gltf.accessors[indexAccessorIndex];
+      if (!indexAcc || indexAcc.type !== "SCALAR") return;
+      const indexCount = Math.min(Number(indexAcc.count || 0), Limits.maxTrianglesPerModel * 3);
+      for (let i = 0; i + 2 < indexCount; i += 3) {
+        const a = glbWorldPoint(transform, readGlbVec3(gltf, binBytes, positionAccessorIndex, readGlbIndex(gltf, binBytes, indexAccessorIndex, i)), scale);
+        const b = glbWorldPoint(transform, readGlbVec3(gltf, binBytes, positionAccessorIndex, readGlbIndex(gltf, binBytes, indexAccessorIndex, i + 1)), scale);
+        const c = glbWorldPoint(transform, readGlbVec3(gltf, binBytes, positionAccessorIndex, readGlbIndex(gltf, binBytes, indexAccessorIndex, i + 2)), scale);
+        pushTri(pos, norm, a, b, c);
+      }
+      return;
+    }
+    for (let i = 0; i + 2 < vertexCount; i += 3) {
+      pushTri(pos, norm, glbWorldPoint(transform, readGlbVec3(gltf, binBytes, positionAccessorIndex, i), scale), glbWorldPoint(transform, readGlbVec3(gltf, binBytes, positionAccessorIndex, i + 1), scale), glbWorldPoint(transform, readGlbVec3(gltf, binBytes, positionAccessorIndex, i + 2), scale));
+    }
+  }
+
+  function glbRootNodes(gltf) {
+    if (!Array.isArray(gltf.nodes)) return [];
+    const sceneIndex = gltf.scene !== undefined ? gltf.scene : 0;
+    const scene = Array.isArray(gltf.scenes) ? gltf.scenes[sceneIndex] : null;
+    if (scene && Array.isArray(scene.nodes)) return scene.nodes.slice(0, Limits.maxDaeNodes);
+    const children = new Set();
+    for (let i = 0; i < gltf.nodes.length; i += 1) {
+      const kids = Array.isArray(gltf.nodes[i].children) ? gltf.nodes[i].children : [];
+      for (let k = 0; k < kids.length; k += 1) children.add(kids[k]);
+    }
+    const roots = [];
+    for (let i = 0; i < gltf.nodes.length && roots.length < Limits.maxDaeNodes; i += 1) {
+      if (!children.has(i)) roots.push(i);
+    }
+    return roots;
+  }
+
+  function identityMatrix() {
+    return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  }
+
+  function glbNodeMatrix(node) {
+    if (Array.isArray(node.matrix) && node.matrix.length === 16) return node.matrix.map(Number);
+    const t = Array.isArray(node.translation) ? node.translation : [0, 0, 0];
+    const r = Array.isArray(node.rotation) ? node.rotation : [0, 0, 0, 1];
+    const s = Array.isArray(node.scale) ? node.scale : [1, 1, 1];
+    const x = r[0], y = r[1], z = r[2], w = r[3];
+    const x2 = x + x, y2 = y + y, z2 = z + z;
+    const xx = x * x2, xy = x * y2, xz = x * z2;
+    const yy = y * y2, yz = y * z2, zz = z * z2;
+    const wx = w * x2, wy = w * y2, wz = w * z2;
+    return [
+      (1 - (yy + zz)) * s[0], (xy + wz) * s[0], (xz - wy) * s[0], 0,
+      (xy - wz) * s[1], (1 - (xx + zz)) * s[1], (yz + wx) * s[1], 0,
+      (xz + wy) * s[2], (yz - wx) * s[2], (1 - (xx + yy)) * s[2], 0,
+      Number(t[0] || 0), Number(t[1] || 0), Number(t[2] || 0), 1
+    ];
+  }
+
+  function glbWorldPoint(transform, point, scale) {
+    const p = matPoint(transform, point);
+    return [p[0] * scale, -p[2] * scale, p[1] * scale];
+  }
+
+  function glbAccessorView(gltf, binBytes, accessorIndex) {
+    const accessor = gltf.accessors[accessorIndex];
+    if (!accessor) throw new Error("missing GLB accessor");
+    const bufferView = gltf.bufferViews[accessor.bufferView];
+    if (!bufferView || (bufferView.buffer !== undefined && bufferView.buffer !== 0)) throw new Error("unsupported GLB accessor");
+    const byteOffset = Number(bufferView.byteOffset || 0) + Number(accessor.byteOffset || 0);
+    const byteStride = Number(bufferView.byteStride || 0);
+    return { accessor, view: new DataView(binBytes), byteOffset, byteStride };
+  }
+
+  function readGlbVec3(gltf, binBytes, accessorIndex, index) {
+    const data = glbAccessorView(gltf, binBytes, accessorIndex);
+    const stride = data.byteStride || 12;
+    const offset = data.byteOffset + index * stride;
+    const view = data.view;
+    if (offset + 12 > view.byteLength) throw new Error("GLB position read out of bounds");
+    return [view.getFloat32(offset, true), view.getFloat32(offset + 4, true), view.getFloat32(offset + 8, true)];
+  }
+
+  function readGlbIndex(gltf, binBytes, accessorIndex, index) {
+    const data = glbAccessorView(gltf, binBytes, accessorIndex);
+    const type = data.accessor.componentType;
+    const size = type === 5125 ? 4 : type === 5123 ? 2 : type === 5121 ? 1 : 0;
+    if (!size) throw new Error("unsupported GLB index type");
+    const stride = data.byteStride || size;
+    const offset = data.byteOffset + index * stride;
+    const view = data.view;
+    if (offset + size > view.byteLength) throw new Error("GLB index read out of bounds");
+    if (type === 5125) return view.getUint32(offset, true);
+    if (type === 5123) return view.getUint16(offset, true);
+    return view.getUint8(offset);
+  }
+
+  function addPrimitive(kind) {
+    let mesh = makeBox(24, 24, 24);
+    let name = "Block";
+    let color = Colors.block;
+    if (kind === "panel") { mesh = makeBox(48, 2, 36); name = "Plywood panel"; color = Colors.panel; }
+    if (kind === "stud") { mesh = makeBox(1.5, 3.5, 96); name = "2x stud"; color = Colors.stud; }
+    if (kind === "deck") { mesh = makeBox(72, 144, 2); name = "6x12 deck"; color = Colors.deck; }
+    if (kind === "wheel") { mesh = makeCylinder(12, 6, 24); name = "Trailer wheel"; color = Colors.wheel; }
+    if (kind === "roof") { mesh = makeBox(84, 156, 1.5); name = "Roof sheet"; color = Colors.roof; }
+    const m = addModel(name, kind, mesh, color, "custom");
+    m.position = [state.camera.target[0], state.camera.target[1], state.camera.target[2]];
+    refreshAll();
+  }
+
+  function loadStarter() {
+    state.models = [];
+    state.nextId = 1;
+    const specs = [
+      ["6x12 deck", "deck", makeBox(72, 144, 2), Colors.deck, [0, 0, 11]],
+      ["left frame rail", "part", makeBox(4, 144, 4), Colors.imported, [-29, 0, 5]],
+      ["right frame rail", "part", makeBox(4, 144, 4), Colors.imported, [29, 0, 5]],
+      ["plywood shell wall", "part", makeBox(2, 144, 60), Colors.panel, [-35, 0, 43]],
+      ["sleeping platform", "part", makeBox(46, 38, 16), Colors.block, [12, 48, 22]],
+      ["kitchen cabinet", "part", makeBox(20, 34, 32), Colors.block, [-22, -28, 27]],
+      ["fold table", "part", makeBox(30, 18, 2), Colors.stud, [12, -6, 36]],
+      ["roof sheet", "part", makeBox(84, 156, 2), Colors.roof, [0, 0, 75]]
+    ];
+    for (let i = 0; i < specs.length; i += 1) {
+      const m = addModel(specs[i][0], specs[i][1], specs[i][2], specs[i][3], "custom");
+      m.position = specs[i][4];
+    }
+    selectModel(state.models[0].id);
+    focusAll();
+    log("Starter 6x12 kit loaded", "good");
+  }
+
+  function updateSelectedFromFields() {
+    const m = selectedModel();
+    if (!m) return;
+    const nextLocked = fields.locked.value === "true";
+    if (m.locked && nextLocked) {
+      m.visible = fields.visible.value === "true";
+      m.notes = fields.notes.value;
+      state.mode = fields.mode.value;
+      refreshList();
+      refreshModuleBoard();
+      requestRender();
+      return;
+    }
+    m.name = fields.name.value || m.name;
+    m.fileName = m.name;
+    m.role = fields.role.value;
+    m.material = fields.material.value;
+    m.costCategory = fields.costCategory.value;
+    m.visible = fields.visible.value === "true";
+    m.locked = nextLocked;
+    m.position = [clamp(Number(fields.x.value), -Limits.maxCoord, Limits.maxCoord), clamp(Number(fields.y.value), -Limits.maxCoord, Limits.maxCoord), clamp(Number(fields.z.value), -Limits.maxCoord, Limits.maxCoord)];
+    m.rotationZ = Number(fields.rz.value || 0) * Math.PI / 180;
+    m.scale = clamp(Number(fields.scale.value || 1), Limits.minScale, Limits.maxScale);
+    m.opacity = clamp(Number(fields.opacity.value || 1), 0.05, 1);
+    m.color = hexToRgb(fields.color.value);
+    m.notes = fields.notes.value;
+    if (m.moduleId) {
+      const module = state.modules.find((item) => item.id === m.moduleId);
+      if (module) {
+        module.name = m.name;
+        module.material = m.material;
+        module.costCategory = m.costCategory;
+        module.visible = m.visible;
+        module.locked = m.locked;
+        module.color = fields.color.value;
+        module.notes = m.notes;
+      }
+    }
+    state.mode = fields.mode.value;
+    refreshModuleBoard();
+    refreshList();
+    refreshStats();
+    refreshCostReadout();
+    requestRender();
+  }
+
+  function duplicateSelected() {
+    const m = selectedModel();
+    if (!m || state.models.length >= Limits.maxObjects) return;
+    const copy = {
+      ...m,
+      id: state.nextId,
+      name: `${m.name} copy`,
+      fileName: `${m.fileName} copy`,
+      moduleId: null,
+      snapPoints: Array.isArray(m.snapPoints) ? m.snapPoints.map((p) => ({ ...p, position: Array.isArray(p.position) ? p.position.slice() : [] })) : [],
+      positions: new Float32Array(m.positions),
+      normals: new Float32Array(m.normals),
+      bounds: { min: m.bounds.min.slice(), max: m.bounds.max.slice() },
+      color: m.color.slice(),
+      position: [m.position[0] + 12, m.position[1] + 12, m.position[2]],
+      gpu: null
+    };
+    state.nextId += 1;
+    state.models.push(copy);
+    selectModel(copy.id);
+  }
+
+  function removeSelected() {
+    const m = selectedModel();
+    if (!m) return;
+    state.models = state.models.filter((item) => item.id !== m.id);
+    state.modules.forEach((module) => {
+      if (module.modelId === m.id) {
+        module.modelId = null;
+        module.loaded = false;
+      }
+    });
+    state.selectedId = state.models[0] ? state.models[0].id : null;
+    refreshAll();
+  }
+
+  function groundSelected() {
+    const m = selectedModel();
+    if (!m) return;
+    if (m.locked) return log(`${m.name} is locked`, "warn");
+    const b = worldBounds(m);
+    m.position[2] -= b.min[2];
+    refreshAll();
+  }
+
+  function centerSelected() {
+    const m = selectedModel();
+    if (!m) return;
+    if (m.locked) return log(`${m.name} is locked`, "warn");
+    m.position[0] = 0;
+    m.position[1] = 0;
+    refreshAll();
+  }
+
+  function focusAll() {
+    const b = fullBounds();
+    if (!b) return;
+    state.camera.target = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
+    state.camera.distance = clamp(Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]) * 1.7, 120, 12000);
+    requestRender();
+  }
+
+  function focusSelected() {
+    const m = selectedModel();
+    if (!m) return focusAll();
+    const b = worldBounds(m);
+    state.camera.target = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
+    state.camera.distance = clamp(Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]) * 2.5, 80, 9000);
+    requestRender();
+  }
+
+  function transformedTriangles(model) {
+    const matrix = modelMatrix(model);
+    const tris = [];
+    for (let i = 0; i < model.positions.length; i += 9) {
+      tris.push([
+        matPoint(matrix, [model.positions[i], model.positions[i + 1], model.positions[i + 2]]),
+        matPoint(matrix, [model.positions[i + 3], model.positions[i + 4], model.positions[i + 5]]),
+        matPoint(matrix, [model.positions[i + 6], model.positions[i + 7], model.positions[i + 8]])
+      ]);
+    }
+    return tris;
+  }
+
+  function exportStl(models, filename) {
+    const tris = models.reduce((sum, m) => sum + m.positions.length / 9, 0);
+    if (tris <= 0) return log("nothing to export", "bad");
+    if (tris > Limits.maxExportTriangles) return log(`export rejected: ${tris} triangles exceeds cap`, "bad");
+    const lines = ["solid gunnars_depot"];
+    for (let i = 0; i < models.length; i += 1) {
+      if (!models[i].visible) continue;
+      const triangles = transformedTriangles(models[i]);
+      for (let t = 0; t < triangles.length; t += 1) {
+        const tri = triangles[t];
+        const n = faceNormal(tri[0], tri[1], tri[2]);
+        lines.push(`facet normal ${n[0]} ${n[1]} ${n[2]}`, "outer loop", `vertex ${tri[0][0]} ${tri[0][1]} ${tri[0][2]}`, `vertex ${tri[1][0]} ${tri[1][1]} ${tri[1][2]}`, `vertex ${tri[2][0]} ${tri[2][1]} ${tri[2][2]}`, "endloop", "endfacet");
+      }
+    }
+    lines.push("endsolid gunnars_depot");
+    download(filename, lines.join("\n"), "model/stl");
+    log(`exported ${filename}`, "good");
+  }
+
+  function projectObject() {
+    return {
+      app: "gunnars-depot",
+      version: 1,
+      stage: state.stage,
+      modules: state.modules.map((module) => ({ ...module })),
+      view: { ...state.view },
+      nextId: state.nextId,
+      models: state.models.map((m) => ({
+        id: m.id,
+        name: m.name,
+        fileName: m.fileName,
+        fileType: m.fileType,
+        role: m.role,
+        moduleId: m.moduleId,
+        material: m.material,
+        costCategory: m.costCategory,
+        snapPoints: m.snapPoints,
+        locked: m.locked,
+        notes: m.notes,
+        color: m.color,
+        opacity: m.opacity,
+        position: m.position,
+        rotationZ: m.rotationZ,
+        scale: m.scale,
+        visible: m.visible,
+        positions: Array.from(m.positions),
+        normals: Array.from(m.normals)
+      }))
+    };
+  }
+
+  function saveProject() {
+    download("gunnars-depot-build-package.gunnar.json", JSON.stringify(projectObject(), null, 2), "application/json");
+    log("build package exported: model, materials, notes, and client-ready logic", "good");
+  }
+
+  async function openProject(file) {
+    if (!file) return;
+    try {
+      if (file.size > Limits.maxFileBytes) throw new Error("project file too large");
+      const data = JSON.parse(await file.text());
+      if (!data || (data.app !== "gunnars-depot" && data.app !== "gunnars-forge") || !Array.isArray(data.models)) throw new Error("not a Gunnar project");
+      if (data.models.length > Limits.maxObjects) throw new Error("object cap exceeded");
+      state.stage = data.stage || state.stage;
+      if (Array.isArray(data.modules)) state.modules = data.modules.map((module) => ({ ...module }));
+      if (data.view) state.view = { ...state.view, ...data.view };
+      state.nextId = Number(data.nextId) || 1;
+      state.models = data.models.map((m) => ({
+        id: Number(m.id),
+        name: String(m.name || "model"),
+        fileName: String(m.fileName || m.name || "model"),
+        fileType: String(m.fileType || "project"),
+        role: String(m.role || "custom"),
+        moduleId: m.moduleId || null,
+        material: String(m.material || "plywood"),
+        costCategory: String(m.costCategory || "low"),
+        snapPoints: Array.isArray(m.snapPoints) ? m.snapPoints : [],
+        locked: Boolean(m.locked),
+        notes: String(m.notes || ""),
+        positions: new Float32Array(m.positions || []),
+        normals: new Float32Array(m.normals || []),
+        bounds: boundsForPositions(new Float32Array(m.positions || [])),
+        color: Array.isArray(m.color) ? m.color : Colors.imported.slice(),
+        opacity: clamp(Number(m.opacity || 1), 0.05, 1),
+        position: Array.isArray(m.position) ? m.position : [0, 0, 0],
+        rotationZ: Number(m.rotationZ || 0),
+        scale: Number(m.scale || 1),
+        visible: m.visible !== false,
+        gpu: null
+      }));
+      state.modules.forEach((module) => {
+        const linked = state.models.find((model) => model.moduleId === module.id);
+        module.modelId = linked ? linked.id : module.modelId || null;
+        module.loaded = Boolean(module.modelId);
+      });
+      state.selectedId = state.models[0] ? state.models[0].id : null;
+      document.getElementById("stageW").value = state.stage.w / 12;
+      document.getElementById("stageD").value = state.stage.d / 12;
+      document.getElementById("stageH").value = state.stage.h / 12;
+      rebuildStage();
+      refreshAll();
+      focusAll();
+      log("project opened", "good");
+    } catch (error) {
+      log(`project open failed: ${error.message}`, "bad");
+    } finally {
+      projectInput.value = "";
+    }
+  }
+
+  function download(filename, text, mime) {
+    const blob = new Blob([text], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function bindEvents() {
+    document.getElementById("openFilesBtn").addEventListener("click", () => fileInput.click());
+    document.getElementById("loadModulesBtn").addEventListener("click", loadDepotStarter);
+    document.getElementById("loadConceptsBtn").addEventListener("click", loadConceptStudies);
+    document.getElementById("openProjectBtn").addEventListener("click", () => projectInput.click());
+    document.getElementById("saveProjectBtn").addEventListener("click", saveProject);
+    document.getElementById("exportAllBtn").addEventListener("click", () => exportStl(state.models, "gunnars-depot-build.stl"));
+    document.getElementById("exportSelectedBtn").addEventListener("click", () => {
+      const m = selectedModel();
+        if (m) exportStl([m], `${m.name.replace(/[^a-z0-9_-]+/gi, "_")}.stl`);
+      });
+    document.getElementById("clientViewBtn").addEventListener("click", () => {
+      document.body.classList.toggle("client-mode");
+      requestRender();
+    });
+    document.getElementById("applyStageBtn").addEventListener("click", () => {
+      state.stage = { w: Number(document.getElementById("stageW").value || 6) * 12, d: Number(document.getElementById("stageD").value || 12) * 12, h: Number(document.getElementById("stageH").value || 7) * 12 };
+      rebuildStage();
+      refreshStats();
+    });
+    document.querySelectorAll("[data-add]").forEach((btn) => btn.addEventListener("click", () => addPrimitive(btn.dataset.add)));
+    document.getElementById("duplicateBtn").addEventListener("click", duplicateSelected);
+    document.getElementById("removeBtn").addEventListener("click", removeSelected);
+    document.getElementById("fitBtn").addEventListener("click", () => { const m = selectedModel(); if (m) fitModelToStage(m, true); });
+    document.getElementById("groundBtn").addEventListener("click", groundSelected);
+    document.getElementById("centerBtn").addEventListener("click", centerSelected);
+    document.getElementById("focusBtn").addEventListener("click", focusSelected);
+    document.getElementById("toggleGridBtn").addEventListener("click", () => {
+      state.view.grid = !state.view.grid;
+      document.getElementById("toggleGridBtn").textContent = state.view.grid ? "Hide Grid" : "Show Grid";
+      requestRender();
+    });
+    document.getElementById("toggleXrayBtn").addEventListener("click", () => {
+      state.view.xray = !state.view.xray;
+      document.getElementById("toggleXrayBtn").classList.toggle("active", state.view.xray);
+      requestRender();
+    });
+    document.getElementById("toggleExplodeBtn").addEventListener("click", () => {
+      state.view.exploded = !state.view.exploded;
+      document.getElementById("toggleExplodeBtn").classList.toggle("active", state.view.exploded);
+      requestRender();
+    });
+    document.getElementById("isolateBtn").addEventListener("click", () => {
+      state.view.isolate = !state.view.isolate;
+      document.getElementById("isolateBtn").classList.toggle("active", state.view.isolate);
+      requestRender();
+    });
+    moduleBoardEl.addEventListener("click", (event) => {
+      const selectBtn = event.target.closest("[data-module-select]");
+      const loadBtn = event.target.closest("[data-module-load]");
+      const duplicateBtn = event.target.closest("[data-module-duplicate]");
+      const lockBtn = event.target.closest("[data-module-lock]");
+      if (selectBtn) {
+        const module = state.modules.find((item) => item.id === selectBtn.dataset.moduleSelect);
+        if (module && module.modelId) selectModel(module.modelId);
+      }
+      if (loadBtn) {
+        document.getElementById("moduleTarget").value = loadBtn.dataset.moduleLoad;
+        fileInput.click();
+      }
+      if (duplicateBtn) {
+        const module = state.modules.find((item) => item.id === duplicateBtn.dataset.moduleDuplicate);
+        if (module && module.modelId) {
+          selectModel(module.modelId);
+          duplicateSelected();
+        }
+      }
+      if (lockBtn) {
+        const module = state.modules.find((item) => item.id === lockBtn.dataset.moduleLock);
+        if (module) {
+          module.locked = !module.locked;
+          const model = state.models.find((item) => item.id === module.modelId);
+          if (model) model.locked = module.locked;
+          refreshAll();
+        }
+      }
+    });
+    moduleBoardEl.addEventListener("change", (event) => {
+      const checkbox = event.target.closest("[data-module-visible]");
+      if (!checkbox) return;
+      const module = state.modules.find((item) => item.id === checkbox.dataset.moduleVisible);
+      if (!module) return;
+      module.visible = checkbox.checked;
+      const model = state.models.find((item) => item.id === module.modelId);
+      if (model) model.visible = checkbox.checked;
+      refreshAll();
+    });
+    modelListEl.addEventListener("click", (event) => {
+      const item = event.target.closest("[data-id]");
+      if (item) selectModel(Number(item.dataset.id));
+    });
+    Object.values(fields).forEach((el) => el.addEventListener("input", updateSelectedFromFields));
+    fileInput.addEventListener("change", () => loadFiles(fileInput.files));
+    projectInput.addEventListener("change", () => openProject(projectInput.files[0]));
+    const drop = document.getElementById("dropZone");
+    ["dragenter", "dragover"].forEach((type) => drop.addEventListener(type, (e) => { e.preventDefault(); drop.classList.add("hot"); }));
+    ["dragleave", "drop"].forEach((type) => drop.addEventListener(type, (e) => { e.preventDefault(); drop.classList.remove("hot"); }));
+    drop.addEventListener("drop", (e) => loadFiles(e.dataTransfer.files));
+    canvas.addEventListener("pointerdown", pointerDown);
+    canvas.addEventListener("pointermove", pointerMove);
+    canvas.addEventListener("pointerup", pointerUp);
+    canvas.addEventListener("pointercancel", pointerUp);
+    canvas.addEventListener("wheel", wheel, { passive: false });
+    window.addEventListener("resize", requestRender);
+  }
+
+  function pointerDown(event) {
+    canvas.setPointerCapture(event.pointerId);
+    const hit = pick(event.clientX, event.clientY);
+    if (hit) selectModel(hit.id);
+    state.pointer = { active: true, id: event.pointerId, x: event.clientX, y: event.clientY };
+  }
+
+  function pointerMove(event) {
+    if (!state.pointer.active || state.pointer.id !== event.pointerId) return;
+    const dx = event.clientX - state.pointer.x;
+    const dy = event.clientY - state.pointer.y;
+    state.pointer.x = event.clientX;
+    state.pointer.y = event.clientY;
+    const m = selectedModel();
+    if (state.mode === "move" && m && !m.locked) {
+      const step = 0.35;
+      m.position[0] += dx * step;
+      m.position[1] -= dy * step;
+      refreshInspector();
+      refreshStats();
+      requestRender();
+      return;
+    }
+    state.camera.yaw -= dx * 0.008;
+    state.camera.pitch = clamp(state.camera.pitch + dy * 0.006, -1.25, 1.35);
+    requestRender();
+  }
+
+  function pointerUp(event) {
+    if (state.pointer.id === event.pointerId) state.pointer.active = false;
+  }
+
+  function wheel(event) {
+    event.preventDefault();
+    state.camera.distance = clamp(state.camera.distance * (event.deltaY > 0 ? 1.08 : 0.92), 40, 16000);
+    requestRender();
+  }
+
+  function runSelfTests() {
+    const stl = "solid t\nfacet normal 0 0 1\nouter loop\nvertex 0 0 0\nvertex 1 0 0\nvertex 0 1 0\nendloop\nendfacet\nendsolid t";
+    const mesh1 = parseAsciiStl(stl, 1);
+    if (mesh1.positions.length !== 9) throw new Error("STL self-test failed");
+    const obj = "v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3";
+    const mesh2 = parseObj(obj, 1);
+    if (mesh2.positions.length !== 9) throw new Error("OBJ self-test failed");
+    const dae = `<?xml version="1.0"?><COLLADA><library_geometries><geometry id="g"><mesh><source id="p"><float_array id="pa" count="9">0 0 0 1 0 0 0 1 0</float_array><technique_common><accessor source="#pa" count="3" stride="3"/></technique_common></source><vertices id="v"><input semantic="POSITION" source="#p"/></vertices><triangles count="1"><input semantic="VERTEX" source="#v" offset="0"/><p>0 1 2</p></triangles></mesh></geometry></library_geometries></COLLADA>`;
+    const mesh3 = parseDae(dae, 1);
+    if (mesh3.positions.length !== 9) throw new Error("DAE self-test failed");
+  }
+
+  function start() {
+    try {
+      initGL();
+      bindEvents();
+      runSelfTests();
+      refreshModuleBoard();
+      loadDepotStarter();
+      setStatus("Ready. Split the build, edit modules, export the plan.", "good");
+      window.__GUNNARS_DEPOT_READY__ = true;
+    } catch (error) {
+      setStatus(`Depot failed: ${error.message}`, "bad");
+      window.__GUNNARS_DEPOT_READY__ = false;
+    }
+  }
+
+  start();
+  </script>
+</body>
+</html>
