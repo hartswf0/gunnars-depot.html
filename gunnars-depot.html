@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Gunnar's Depot - Modular Structure Command Center</title>
+  <title>Gunnar's Depot - Builder Inspector</title>
   <link rel="icon" type="image/svg+xml" href="assets/branding/favicon.svg">
   <style>
     :root {
@@ -317,6 +317,31 @@
       font-weight: 800;
     }
 
+    .quick-rail {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 10px;
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 6px;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 12px;
+      background: rgba(17,17,17,0.76);
+      backdrop-filter: blur(8px);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .quick-rail button {
+      flex: 0 0 auto;
+      min-height: 34px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
     .drop {
       display: grid;
       place-items: center;
@@ -494,6 +519,49 @@
 
     .log .warn {
       border-left-color: var(--hot);
+    }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .tool-grid button {
+      min-height: 46px;
+      text-align: left;
+      padding: 8px 10px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .metric {
+      display: grid;
+      gap: 3px;
+      padding: 9px;
+      border: 1px solid var(--line);
+      background: #181818;
+    }
+
+    .metric strong {
+      font-size: 18px;
+      line-height: 1;
+      color: var(--hot);
+    }
+
+    .metric span {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--concrete);
+      text-transform: uppercase;
+    }
+
+    .mobile-nav {
+      display: none;
     }
 
     .hidden-file {
@@ -680,6 +748,347 @@
         font-size: 12px;
       }
     }
+
+    @media (max-width: 760px) {
+      * {
+        scrollbar-color: #111111 #E8E6E0;
+      }
+
+      *::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      *::-webkit-scrollbar-track {
+        background: #E8E6E0;
+      }
+
+      *::-webkit-scrollbar-thumb {
+        border: 2px solid #E8E6E0;
+        background: #111111;
+      }
+
+      html,
+      body {
+        background: #F6F5F1;
+        color: #111111;
+      }
+
+      body {
+        padding-bottom: max(74px, env(safe-area-inset-bottom));
+      }
+
+      .app {
+        grid-template-rows: auto minmax(270px, 42svh) auto auto;
+        background: #F6F5F1;
+      }
+
+      .topbar {
+        grid-template-columns: 1fr;
+        align-items: start;
+        gap: 9px;
+        min-height: 0;
+        padding: max(10px, env(safe-area-inset-top)) 12px 10px;
+        background: rgba(246,245,241,0.96);
+        color: #111111;
+        border-bottom: 1px solid #D8D6CF;
+        box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+        backdrop-filter: blur(8px);
+      }
+
+      .brand {
+        gap: 9px;
+      }
+
+      .mark {
+        width: 42px;
+        height: 42px;
+        border-color: #111111;
+        background: #FFFFFF;
+        color: #111111;
+        border-radius: 9px;
+        font-size: 17px;
+      }
+
+      h1 {
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        color: #333333;
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      #status {
+        display: none;
+      }
+
+      .top-actions {
+        margin: 0 -12px;
+        padding: 0 12px 4px;
+      }
+
+      .top-actions button {
+        min-width: auto;
+        min-height: 44px;
+        border: 1px solid #CFCBC2;
+        border-radius: 10px;
+        background: #FFFFFF;
+        color: #111111;
+        box-shadow: 0 1px 0 rgba(0,0,0,0.08);
+      }
+
+      .top-actions #openProjectBtn,
+      .top-actions #exportSelectedBtn,
+      .top-actions #exportAllBtn,
+      .top-actions #clientViewBtn {
+        display: none;
+      }
+
+      .top-actions .primary,
+      .top-actions button.active {
+        background: #111111;
+        color: #FFFFFF;
+        border-color: #111111;
+      }
+
+      .viewport-wrap {
+        height: min(42svh, 360px);
+        min-height: 270px;
+        margin: 10px 12px 0;
+        border: 1px solid #CFCBC2;
+        border-radius: 14px;
+        background:
+          linear-gradient(90deg, rgba(17,17,17,0.07) 1px, transparent 1px),
+          linear-gradient(rgba(17,17,17,0.07) 1px, transparent 1px),
+          #FFFFFF;
+        background-size: 18px 18px;
+        overflow: hidden;
+        box-shadow: 0 1px 0 rgba(0,0,0,0.08);
+      }
+
+      .hud {
+        display: none;
+      }
+
+      .quick-rail {
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        border-color: #D8D6CF;
+        background: rgba(255,255,255,0.94);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+      }
+
+      .quick-rail button {
+        min-height: 38px;
+        border-color: #CFCBC2;
+        background: #FFFFFF;
+        color: #111111;
+        font-size: 13px;
+      }
+
+      .quick-rail button.active,
+      .quick-rail button:hover {
+        border-color: #111111;
+        background: #111111;
+        color: #FFFFFF;
+      }
+
+      .panel,
+      .right {
+        background: #F6F5F1;
+        color: #111111;
+      }
+
+      .panel-inner {
+        padding: 12px;
+        gap: 12px;
+      }
+
+      .block {
+        padding: 14px;
+        border: 1px solid #D8D6CF;
+        border-radius: 14px;
+        background: #FFFFFF;
+        box-shadow: 0 1px 0 rgba(0,0,0,0.05);
+      }
+
+      .block:last-child {
+        border-bottom: 1px solid #D8D6CF;
+      }
+
+      h2 {
+        color: #111111;
+        font-size: 15px;
+      }
+
+      .hint {
+        display: none;
+      }
+
+      label {
+        color: #111111;
+        font-size: 12px;
+      }
+
+      input,
+      select,
+      textarea {
+        min-height: 44px;
+        border: 1px solid #CFCBC2;
+        border-radius: 10px;
+        background: #FFFFFF;
+        color: #111111;
+      }
+
+      button {
+        min-height: 44px;
+        border: 1px solid #CFCBC2;
+        border-radius: 10px;
+        background: #FFFFFF;
+        color: #111111;
+      }
+
+      button:hover,
+      button.active,
+      button.primary {
+        background: #111111;
+        color: #FFFFFF;
+        border-color: #111111;
+      }
+
+      .drop {
+        min-height: 62px;
+        border-color: #111111;
+        border-radius: 12px;
+        background: #FAFAF8;
+        color: #111111;
+      }
+
+      .item,
+      .module-card,
+      .readout,
+      .metric,
+      .log li {
+        border-color: #D8D6CF;
+        background: #FFFFFF;
+        color: #111111;
+      }
+
+      .module-card {
+        border-radius: 12px;
+        padding: 11px;
+      }
+
+      .module-card.selected,
+      .item.selected {
+        border-color: #111111;
+        background: #F2F1EC;
+        color: #111111;
+        box-shadow: inset 0 0 0 1px #111111;
+      }
+
+      .module-head {
+        grid-template-columns: 28px 1fr auto;
+      }
+
+      .module-title strong {
+        font-size: 16px;
+      }
+
+      .module-title span,
+      .pill,
+      .snap-list,
+      .item small,
+      .metric span {
+        color: #555555;
+      }
+
+      .pill {
+        background: #F4F3EF;
+        color: #111111;
+        border-color: #D8D6CF;
+      }
+
+      .tool-grid,
+      .grid2,
+      .grid3 {
+        grid-template-columns: 1fr;
+      }
+
+      .module-actions {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .module-actions button {
+        min-height: 40px;
+        font-size: 14px;
+      }
+
+      .metric-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .metric strong {
+        color: #111111;
+      }
+
+      .left {
+        grid-row: 3;
+      }
+
+      .right {
+        grid-row: 4;
+      }
+
+      .left .block:nth-child(3),
+      .left .block:nth-child(5),
+      .left .block:nth-child(6),
+      .right .block:last-child {
+        display: none;
+      }
+
+      .left .block:first-child .grid2 {
+        display: none;
+      }
+
+      .mobile-nav {
+        display: none !important;
+        position: fixed;
+        left: 10px;
+        right: 10px;
+        bottom: max(10px, env(safe-area-inset-bottom));
+        z-index: 40;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        padding: 8px;
+        border: 1px solid #D8D6CF;
+        border-radius: 18px;
+        background: rgba(255,255,255,0.96);
+        box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+        backdrop-filter: blur(8px);
+      }
+
+      .mobile-nav button {
+        display: grid;
+        place-items: center;
+        min-height: 48px;
+        padding: 5px;
+        border: 0;
+        background: transparent;
+        color: #111111;
+        font-size: 12px;
+      }
+
+      .mobile-nav button.active,
+      .mobile-nav button:hover {
+        background: #111111;
+        color: #FFFFFF;
+      }
+    }
   </style>
 </head>
 <body>
@@ -688,15 +1097,16 @@
       <div class="brand">
         <div class="mark">GD</div>
         <div>
-          <h1>Gunnar's Depot</h1>
-          <p class="subtitle">Build the Vision. Command the Job.</p>
+          <h1>Gunnar</h1>
+          <p class="subtitle">Split. Inspect. Build.</p>
         </div>
       </div>
-      <div id="status">Loading the depot.</div>
+      <div id="status">Ready.</div>
       <div class="top-actions">
         <button id="openFilesBtn" class="primary" type="button">Load</button>
-        <button id="loadModulesBtn" type="button">Starter Build</button>
-        <button id="loadConceptsBtn" type="button">Five Studies</button>
+        <button id="loadModulesBtn" type="button">Split</button>
+        <button id="loadConceptsBtn" type="button">Studies</button>
+        <button id="movieBtn" type="button">Movie</button>
         <button id="openProjectBtn" type="button">Open</button>
         <button id="saveProjectBtn" type="button">Plan</button>
         <button id="exportSelectedBtn" type="button">Export Part</button>
@@ -708,8 +1118,8 @@
     <aside class="panel left">
       <div class="panel-inner">
         <section class="block">
-          <h2>1 / Structure Modules</h2>
-          <div id="dropZone" class="drop">Drop .dae .stl .obj here<br>then assign it to a module</div>
+          <h2>Split</h2>
+          <div id="dropZone" class="drop">Drop file</div>
           <div class="grid2">
             <label>Target Module
               <select id="moduleTarget">
@@ -748,12 +1158,12 @@
         </section>
 
         <section class="block">
-          <h2>2 / Module Board</h2>
+          <h2>Parts</h2>
           <div id="moduleBoard" class="list"></div>
         </section>
 
         <section class="block">
-          <h2>3 / Envelope</h2>
+          <h2>Ring</h2>
           <div class="grid3">
             <label>Width ft<input id="stageW" type="number" min="1" step="0.5" value="6"></label>
             <label>Length ft<input id="stageD" type="number" min="1" step="0.5" value="12"></label>
@@ -763,7 +1173,7 @@
         </section>
 
         <section class="block">
-          <h2>4 / Add Builder Parts</h2>
+          <h2>Add</h2>
           <div class="grid2">
             <button data-add="block" type="button">Block</button>
             <button data-add="panel" type="button">Panel</button>
@@ -771,11 +1181,15 @@
             <button data-add="deck" type="button">6x12 Deck</button>
             <button data-add="wheel" type="button">Wheel</button>
             <button data-add="roof" type="button">Roof Sheet</button>
+            <button data-add="door" type="button">Door</button>
+            <button data-add="window" type="button">Window</button>
+            <button data-add="cabinet" type="button">Cabinet</button>
+            <button data-add="bed" type="button">Bed</button>
           </div>
         </section>
 
         <section class="block">
-          <h2>5 / Loaded Parts</h2>
+          <h2>Loaded</h2>
           <div id="modelList" class="list"></div>
           <div class="row">
             <button id="duplicateBtn" type="button">Duplicate</button>
@@ -784,7 +1198,7 @@
         </section>
 
         <section class="block">
-          <h2>6 / View Tools</h2>
+          <h2>View</h2>
           <div class="grid2">
             <button id="toggleGridBtn" type="button">Hide Grid</button>
             <button id="toggleXrayBtn" type="button">X-Ray View</button>
@@ -802,12 +1216,13 @@
         <span>Modules stay separate: base, frame, walls, roof, interior.</span>
         <span>1 unit = 1 inch / starter ring = 6 ft x 12 ft trailer logic</span>
       </div>
+      <div id="quickRail" class="quick-rail"></div>
     </main>
 
     <aside class="panel right">
       <div class="panel-inner">
         <section class="block">
-          <h2>Selected Part / Logic Surface</h2>
+          <h2>Part</h2>
           <div id="selectedReadout" class="readout">No model selected.</div>
           <label>Name<input id="modelName" type="text"></label>
           <label>Design Role
@@ -893,19 +1308,43 @@
           <label>Build Notes<textarea id="notes" placeholder="cost logic, material logic, what gets sacrificed, build sequence"></textarea></label>
         </section>
 
-        <section class="block">
-          <h2>Cost / Material Logic</h2>
+        <section id="fieldTools" class="block">
+          <h2>Tools</h2>
+          <div class="tool-grid">
+            <button id="movieToolBtn" type="button">Movie</button>
+            <button id="stopMovieBtn" type="button">Stop</button>
+            <button id="hapticBtn" type="button">Tap: On</button>
+            <button id="soundBtn" type="button">Tone: On</button>
+            <button id="snapBtn" type="button">Snap: On</button>
+            <button id="measureBtn" type="button">Measure</button>
+          </div>
+          <div class="metric-grid">
+            <div class="metric"><strong id="metricModules">0</strong><span>modules</span></div>
+            <div class="metric"><strong id="metricParts">0</strong><span>parts</span></div>
+            <div class="metric"><strong id="metricCost">$0</strong><span>rough</span></div>
+          </div>
+        </section>
+
+        <section id="planPanel" class="block">
+          <h2>Plan</h2>
           <div id="costReadout" class="readout">No material estimate yet.</div>
         </section>
 
         <section class="block">
-          <h2>Diagnostics</h2>
+          <h2>Log</h2>
           <div id="stats" class="readout">No geometry yet.</div>
           <ul id="log" class="log"></ul>
         </section>
       </div>
     </aside>
   </div>
+
+  <nav class="mobile-nav" aria-label="Builder navigation">
+    <button data-jump="viewport" class="active" type="button">View</button>
+    <button data-jump="modules" type="button">Modules</button>
+    <button data-jump="edit" type="button">Edit</button>
+    <button data-jump="plan" type="button">Plan</button>
+  </nav>
 
   <input id="fileInput" class="hidden-file" type="file" multiple accept=".dae,.stl,.obj,.glb">
   <input id="projectInput" class="hidden-file" type="file" accept=".gunnar.json,.json,application/json">
@@ -959,11 +1398,11 @@
   });
 
   const DEPOT_MODULES = Object.freeze([
-    { id: "foundation", name: "Foundation / Base", file: "assets/models/modules/foundation-base.dae", glb: "assets/models/modules/foundation-base.glb", runtimeFile: "assets/models/modules/foundation-base.stl", role: "foundation", material: "steel", color: "#242424", costCategory: "low", notes: "Trailer frame, deck, wheels, axle, hitch, and jack. Build datum.", snapPoints: [{ id: "front-center", type: "centerline", position: [0, -72, 0] }, { id: "rear-center", type: "centerline", position: [0, 72, 0] }, { id: "left-rail", type: "edge", position: [-36, 0, 0] }, { id: "right-rail", type: "edge", position: [36, 0, 0] }] },
-    { id: "frame", name: "Structural Frame", file: "assets/models/modules/structural-frame.dae", glb: "assets/models/modules/structural-frame.glb", runtimeFile: "assets/models/modules/structural-frame.stl", role: "frame", material: "treated_wood", color: "#C08457", costCategory: "low", notes: "Visible 2x framing and repairable field logic.", snapPoints: [{ id: "front-stud-line", type: "edge", position: [0, -72, 12] }, { id: "rear-stud-line", type: "edge", position: [0, 72, 12] }, { id: "roof-bearing-left", type: "roof-bearing", position: [-36, 0, 72] }, { id: "roof-bearing-right", type: "roof-bearing", position: [36, 0, 72] }] },
-    { id: "walls", name: "Walls / Exterior Shell", file: "assets/models/modules/walls-exterior-shell.dae", glb: "assets/models/modules/walls-exterior-shell.glb", runtimeFile: "assets/models/modules/walls-exterior-shell.stl", role: "walls", material: "plywood", color: "#C08457", costCategory: "low", notes: "Plywood shell, stock windows, cheap door logic.", snapPoints: [{ id: "door-zone", type: "door", position: [0, 72, 30] }, { id: "utility-wall", type: "utility", position: [-34, -28, 36] }] },
-    { id: "roof", name: "Roof / Cover System", file: "assets/models/modules/roof-cover-system.dae", glb: "assets/models/modules/roof-cover-system.glb", runtimeFile: "assets/models/modules/roof-cover-system.stl", role: "roof", material: "corrugated_metal", color: "#A3A3A3", costCategory: "low", notes: "Single-slope corrugated roof; cheap and replaceable.", snapPoints: [{ id: "roof-centerline", type: "centerline", position: [0, 0, 78] }, { id: "front-eave", type: "edge", position: [0, -78, 76] }, { id: "rear-eave", type: "edge", position: [0, 78, 76] }] },
-    { id: "interior", name: "Interior / Finish Layer", file: "assets/models/modules/interior-finish-layer.dae", glb: "assets/models/modules/interior-finish-layer.glb", runtimeFile: "assets/models/modules/interior-finish-layer.stl", role: "interior", material: "plywood", color: "#D09A5F", costCategory: "low", notes: "Plywood bed, kitchenette, utility cabinet, bins, fold-down work surface.", snapPoints: [{ id: "sleeping-zone", type: "centerline", position: [0, 42, 18] }, { id: "kitchen-utility", type: "utility", position: [-24, -32, 30] }, { id: "central-path", type: "centerline", position: [0, 0, 0] }] }
+    { id: "foundation", name: "Foundation / Base", file: "assets/models/modules/foundation-base.dae", glb: "assets/models/modules/foundation-base.glb", runtimeFile: "assets/models/modules/foundation-base.stl", role: "foundation", material: "steel", color: "#242424", costCategory: "low", parts: 12, notes: "Trailer frame, deck, wheels, axle, hitch, and jack. Build datum.", snapPoints: [{ id: "front-center", type: "centerline", position: [0, -72, 0] }, { id: "rear-center", type: "centerline", position: [0, 72, 0] }, { id: "left-rail", type: "edge", position: [-36, 0, 0] }, { id: "right-rail", type: "edge", position: [36, 0, 0] }] },
+    { id: "frame", name: "Structural Frame", file: "assets/models/modules/structural-frame.dae", glb: "assets/models/modules/structural-frame.glb", runtimeFile: "assets/models/modules/structural-frame.stl", role: "frame", material: "treated_wood", color: "#C08457", costCategory: "low", parts: 18, notes: "Visible 2x framing and repairable field logic.", snapPoints: [{ id: "front-stud-line", type: "edge", position: [0, -72, 12] }, { id: "rear-stud-line", type: "edge", position: [0, 72, 12] }, { id: "roof-bearing-left", type: "roof-bearing", position: [-36, 0, 72] }, { id: "roof-bearing-right", type: "roof-bearing", position: [36, 0, 72] }] },
+    { id: "walls", name: "Walls / Exterior Shell", file: "assets/models/modules/walls-exterior-shell.dae", glb: "assets/models/modules/walls-exterior-shell.glb", runtimeFile: "assets/models/modules/walls-exterior-shell.stl", role: "walls", material: "plywood", color: "#C08457", costCategory: "low", parts: 18, notes: "Plywood shell, stock windows, cheap door logic.", snapPoints: [{ id: "door-zone", type: "door", position: [0, 72, 30] }, { id: "utility-wall", type: "utility", position: [-34, -28, 36] }] },
+    { id: "roof", name: "Roof / Cover System", file: "assets/models/modules/roof-cover-system.dae", glb: "assets/models/modules/roof-cover-system.glb", runtimeFile: "assets/models/modules/roof-cover-system.stl", role: "roof", material: "corrugated_metal", color: "#A3A3A3", costCategory: "low", parts: 10, notes: "Single-slope corrugated roof; cheap and replaceable.", snapPoints: [{ id: "roof-centerline", type: "centerline", position: [0, 0, 78] }, { id: "front-eave", type: "edge", position: [0, -78, 76] }, { id: "rear-eave", type: "edge", position: [0, 78, 76] }] },
+    { id: "interior", name: "Interior / Finish Layer", file: "assets/models/modules/interior-finish-layer.dae", glb: "assets/models/modules/interior-finish-layer.glb", runtimeFile: "assets/models/modules/interior-finish-layer.stl", role: "interior", material: "plywood", color: "#D09A5F", costCategory: "low", parts: 14, notes: "Plywood bed, kitchenette, utility cabinet, bins, fold-down work surface.", snapPoints: [{ id: "sleeping-zone", type: "centerline", position: [0, 42, 18] }, { id: "kitchen-utility", type: "utility", position: [-24, -32, 30] }, { id: "central-path", type: "centerline", position: [0, 0, 0] }] }
   ]);
 
   const DEPOT_CONCEPTS = Object.freeze([
@@ -978,9 +1417,13 @@
   const statusEl = document.getElementById("status");
   const modelListEl = document.getElementById("modelList");
   const moduleBoardEl = document.getElementById("moduleBoard");
+  const quickRailEl = document.getElementById("quickRail");
   const selectedReadoutEl = document.getElementById("selectedReadout");
   const snapReadoutEl = document.getElementById("snapReadout");
   const costReadoutEl = document.getElementById("costReadout");
+  const metricModulesEl = document.getElementById("metricModules");
+  const metricPartsEl = document.getElementById("metricParts");
+  const metricCostEl = document.getElementById("metricCost");
   const statsEl = document.getElementById("stats");
   const logEl = document.getElementById("log");
   const fileInput = document.getElementById("fileInput");
@@ -1018,12 +1461,14 @@
     renderPending: false,
     mode: "orbit",
     modules: DEPOT_MODULES.map((m) => ({ ...m, modelId: null, loaded: false, visible: m.visible !== false, locked: Boolean(m.locked) })),
-    view: { grid: true, xray: false, exploded: false, isolate: false }
+    view: { grid: true, xray: false, exploded: false, isolate: false },
+    tour: { active: false, ids: [], index: 0, lastSwitch: 0, currentId: null },
+    feedback: { haptic: true, sound: true, snap: true, audio: null }
   };
 
   function setStatus(message, tone) {
     statusEl.textContent = message;
-    statusEl.style.color = tone === "bad" ? "#ff6b5f" : "#F4EFE7";
+    statusEl.style.color = tone === "bad" ? "#ff6b5f" : (mobileUiActive() ? "#111111" : "#F4EFE7");
   }
 
   function log(message, tone) {
@@ -1032,6 +1477,85 @@
     li.textContent = `${new Date().toLocaleTimeString()} ${message}`;
     logEl.prepend(li);
     while (logEl.children.length > 90) logEl.lastChild.remove();
+  }
+
+  function pulse(kind) {
+    const key = kind || "tap";
+    const patterns = {
+      tap: [8],
+      move: [5],
+      success: [12, 28, 12],
+      warn: [35],
+      error: [70, 35, 70]
+    };
+    if (state.feedback.haptic && "vibrate" in navigator) {
+      navigator.vibrate(patterns[key] || patterns.tap);
+    }
+    if (state.feedback.sound) playTone(key);
+  }
+
+  function playTone(kind) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    if (!state.feedback.audio) state.feedback.audio = new AudioContextClass();
+    const ctx = state.feedback.audio;
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {
+        state.feedback.sound = false;
+        toggleButtonText("soundBtn", "Sound", false);
+      });
+    }
+    const map = {
+      tap: { f: 220, d: 0.045 },
+      move: { f: 165, d: 0.035 },
+      success: { f: 440, d: 0.075 },
+      warn: { f: 120, d: 0.09 },
+      error: { f: 90, d: 0.14 }
+    };
+    const spec = map[kind] || map.tap;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "square";
+    osc.frequency.value = spec.f;
+    gain.gain.value = 0.018;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + spec.d);
+  }
+
+  function toggleButtonText(id, label, enabled) {
+    const button = document.getElementById(id);
+    if (button) button.textContent = `${label}: ${enabled ? "On" : "Off"}`;
+  }
+
+  function mobileUiActive() {
+    return window.matchMedia && window.matchMedia("(max-width: 760px)").matches;
+  }
+
+  function compactName(model) {
+    const key = model.moduleId || model.role || model.name;
+    const names = {
+      foundation: "Base",
+      frame: "Frame",
+      walls: "Walls",
+      roof: "Roof",
+      interior: "Inside",
+      usonian: "Wright",
+      ban: "Ban",
+      lacaton: "L+V",
+      alexander: "Alex",
+      contractor: "Cheap"
+    };
+    return names[key] || String(model.name || "Part").split(/[ /-]/).filter(Boolean).slice(0, 2).join(" ");
+  }
+
+  function visibleModelIds() {
+    const ids = [];
+    for (let i = 0; i < state.models.length; i += 1) {
+      if (state.models[i].visible) ids.push(state.models[i].id);
+    }
+    return ids;
   }
 
   function clamp(value, min, max) {
@@ -1214,15 +1738,19 @@
   function render() {
     state.renderPending = false;
     resizeCanvas();
+    updateMovie(performance.now());
     const gl = state.gl;
+    if (mobileUiActive()) gl.clearColor(0.97, 0.96, 0.93, 1);
+    else gl.clearColor(0.06, 0.06, 0.06, 1);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     const vp = viewProjection();
-    if (state.view.grid) drawLines(state.gridBuffer, [0.16, 0.39, 0.92, 0.22], vp);
-    drawLines(state.ringBuffer, Colors.ring, vp);
+    if (state.view.grid) drawLines(state.gridBuffer, mobileUiActive() ? [0.06, 0.06, 0.06, 0.12] : [0.16, 0.39, 0.92, 0.22], vp);
+    drawLines(state.ringBuffer, mobileUiActive() ? [0.06, 0.06, 0.06, 0.62] : Colors.ring, vp);
     for (let i = 0; i < state.models.length; i += 1) {
       drawModel(state.models[i], vp);
     }
+    if (state.tour.active) requestRender();
   }
 
   function drawLines(lineBuffer, color, vp) {
@@ -1480,10 +2008,37 @@
   function refreshAll() {
     refreshModuleBoard();
     refreshList();
+    refreshQuickRail();
     refreshInspector();
     refreshStats();
     refreshCostReadout();
     requestRender();
+  }
+
+  function refreshQuickRail() {
+    quickRailEl.textContent = "";
+    const all = document.createElement("button");
+    all.type = "button";
+    all.dataset.quickAll = "true";
+    all.textContent = "All";
+    all.className = state.view.isolate ? "" : "active";
+    quickRailEl.appendChild(all);
+    const movie = document.createElement("button");
+    movie.type = "button";
+    movie.dataset.quickMovie = "true";
+    movie.textContent = state.tour.active ? "Stop" : "Movie";
+    movie.className = state.tour.active ? "active" : "";
+    quickRailEl.appendChild(movie);
+    const cap = Math.min(state.models.length, 12);
+    for (let i = 0; i < cap; i += 1) {
+      const model = state.models[i];
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.quickModel = String(model.id);
+      button.textContent = compactName(model);
+      button.className = model.id === state.selectedId && state.view.isolate ? "active" : "";
+      quickRailEl.appendChild(button);
+    }
   }
 
   function refreshModuleBoard() {
@@ -1493,7 +2048,7 @@
       const model = module.modelId ? state.models.find((m) => m.id === module.modelId) : null;
       const card = document.createElement("div");
       card.className = "module-card" + (model && model.id === state.selectedId ? " selected" : "");
-      const loadedText = model ? `${Math.round(model.positions.length / 9)} tris` : "not loaded";
+      const loadedText = model ? `${Math.round(model.positions.length / 9)} tris loaded` : `${module.parts || 0} parts ready`;
       card.innerHTML = `
         <div class="module-head">
           <input data-module-visible="${escapeText(module.id)}" type="checkbox" ${module.visible ? "checked" : ""} aria-label="Visible">
@@ -1504,10 +2059,10 @@
           <span class="pill">${module.locked ? "LOCK" : "EDIT"}</span>
         </div>
         <div class="module-actions">
-          <button data-module-select="${escapeText(module.id)}" type="button">Edit</button>
+          <button data-module-select="${escapeText(module.id)}" type="button">Inspect</button>
+          <button data-module-solo="${escapeText(module.id)}" type="button">Solo</button>
+          <button data-module-movie="${escapeText(module.id)}" type="button">Movie</button>
           <button data-module-load="${escapeText(module.id)}" type="button">Load</button>
-          <button data-module-duplicate="${escapeText(module.id)}" type="button">Duplicate</button>
-          <button data-module-lock="${escapeText(module.id)}" type="button">${module.locked ? "Unlock" : "Lock"}</button>
         </div>`;
       moduleBoardEl.appendChild(card);
     }
@@ -1544,7 +2099,7 @@
       Object.values(fields).forEach((el) => { if ("value" in el) el.value = ""; });
       return;
     }
-    selectedReadoutEl.textContent = `${m.name}\n${m.moduleId || "custom part"} / ${m.fileType} / ${Math.round(m.positions.length / 9)} triangles\nText and geometry are bound: editing these fields mutates the selected build part.`;
+    selectedReadoutEl.textContent = `${compactName(m)}\n${m.fileType} / ${Math.round(m.positions.length / 9)} tris\n${m.material || "material"} / ${m.costCategory || "cost"}`;
     fields.name.value = m.name;
     fields.role.value = m.role;
     fields.x.value = round(m.position[0]);
@@ -1576,20 +2131,37 @@
   }
 
   function refreshCostReadout() {
+    const loadedModules = state.modules.filter((module) => module.modelId).length;
+    const plannedParts = state.modules.reduce((sum, module) => sum + Number(module.parts || 0), 0);
+    const effectiveLayers = Math.max(loadedModules, Math.min(state.models.length, state.modules.length));
     if (!state.models.length) {
-      costReadoutEl.textContent = "No material estimate yet.";
+      metricModulesEl.textContent = String(effectiveLayers);
+      metricPartsEl.textContent = String(plannedParts);
+      metricCostEl.textContent = "$0";
+      costReadoutEl.textContent = `Layers: 0/${state.modules.length}\nParts: ${plannedParts}\nRough: $0`;
       return;
     }
-    const counts = { low: 0, medium: 0, premium: 0 };
+    const tierCount = { low: 0, medium: 0, premium: 0 };
+    const tierPrice = { low: 140, medium: 360, premium: 820 };
     const materials = new Map();
+    let roughCost = 0;
+    let visibleParts = 0;
     for (let i = 0; i < state.models.length; i += 1) {
       const m = state.models[i];
-      const tier = counts[m.costCategory] === undefined ? "low" : m.costCategory;
-      counts[tier] += Math.round(m.positions.length / 9);
+      if (!m.visible) continue;
+      const tier = tierCount[m.costCategory] === undefined ? "low" : m.costCategory;
+      const tris = Math.max(1, Math.round(m.positions.length / 9));
+      const weight = Math.max(1, Math.ceil(tris / 180));
+      tierCount[tier] += 1;
+      visibleParts += 1;
+      roughCost += tierPrice[tier] * weight;
       materials.set(m.material || "unknown", (materials.get(m.material || "unknown") || 0) + 1);
     }
     const materialLine = Array.from(materials.entries()).map(([name, count]) => `${name}: ${count}`).join("\n");
-    costReadoutEl.textContent = `Cost signal by triangle weight:\nlow: ${counts.low}\nmedium: ${counts.medium}\npremium: ${counts.premium}\n\nMaterials in build:\n${materialLine}`;
+    metricModulesEl.textContent = String(effectiveLayers);
+    metricPartsEl.textContent = String(visibleParts);
+    metricCostEl.textContent = `$${Math.round(roughCost).toLocaleString()}`;
+    costReadoutEl.textContent = `Layers: ${effectiveLayers}/${state.modules.length}\nParts: ${visibleParts}/${state.models.length}\nRough: $${Math.round(roughCost).toLocaleString()}\nLow/Med/Prem: ${tierCount.low}/${tierCount.medium}/${tierCount.premium}\n\n${materialLine || "no material"}`;
   }
 
   function round(v, places) {
@@ -2178,6 +2750,10 @@
     if (kind === "deck") { mesh = makeBox(72, 144, 2); name = "6x12 deck"; color = Colors.deck; }
     if (kind === "wheel") { mesh = makeCylinder(12, 6, 24); name = "Trailer wheel"; color = Colors.wheel; }
     if (kind === "roof") { mesh = makeBox(84, 156, 1.5); name = "Roof sheet"; color = Colors.roof; }
+    if (kind === "door") { mesh = makeBox(28, 2, 64); name = "Stock door"; color = Colors.panel; }
+    if (kind === "window") { mesh = makeBox(30, 2, 24); name = "Stock window"; color = Colors.bone; }
+    if (kind === "cabinet") { mesh = makeBox(24, 18, 34); name = "Utility cabinet"; color = Colors.block; }
+    if (kind === "bed") { mesh = makeBox(34, 72, 14); name = "Sleeping platform"; color = Colors.deck; }
     const m = addModel(name, kind, mesh, color, "custom");
     m.position = [state.camera.target[0], state.camera.target[1], state.camera.target[2]];
     refreshAll();
@@ -2322,6 +2898,77 @@
     requestRender();
   }
 
+  function inspectModel(id, solo) {
+    const m = state.models.find((model) => model.id === id);
+    if (!m) return;
+    stopMovie(false);
+    state.selectedId = m.id;
+    state.view.isolate = Boolean(solo);
+    document.getElementById("isolateBtn").classList.toggle("active", state.view.isolate);
+    refreshAll();
+    focusSelected();
+  }
+
+  function startMovie(ids) {
+    const available = (ids && ids.length ? ids : visibleModelIds()).filter((id) => state.models.some((model) => model.id === id && model.visible));
+    if (!available.length) {
+      pulse("warn");
+      log("nothing visible to film", "warn");
+      return;
+    }
+    state.tour.active = true;
+    state.tour.ids = available.slice(0, 24);
+    state.tour.index = 0;
+    state.tour.lastSwitch = 0;
+    state.tour.currentId = null;
+    state.view.isolate = true;
+    document.getElementById("movieBtn").classList.add("active");
+    document.getElementById("isolateBtn").classList.add("active");
+    pulse("success");
+    requestRender();
+  }
+
+  function stopMovie(refresh) {
+    if (!state.tour.active) return;
+    state.tour.active = false;
+    state.tour.ids = [];
+    state.tour.currentId = null;
+    document.getElementById("movieBtn").classList.remove("active");
+    if (refresh !== false) {
+      state.view.isolate = false;
+      document.getElementById("isolateBtn").classList.remove("active");
+      refreshAll();
+    }
+  }
+
+  function updateMovie(now) {
+    if (!state.tour.active) return;
+    const ids = state.tour.ids.filter((id) => state.models.some((model) => model.id === id && model.visible));
+    if (!ids.length) {
+      stopMovie(true);
+      return;
+    }
+    if (!state.tour.lastSwitch || now - state.tour.lastSwitch > 3600) {
+      state.tour.ids = ids;
+      state.tour.index = state.tour.lastSwitch ? (state.tour.index + 1) % ids.length : 0;
+      state.tour.lastSwitch = now;
+      const next = state.models.find((model) => model.id === ids[state.tour.index]);
+      if (next) {
+        state.selectedId = next.id;
+        state.tour.currentId = next.id;
+        const b = worldBounds(next);
+        state.camera.target = [(b.min[0] + b.max[0]) / 2, (b.min[1] + b.max[1]) / 2, (b.min[2] + b.max[2]) / 2];
+        state.camera.distance = clamp(Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]) * 2.8, 90, 9000);
+        state.camera.pitch = 0.58;
+        refreshInspector();
+        refreshModuleBoard();
+        refreshList();
+        refreshQuickRail();
+      }
+    }
+    state.camera.yaw += 0.0075;
+  }
+
   function transformedTriangles(model) {
     const matrix = modelMatrix(model);
     const tris = [];
@@ -2339,7 +2986,7 @@
     const tris = models.reduce((sum, m) => sum + m.positions.length / 9, 0);
     if (tris <= 0) return log("nothing to export", "bad");
     if (tris > Limits.maxExportTriangles) return log(`export rejected: ${tris} triangles exceeds cap`, "bad");
-    const lines = ["solid gunnars_depot"];
+    const lines = ["solid gunnars_build"];
     for (let i = 0; i < models.length; i += 1) {
       if (!models[i].visible) continue;
       const triangles = transformedTriangles(models[i]);
@@ -2349,7 +2996,7 @@
         lines.push(`facet normal ${n[0]} ${n[1]} ${n[2]}`, "outer loop", `vertex ${tri[0][0]} ${tri[0][1]} ${tri[0][2]}`, `vertex ${tri[1][0]} ${tri[1][1]} ${tri[1][2]}`, `vertex ${tri[2][0]} ${tri[2][1]} ${tri[2][2]}`, "endloop", "endfacet");
       }
     }
-    lines.push("endsolid gunnars_depot");
+    lines.push("endsolid gunnars_build");
     download(filename, lines.join("\n"), "model/stl");
     log(`exported ${filename}`, "good");
   }
@@ -2387,8 +3034,8 @@
   }
 
   function saveProject() {
-    download("gunnars-depot-build-package.gunnar.json", JSON.stringify(projectObject(), null, 2), "application/json");
-    log("build package exported: model, materials, notes, and client-ready logic", "good");
+    download("gunnars-build-package.gunnar.json", JSON.stringify(projectObject(), null, 2), "application/json");
+    log("package exported", "good");
   }
 
   async function openProject(file) {
@@ -2396,7 +3043,7 @@
     try {
       if (file.size > Limits.maxFileBytes) throw new Error("project file too large");
       const data = JSON.parse(await file.text());
-      if (!data || (data.app !== "gunnars-depot" && data.app !== "gunnars-forge") || !Array.isArray(data.models)) throw new Error("not a Gunnar project");
+      if (!data || !["gunnars-depot", "gunnars-forge"].includes(data.app) || !Array.isArray(data.models)) throw new Error("not a build project");
       if (data.models.length > Limits.maxObjects) throw new Error("object cap exceeded");
       state.stage = data.stage || state.stage;
       if (Array.isArray(data.modules)) state.modules = data.modules.map((module) => ({ ...module }));
@@ -2458,85 +3105,144 @@
   }
 
   function bindEvents() {
-    document.getElementById("openFilesBtn").addEventListener("click", () => fileInput.click());
-    document.getElementById("loadModulesBtn").addEventListener("click", loadDepotStarter);
-    document.getElementById("loadConceptsBtn").addEventListener("click", loadConceptStudies);
-    document.getElementById("openProjectBtn").addEventListener("click", () => projectInput.click());
-    document.getElementById("saveProjectBtn").addEventListener("click", saveProject);
-    document.getElementById("exportAllBtn").addEventListener("click", () => exportStl(state.models, "gunnars-depot-build.stl"));
+    document.getElementById("openFilesBtn").addEventListener("click", () => { pulse("tap"); fileInput.click(); });
+    document.getElementById("loadModulesBtn").addEventListener("click", () => { pulse("success"); loadDepotStarter(); });
+    document.getElementById("loadConceptsBtn").addEventListener("click", () => { pulse("success"); loadConceptStudies(); });
+    document.getElementById("movieBtn").addEventListener("click", () => { if (state.tour.active) stopMovie(true); else startMovie(); });
+    document.getElementById("openProjectBtn").addEventListener("click", () => { pulse("tap"); projectInput.click(); });
+    document.getElementById("saveProjectBtn").addEventListener("click", () => { pulse("success"); saveProject(); });
+    document.getElementById("exportAllBtn").addEventListener("click", () => { pulse("success"); exportStl(state.models, "gunnars-build.stl"); });
     document.getElementById("exportSelectedBtn").addEventListener("click", () => {
       const m = selectedModel();
-        if (m) exportStl([m], `${m.name.replace(/[^a-z0-9_-]+/gi, "_")}.stl`);
+        if (m) { pulse("success"); exportStl([m], `${m.name.replace(/[^a-z0-9_-]+/gi, "_")}.stl`); }
+        else pulse("warn");
       });
     document.getElementById("clientViewBtn").addEventListener("click", () => {
+      pulse("tap");
       document.body.classList.toggle("client-mode");
       requestRender();
     });
     document.getElementById("applyStageBtn").addEventListener("click", () => {
+      pulse("success");
       state.stage = { w: Number(document.getElementById("stageW").value || 6) * 12, d: Number(document.getElementById("stageD").value || 12) * 12, h: Number(document.getElementById("stageH").value || 7) * 12 };
       rebuildStage();
       refreshStats();
     });
-    document.querySelectorAll("[data-add]").forEach((btn) => btn.addEventListener("click", () => addPrimitive(btn.dataset.add)));
-    document.getElementById("duplicateBtn").addEventListener("click", duplicateSelected);
-    document.getElementById("removeBtn").addEventListener("click", removeSelected);
-    document.getElementById("fitBtn").addEventListener("click", () => { const m = selectedModel(); if (m) fitModelToStage(m, true); });
-    document.getElementById("groundBtn").addEventListener("click", groundSelected);
-    document.getElementById("centerBtn").addEventListener("click", centerSelected);
-    document.getElementById("focusBtn").addEventListener("click", focusSelected);
+    document.querySelectorAll("[data-add]").forEach((btn) => btn.addEventListener("click", () => { pulse("tap"); addPrimitive(btn.dataset.add); }));
+    document.getElementById("duplicateBtn").addEventListener("click", () => { pulse("success"); duplicateSelected(); });
+    document.getElementById("removeBtn").addEventListener("click", () => { pulse("warn"); removeSelected(); });
+    document.getElementById("fitBtn").addEventListener("click", () => { const m = selectedModel(); if (m) { pulse("success"); fitModelToStage(m, true); } else pulse("warn"); });
+    document.getElementById("groundBtn").addEventListener("click", () => { pulse("tap"); groundSelected(); });
+    document.getElementById("centerBtn").addEventListener("click", () => { pulse("tap"); centerSelected(); });
+    document.getElementById("focusBtn").addEventListener("click", () => { pulse("tap"); focusSelected(); });
     document.getElementById("toggleGridBtn").addEventListener("click", () => {
+      pulse("tap");
       state.view.grid = !state.view.grid;
       document.getElementById("toggleGridBtn").textContent = state.view.grid ? "Hide Grid" : "Show Grid";
       requestRender();
     });
     document.getElementById("toggleXrayBtn").addEventListener("click", () => {
+      pulse("tap");
       state.view.xray = !state.view.xray;
       document.getElementById("toggleXrayBtn").classList.toggle("active", state.view.xray);
       requestRender();
     });
     document.getElementById("toggleExplodeBtn").addEventListener("click", () => {
+      pulse("tap");
       state.view.exploded = !state.view.exploded;
       document.getElementById("toggleExplodeBtn").classList.toggle("active", state.view.exploded);
       requestRender();
     });
     document.getElementById("isolateBtn").addEventListener("click", () => {
+      pulse("tap");
       state.view.isolate = !state.view.isolate;
       document.getElementById("isolateBtn").classList.toggle("active", state.view.isolate);
       requestRender();
     });
+    document.getElementById("hapticBtn").addEventListener("click", () => {
+      state.feedback.haptic = !state.feedback.haptic;
+      toggleButtonText("hapticBtn", "Tap", state.feedback.haptic);
+      pulse("tap");
+    });
+    document.getElementById("soundBtn").addEventListener("click", () => {
+      state.feedback.sound = !state.feedback.sound;
+      toggleButtonText("soundBtn", "Tone", state.feedback.sound);
+      pulse("tap");
+    });
+    document.getElementById("snapBtn").addEventListener("click", () => {
+      state.feedback.snap = !state.feedback.snap;
+      toggleButtonText("snapBtn", "Snap", state.feedback.snap);
+      pulse("tap");
+    });
+    document.getElementById("measureBtn").addEventListener("click", () => {
+      pulse("success");
+      refreshStats();
+      refreshCostReadout();
+      document.getElementById("planPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    document.getElementById("movieToolBtn").addEventListener("click", () => { if (state.tour.active) stopMovie(true); else startMovie(); });
+    document.getElementById("stopMovieBtn").addEventListener("click", () => { pulse("tap"); stopMovie(true); });
+    quickRailEl.addEventListener("click", (event) => {
+      const all = event.target.closest("[data-quick-all]");
+      const movie = event.target.closest("[data-quick-movie]");
+      const part = event.target.closest("[data-quick-model]");
+      if (all) {
+        pulse("tap");
+        stopMovie(false);
+        state.view.isolate = false;
+        document.getElementById("isolateBtn").classList.remove("active");
+        focusAll();
+        refreshAll();
+      }
+      if (movie) {
+        if (state.tour.active) stopMovie(true);
+        else startMovie();
+      }
+      if (part) {
+        pulse("tap");
+        inspectModel(Number(part.dataset.quickModel), true);
+      }
+    });
+    document.querySelectorAll(".mobile-nav [data-jump]").forEach((btn) => btn.addEventListener("click", () => {
+      pulse("tap");
+      document.querySelectorAll(".mobile-nav button").forEach((item) => item.classList.toggle("active", item === btn));
+      const target = btn.dataset.jump;
+      const node = target === "viewport" ? document.querySelector(".viewport-wrap")
+        : target === "modules" ? document.querySelector(".left")
+        : target === "edit" ? document.querySelector(".right")
+        : document.getElementById("planPanel");
+      if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
+    }));
     moduleBoardEl.addEventListener("click", (event) => {
       const selectBtn = event.target.closest("[data-module-select]");
+      const soloBtn = event.target.closest("[data-module-solo]");
+      const movieModuleBtn = event.target.closest("[data-module-movie]");
       const loadBtn = event.target.closest("[data-module-load]");
-      const duplicateBtn = event.target.closest("[data-module-duplicate]");
-      const lockBtn = event.target.closest("[data-module-lock]");
       if (selectBtn) {
+        pulse("tap");
         const module = state.modules.find((item) => item.id === selectBtn.dataset.moduleSelect);
-        if (module && module.modelId) selectModel(module.modelId);
+        if (module && module.modelId) inspectModel(module.modelId, false);
+      }
+      if (soloBtn) {
+        pulse("tap");
+        const module = state.modules.find((item) => item.id === soloBtn.dataset.moduleSolo);
+        if (module && module.modelId) inspectModel(module.modelId, true);
+      }
+      if (movieModuleBtn) {
+        const module = state.modules.find((item) => item.id === movieModuleBtn.dataset.moduleMovie);
+        if (module && module.modelId) startMovie([module.modelId]);
+        else pulse("warn");
       }
       if (loadBtn) {
+        pulse("tap");
         document.getElementById("moduleTarget").value = loadBtn.dataset.moduleLoad;
         fileInput.click();
-      }
-      if (duplicateBtn) {
-        const module = state.modules.find((item) => item.id === duplicateBtn.dataset.moduleDuplicate);
-        if (module && module.modelId) {
-          selectModel(module.modelId);
-          duplicateSelected();
-        }
-      }
-      if (lockBtn) {
-        const module = state.modules.find((item) => item.id === lockBtn.dataset.moduleLock);
-        if (module) {
-          module.locked = !module.locked;
-          const model = state.models.find((item) => item.id === module.modelId);
-          if (model) model.locked = module.locked;
-          refreshAll();
-        }
       }
     });
     moduleBoardEl.addEventListener("change", (event) => {
       const checkbox = event.target.closest("[data-module-visible]");
       if (!checkbox) return;
+      pulse("tap");
       const module = state.modules.find((item) => item.id === checkbox.dataset.moduleVisible);
       if (!module) return;
       module.visible = checkbox.checked;
@@ -2546,7 +3252,10 @@
     });
     modelListEl.addEventListener("click", (event) => {
       const item = event.target.closest("[data-id]");
-      if (item) selectModel(Number(item.dataset.id));
+      if (item) {
+        pulse("tap");
+        selectModel(Number(item.dataset.id));
+      }
     });
     Object.values(fields).forEach((el) => el.addEventListener("input", updateSelectedFromFields));
     fileInput.addEventListener("change", () => loadFiles(fileInput.files));
@@ -2566,7 +3275,10 @@
   function pointerDown(event) {
     canvas.setPointerCapture(event.pointerId);
     const hit = pick(event.clientX, event.clientY);
-    if (hit) selectModel(hit.id);
+    if (hit) {
+      pulse("tap");
+      selectModel(hit.id);
+    }
     state.pointer = { active: true, id: event.pointerId, x: event.clientX, y: event.clientY };
   }
 
@@ -2579,8 +3291,11 @@
     const m = selectedModel();
     if (state.mode === "move" && m && !m.locked) {
       const step = 0.35;
-      m.position[0] += dx * step;
-      m.position[1] -= dy * step;
+      const snap = state.feedback.snap ? 1 : 0;
+      const nextX = m.position[0] + dx * step;
+      const nextY = m.position[1] - dy * step;
+      m.position[0] = snap ? Math.round(nextX / snap) * snap : nextX;
+      m.position[1] = snap ? Math.round(nextY / snap) * snap : nextY;
       refreshInspector();
       refreshStats();
       requestRender();
