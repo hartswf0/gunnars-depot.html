@@ -4,12 +4,13 @@
 
 Gunnar's Depot is a browser-based modular structure forge for builders, contractors, designers, and clients who need to see it, split it, change it, explain it, and build it.
 
-The GitHub Pages entry point is `index.html`. The new mobile-first builder base is `gunnar-thunder-builder.html`; the branded depot app remains `gunnars-depot.html`.
+The GitHub Pages entry point is `index.html`. The new mobile-first builder base is `gunnar-thunder-builder.html`; the family game surface is `builders-game.html`; the branded depot app remains `gunnars-depot.html`.
 
 ## What Is Included
 
 - `index.html` - mobile-friendly launcher for GitHub Pages.
 - `gunnar-thunder-builder.html` - mobile-first parts/layers builder for importing one DAE/STL as the base and building with editable widgets.
+- `builders-game.html` - mobile Builder's Language trailer game where commands become parts on a build grid.
 - `gunnars-depot.html` - branded modular 3D structure command center.
 - `gunnar-trailer-configurer.html` - earlier trailer-focused DAE/STL/OBJ configurator.
 - `thors-forge.html` - single-file STL editor/viewer.
@@ -26,6 +27,7 @@ Open `index.html` on GitHub Pages, then launch:
 
 - **Gunnar's Depot**: main branded modular structure tool.
 - **Gunnar Thunder Builder**: sharper builder surface with widgets, scene hierarchy, layer visibility, haptics, sound, DAE/STL import, and STL/JSON export.
+- **Builder's Game**: family-friendly mobile game where block, pillar, slab, and beam commands become trailer-building actions.
 - **Gunnar Trailer Configurer**: simple trailer iteration tool.
 - **Thor's Forge**: STL-oriented editor and primitive builder.
 

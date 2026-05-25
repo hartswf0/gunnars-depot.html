@@ -1,0 +1,1061 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Gunnar Builder's Game</title>
+  <link rel="icon" type="image/svg+xml" href="assets/branding/favicon.svg">
+  <style>
+    :root {
+      --paper: #f8f7f2;
+      --ink: #111111;
+      --line: #111111;
+      --soft: #e6e2d8;
+      --orange: #f97316;
+      --green: #16a34a;
+      --blue: #2563eb;
+      --red: #dc2626;
+      --wood: #c08457;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      min-height: 44px;
+      border: 3px solid var(--line);
+      border-radius: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--mono);
+      font-weight: 900;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    button:active,
+    button.active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    button.primary {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    button.good {
+      background: var(--green);
+      color: #fff;
+      border-color: var(--ink);
+    }
+
+    button.warn {
+      background: var(--orange);
+      color: var(--ink);
+    }
+
+    button:disabled {
+      opacity: 0.35;
+      border-style: dashed;
+    }
+
+    #app {
+      width: min(620px, 100%);
+      height: 100%;
+      margin: 0 auto;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      border-left: 4px solid var(--line);
+      border-right: 4px solid var(--line);
+      background: var(--paper);
+      position: relative;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 58px;
+      padding: max(8px, env(safe-area-inset-top)) 10px 8px;
+      border-bottom: 4px solid var(--line);
+      background: var(--paper);
+      z-index: 5;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 3px solid var(--line);
+      font-family: var(--mono);
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+
+    h1 {
+      font-size: 16px;
+      line-height: 1;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+    }
+
+    .sub {
+      margin-top: 2px;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .hud {
+      display: flex;
+      gap: 5px;
+      flex: 0 0 auto;
+    }
+
+    .badge {
+      min-width: 56px;
+      padding: 5px 7px;
+      background: var(--ink);
+      color: var(--paper);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 900;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    main {
+      min-height: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .command {
+      border-bottom: 4px solid var(--line);
+      background: var(--ink);
+      color: var(--paper);
+      padding: 10px;
+      display: grid;
+      gap: 7px;
+    }
+
+    .command-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      font-family: var(--mono);
+      font-weight: 900;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    .call {
+      font-family: var(--mono);
+      font-size: clamp(26px, 9vw, 52px);
+      font-weight: 900;
+      letter-spacing: -0.08em;
+      line-height: 0.92;
+      text-transform: uppercase;
+    }
+
+    .translation {
+      min-height: 22px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 900;
+      color: #d8d4ca;
+      text-transform: uppercase;
+    }
+
+    .board-wrap {
+      min-height: 0;
+      position: relative;
+      background:
+        linear-gradient(90deg, rgba(17,17,17,0.08) 1px, transparent 1px),
+        linear-gradient(rgba(17,17,17,0.08) 1px, transparent 1px),
+        var(--paper);
+      background-size: 20px 20px;
+      overflow: hidden;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    .toast {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      top: 12px;
+      z-index: 4;
+      display: none;
+      padding: 10px;
+      border: 4px solid var(--line);
+      background: var(--paper);
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+      box-shadow: 5px 5px 0 var(--line);
+    }
+
+    .toast.show {
+      display: block;
+    }
+
+    .tray {
+      border-top: 4px solid var(--line);
+      background: var(--paper);
+      display: grid;
+      gap: 8px;
+      padding: 9px;
+      padding-bottom: max(9px, env(safe-area-inset-bottom));
+    }
+
+    .stones {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .stone {
+      min-height: 74px;
+      display: grid;
+      gap: 3px;
+      place-items: center;
+      padding: 6px 3px;
+      background: #fff;
+    }
+
+    .shape {
+      width: 38px;
+      height: 28px;
+      border: 4px solid currentColor;
+      background: transparent;
+    }
+
+    .stone[data-stone="block"] .shape {
+      width: 34px;
+      height: 34px;
+      background: var(--wood);
+    }
+
+    .stone[data-stone="pillar"] .shape {
+      width: 16px;
+      height: 42px;
+      background: var(--blue);
+    }
+
+    .stone[data-stone="slab"] .shape {
+      width: 46px;
+      height: 14px;
+      background: var(--orange);
+    }
+
+    .stone[data-stone="beam"] .shape {
+      width: 50px;
+      height: 12px;
+      background: var(--green);
+      transform: rotate(-10deg);
+    }
+
+    .stone span {
+      font-size: 11px;
+      font-family: var(--mono);
+      font-weight: 900;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .actions button {
+      min-height: 42px;
+      font-size: 11px;
+      padding: 5px 3px;
+    }
+
+    .sheet {
+      position: absolute;
+      inset: auto 0 0 0;
+      z-index: 8;
+      max-height: 78%;
+      display: none;
+      flex-direction: column;
+      border-top: 4px solid var(--line);
+      background: var(--paper);
+      box-shadow: 0 -10px 0 rgba(17,17,17,0.15);
+    }
+
+    .sheet.open {
+      display: flex;
+    }
+
+    .sheet-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      border-bottom: 4px solid var(--line);
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .sheet-head strong {
+      font-family: var(--mono);
+      text-transform: uppercase;
+    }
+
+    .sheet-body {
+      padding: 10px;
+      overflow: auto;
+      display: grid;
+      gap: 10px;
+    }
+
+    .panel {
+      border: 4px solid var(--line);
+      background: #fff;
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .panel h2 {
+      font-size: 14px;
+      font-family: var(--mono);
+      text-transform: uppercase;
+    }
+
+    .panel p,
+    .log-item {
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.25;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    label {
+      display: grid;
+      gap: 4px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    select,
+    input {
+      min-height: 42px;
+      border: 3px solid var(--line);
+      background: var(--paper);
+      padding: 6px;
+      font-family: var(--mono);
+      font-weight: 900;
+      border-radius: 0;
+    }
+
+    .log {
+      display: grid;
+      gap: 6px;
+      max-height: 220px;
+      overflow: auto;
+    }
+
+    .log-item {
+      padding: 7px;
+      border: 3px solid var(--line);
+      background: var(--soft);
+    }
+
+    .intro {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      background: var(--paper);
+    }
+
+    .intro.hidden {
+      display: none;
+    }
+
+    .intro-body {
+      display: grid;
+      gap: 12px;
+      align-content: center;
+      padding: 18px;
+      overflow: auto;
+    }
+
+    .intro h2 {
+      font-size: clamp(38px, 13vw, 76px);
+      font-family: var(--mono);
+      line-height: 0.84;
+      letter-spacing: -0.1em;
+      text-transform: uppercase;
+    }
+
+    .rule {
+      border: 4px solid var(--line);
+      padding: 10px;
+      font-family: var(--mono);
+      font-weight: 900;
+      text-transform: uppercase;
+      background: #fff;
+    }
+
+    .intro-actions {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-top: 4px solid var(--line);
+    }
+
+    .sr {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
+
+    @media (max-height: 660px) {
+      .stone {
+        min-height: 62px;
+      }
+      .command {
+        padding: 8px;
+      }
+      .call {
+        font-size: 30px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="brand">
+        <div class="mark">BG</div>
+        <div>
+          <h1>Builder's Game</h1>
+          <div class="sub">meaning = use</div>
+        </div>
+      </div>
+      <div class="hud" aria-label="scoreboard">
+        <div class="badge">LV <span id="levelOut">1</span></div>
+        <div class="badge">PT <span id="scoreOut">0</span></div>
+      </div>
+    </header>
+
+    <main>
+      <section class="command" aria-live="polite">
+        <div class="command-top">
+          <span id="roleOut">Builder A says</span>
+          <span id="timerOut">45</span>
+        </div>
+        <div id="callOut" class="call">SLAB</div>
+        <div id="translationOut" class="translation">bring one slab and place it on the marked cell</div>
+      </section>
+
+      <section class="board-wrap">
+        <canvas id="board" aria-label="Trailer build grid"></canvas>
+        <div id="toast" class="toast"></div>
+      </section>
+
+      <section class="tray">
+        <div class="stones" role="group" aria-label="building stones">
+          <button class="stone" data-stone="block" type="button"><span class="shape"></span><span>Block</span></button>
+          <button class="stone" data-stone="pillar" type="button"><span class="shape"></span><span>Pillar</span></button>
+          <button class="stone" data-stone="slab" type="button"><span class="shape"></span><span>Slab</span></button>
+          <button class="stone" data-stone="beam" type="button"><span class="shape"></span><span>Beam</span></button>
+        </div>
+        <div class="actions">
+          <button id="undoBtn" type="button">Undo</button>
+          <button id="verifyBtn" class="good" type="button">Verify</button>
+          <button id="newBtn" type="button">New</button>
+          <button id="menuBtn" type="button">Menu</button>
+        </div>
+      </section>
+    </main>
+
+    <section id="intro" class="intro">
+      <div class="intro-body">
+        <h2>Words<br>Build<br>Things</h2>
+        <div class="rule">A shouts: slab. B brings a slab. Meaning is the move.</div>
+        <div class="rule">Tap the right part. Tap the marked trailer cell. Verify the command.</div>
+        <div class="rule">Build the 6x12 trailer before the job clock runs out.</div>
+      </div>
+      <div class="intro-actions">
+        <button id="startBtn" class="primary" type="button">Start Game</button>
+        <button id="freeBtn" type="button">Free Build</button>
+      </div>
+    </section>
+
+    <section id="sheet" class="sheet" aria-label="game menu">
+      <div class="sheet-head">
+        <strong>Job Board</strong>
+        <button id="closeSheetBtn" type="button">Close</button>
+      </div>
+      <div class="sheet-body">
+        <div class="panel">
+          <h2>Language-Game</h2>
+          <p>Block, pillar, slab, beam. The word means the operation that follows it.</p>
+          <p id="progressOut">0/0 commands complete.</p>
+        </div>
+        <div class="panel">
+          <h2>Modes</h2>
+          <div class="settings-grid">
+            <button id="gameModeBtn" class="active" type="button">Game</button>
+            <button id="freeModeBtn" type="button">Free</button>
+            <button id="soundBtn" class="active" type="button">Tone</button>
+            <button id="hapticBtn" class="active" type="button">Tap</button>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Family Builder</h2>
+          <div class="settings-grid">
+            <label>Player A<input id="playerA" type="text" value="Builder"></label>
+            <label>Player B<input id="playerB" type="text" value="Assistant"></label>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Audit Log</h2>
+          <div id="log" class="log"></div>
+        </div>
+      </div>
+    </section>
+
+    <div id="announcer" class="sr" aria-live="assertive">Ready.</div>
+  </div>
+
+  <script>
+  "use strict";
+
+  const canvas = document.getElementById("board");
+  const ctx = canvas.getContext("2d");
+  const toastEl = document.getElementById("toast");
+  const logEl = document.getElementById("log");
+  const announcerEl = document.getElementById("announcer");
+  const levelOut = document.getElementById("levelOut");
+  const scoreOut = document.getElementById("scoreOut");
+  const timerOut = document.getElementById("timerOut");
+  const callOut = document.getElementById("callOut");
+  const translationOut = document.getElementById("translationOut");
+  const roleOut = document.getElementById("roleOut");
+  const progressOut = document.getElementById("progressOut");
+  const sheet = document.getElementById("sheet");
+  const intro = document.getElementById("intro");
+
+  const stones = {
+    block: { name: "Block", color: "#c08457", points: 7 },
+    pillar: { name: "Pillar", color: "#2563eb", points: 10 },
+    slab: { name: "Slab", color: "#f97316", points: 8 },
+    beam: { name: "Beam", color: "#16a34a", points: 9 }
+  };
+
+  const commands = [
+    { word: "SLAB", stone: "slab", qty: 1, cells: [[3, 10]], line: "bring one slab to the trailer floor" },
+    { word: "BEAM", stone: "beam", qty: 1, cells: [[1, 10]], line: "bring one beam to the left rail" },
+    { word: "BEAM", stone: "beam", qty: 1, cells: [[6, 10]], line: "bring one beam to the right rail" },
+    { word: "BLOCK", stone: "block", qty: 1, cells: [[0, 11]], line: "set a block at the hitch corner" },
+    { word: "2 PILLARS", stone: "pillar", qty: 2, cells: [[1, 6], [6, 6]], line: "raise two pillars on the wall line" },
+    { word: "3 BEAMS THERE", stone: "beam", qty: 3, cells: [[2, 5], [4, 5], [6, 5]], line: "place three beams where the marks are" },
+    { word: "4 SLABS THERE", stone: "slab", qty: 4, cells: [[2, 8], [3, 8], [4, 8], [5, 8]], line: "lay four slabs across the deck" },
+    { word: "PILLAR / BEAM / PILLAR", stone: "pillar", qty: 2, cells: [[2, 2], [5, 2]], extra: [{ stone: "beam", cells: [[3, 2]], qty: 1 }], line: "make a doorway: pillar, beam, pillar" },
+    { word: "ROOF: 5 SLABS", stone: "slab", qty: 5, cells: [[1, 1], [2, 1], [3, 1], [4, 1], [5, 1]], line: "cover the trailer with five slabs" },
+    { word: "VERIFY SHELTER", stone: "block", qty: 0, cells: [], line: "verify the build: deck, wall, doorway, roof" }
+  ];
+
+  const state = {
+    level: 1,
+    score: 0,
+    time: 45,
+    commandIndex: 0,
+    selectedStone: null,
+    placements: [],
+    history: [],
+    mode: "game",
+    sound: true,
+    haptic: true,
+    running: false,
+    timer: null,
+    hoverCell: null
+  };
+
+  let audioCtx = null;
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(320, Math.floor(rect.width * dpr));
+    canvas.height = Math.max(260, Math.floor(rect.height * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  function currentCommand() {
+    return commands[Math.min(state.commandIndex, commands.length - 1)];
+  }
+
+  function targetCells(command) {
+    const cells = command.cells.map((cell) => ({ stone: command.stone, x: cell[0], y: cell[1] }));
+    if (command.extra) {
+      command.extra.forEach((extra) => {
+        extra.cells.forEach((cell) => cells.push({ stone: extra.stone, x: cell[0], y: cell[1] }));
+      });
+    }
+    return cells;
+  }
+
+  function setHud() {
+    levelOut.textContent = String(state.level);
+    scoreOut.textContent = String(state.score);
+    timerOut.textContent = state.mode === "game" ? String(state.time) : "FREE";
+    const command = currentCommand();
+    callOut.textContent = state.mode === "game" ? command.word : "FREE BUILD";
+    translationOut.textContent = state.mode === "game" ? command.line : "choose any stone and build your own trailer";
+    const a = document.getElementById("playerA").value || "Builder";
+    roleOut.textContent = state.mode === "game" ? `${a} says` : "Sandbox";
+    progressOut.textContent = `${Math.min(state.commandIndex, commands.length)}/${commands.length} commands complete.`;
+  }
+
+  function cellMetrics() {
+    const rect = canvas.getBoundingClientRect();
+    const margin = 20;
+    const cols = 8;
+    const rows = 12;
+    const size = Math.min((rect.width - margin * 2) / cols, (rect.height - margin * 2) / rows);
+    const boardW = cols * size;
+    const boardH = rows * size;
+    return {
+      cols, rows, size,
+      ox: (rect.width - boardW) / 2,
+      oy: (rect.height - boardH) / 2,
+      w: boardW,
+      h: boardH
+    };
+  }
+
+  function draw() {
+    const rect = canvas.getBoundingClientRect();
+    const m = cellMetrics();
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.save();
+    ctx.fillStyle = "#f8f7f2";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(17,17,17,0.16)";
+    for (let x = 0; x <= m.cols; x += 1) {
+      ctx.beginPath();
+      ctx.moveTo(m.ox + x * m.size, m.oy);
+      ctx.lineTo(m.ox + x * m.size, m.oy + m.h);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= m.rows; y += 1) {
+      ctx.beginPath();
+      ctx.moveTo(m.ox, m.oy + y * m.size);
+      ctx.lineTo(m.ox + m.w, m.oy + y * m.size);
+      ctx.stroke();
+    }
+
+    drawTrailerOutline(m);
+    drawTargets(m);
+    state.placements.forEach((part, index) => drawPart(m, part, index));
+    if (state.hoverCell) drawHover(m, state.hoverCell);
+    ctx.restore();
+  }
+
+  function drawTrailerOutline(m) {
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = "#111";
+    ctx.strokeRect(m.ox + m.size * 1, m.oy + m.size * 1, m.size * 6, m.size * 10);
+    ctx.beginPath();
+    ctx.moveTo(m.ox + m.size * 3.5, m.oy + m.size * 11);
+    ctx.lineTo(m.ox + m.size * 2, m.oy + m.size * 12);
+    ctx.moveTo(m.ox + m.size * 4.5, m.oy + m.size * 11);
+    ctx.lineTo(m.ox + m.size * 6, m.oy + m.size * 12);
+    ctx.stroke();
+    ctx.fillStyle = "#111";
+    ctx.fillRect(m.ox + m.size * 3.6, m.oy + m.size * 11.72, m.size * 0.8, m.size * 0.28);
+  }
+
+  function drawTargets(m) {
+    if (state.mode !== "game") return;
+    const cells = targetCells(currentCommand());
+    cells.forEach((target) => {
+      ctx.save();
+      ctx.globalAlpha = 0.26;
+      ctx.fillStyle = stones[target.stone].color;
+      ctx.fillRect(m.ox + target.x * m.size + 2, m.oy + target.y * m.size + 2, m.size - 4, m.size - 4);
+      ctx.globalAlpha = 1;
+      ctx.lineWidth = 4;
+      ctx.setLineDash([7, 4]);
+      ctx.strokeStyle = "#111";
+      ctx.strokeRect(m.ox + target.x * m.size + 4, m.oy + target.y * m.size + 4, m.size - 8, m.size - 8);
+      ctx.restore();
+    });
+  }
+
+  function drawHover(m, cell) {
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = state.selectedStone ? stones[state.selectedStone].color : "#111";
+    ctx.strokeRect(m.ox + cell.x * m.size + 5, m.oy + cell.y * m.size + 5, m.size - 10, m.size - 10);
+  }
+
+  function drawPart(m, part, index) {
+    const x = m.ox + part.x * m.size;
+    const y = m.oy + part.y * m.size;
+    ctx.save();
+    ctx.fillStyle = stones[part.stone].color;
+    ctx.strokeStyle = "#111";
+    ctx.lineWidth = 4;
+    if (part.stone === "block") {
+      ctx.fillRect(x + 7, y + 7, m.size - 14, m.size - 14);
+      ctx.strokeRect(x + 7, y + 7, m.size - 14, m.size - 14);
+    } else if (part.stone === "pillar") {
+      ctx.fillRect(x + m.size * 0.36, y + 5, m.size * 0.28, m.size - 10);
+      ctx.strokeRect(x + m.size * 0.36, y + 5, m.size * 0.28, m.size - 10);
+    } else if (part.stone === "slab") {
+      ctx.fillRect(x + 4, y + m.size * 0.35, m.size - 8, m.size * 0.3);
+      ctx.strokeRect(x + 4, y + m.size * 0.35, m.size - 8, m.size * 0.3);
+    } else if (part.stone === "beam") {
+      ctx.translate(x + m.size / 2, y + m.size / 2);
+      ctx.rotate(-0.17);
+      ctx.fillRect(-m.size * 0.46, -m.size * 0.15, m.size * 0.92, m.size * 0.3);
+      ctx.strokeRect(-m.size * 0.46, -m.size * 0.15, m.size * 0.92, m.size * 0.3);
+    }
+    ctx.restore();
+    ctx.fillStyle = "#111";
+    ctx.font = "900 10px ui-monospace, monospace";
+    ctx.fillText(String(index + 1), x + 4, y + 13);
+  }
+
+  function pickCell(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const m = cellMetrics();
+    const x = Math.floor((clientX - rect.left - m.ox) / m.size);
+    const y = Math.floor((clientY - rect.top - m.oy) / m.size);
+    if (x < 0 || y < 0 || x >= m.cols || y >= m.rows) return null;
+    return { x, y };
+  }
+
+  function selectStone(stone) {
+    state.selectedStone = stone;
+    document.querySelectorAll(".stone").forEach((button) => {
+      button.classList.toggle("active", button.dataset.stone === stone);
+    });
+    ping(360 + Object.keys(stones).indexOf(stone) * 90, 0.06);
+    vibrate(8);
+    announce(`${stones[stone].name} selected.`);
+  }
+
+  function placeAt(cell) {
+    if (!cell) return;
+    if (!state.selectedStone) {
+      showToast("Choose a stone first.");
+      buzz();
+      return;
+    }
+    const occupied = state.placements.some((part) => part.x === cell.x && part.y === cell.y);
+    if (occupied) {
+      showToast("Cell already has a part.");
+      buzz();
+      return;
+    }
+    const part = { stone: state.selectedStone, x: cell.x, y: cell.y, command: state.commandIndex };
+    state.placements.push(part);
+    state.history.push(part);
+    addLog(`PLACE ${part.stone} @ ${cell.x},${cell.y}`);
+    ping(620, 0.08);
+    vibrate([10, 20, 10]);
+    draw();
+  }
+
+  function verify() {
+    if (state.mode === "free") {
+      state.score += 1;
+      setHud();
+      showToast("Free build saved as a move.");
+      return;
+    }
+    const command = currentCommand();
+    if (command.qty === 0) {
+      const passed = state.placements.length >= 12;
+      if (passed) completeCommand(20, "Shelter verified.");
+      else fail(`Need more build. ${state.placements.length}/12 parts.`);
+      return;
+    }
+    const targets = targetCells(command);
+    const ok = targets.every((target) => state.placements.some((part) => part.stone === target.stone && part.x === target.x && part.y === target.y));
+    const wrong = state.placements.some((part) => part.command === state.commandIndex && !targets.some((target) => target.stone === part.stone && target.x === part.x && target.y === part.y));
+    if (ok && !wrong) {
+      const points = targets.reduce((sum, target) => sum + stones[target.stone].points, 0);
+      completeCommand(points, `${command.word} executed.`);
+    } else {
+      fail("The command has not become the right action yet.");
+    }
+  }
+
+  function completeCommand(points, message) {
+    state.score += points + Math.max(0, state.time);
+    state.commandIndex += 1;
+    state.level = Math.min(9, state.commandIndex + 1);
+    state.selectedStone = null;
+    document.querySelectorAll(".stone").forEach((button) => button.classList.remove("active"));
+    addLog(`VERIFY OK: ${message}`);
+    showToast(`Correct. +${points} plus time.`);
+    ping(880, 0.1);
+    vibrate([20, 40, 20]);
+    if (state.commandIndex >= commands.length) {
+      win();
+    } else {
+      nextCommand();
+    }
+  }
+
+  function fail(message) {
+    state.score = Math.max(0, state.score - 6);
+    addLog(`VERIFY FAIL: ${message}`);
+    showToast(message);
+    buzz();
+    setHud();
+  }
+
+  function nextCommand() {
+    state.time = Math.max(18, 45 - state.commandIndex * 2);
+    setHud();
+    announce(currentCommand().word);
+    draw();
+  }
+
+  function win() {
+    stopTimer();
+    state.running = false;
+    showToast(`Trailer built. Final score ${state.score}.`);
+    addLog(`JOB COMPLETE: ${state.score} points`);
+    callOut.textContent = "JOB DONE";
+    translationOut.textContent = "the language-game built a trailer";
+    timerOut.textContent = "OK";
+    ping(1040, 0.16);
+    setTimeout(() => openSheet(), 400);
+  }
+
+  function undo() {
+    const part = state.history.pop();
+    if (!part) return;
+    const index = state.placements.lastIndexOf(part);
+    if (index >= 0) state.placements.splice(index, 1);
+    addLog(`UNDO ${part.stone} @ ${part.x},${part.y}`);
+    draw();
+    ping(220, 0.06);
+  }
+
+  function resetGame(mode) {
+    state.mode = mode || state.mode;
+    state.level = 1;
+    state.score = 0;
+    state.time = 45;
+    state.commandIndex = 0;
+    state.selectedStone = null;
+    state.placements = [];
+    state.history = [];
+    state.running = state.mode === "game";
+    logEl.textContent = "";
+    document.querySelectorAll(".stone").forEach((button) => button.classList.remove("active"));
+    intro.classList.add("hidden");
+    closeSheet();
+    setHud();
+    draw();
+    stopTimer();
+    if (state.mode === "game") startTimer();
+    addLog(state.mode === "game" ? "JOB START" : "FREE BUILD START");
+    announce(state.mode === "game" ? currentCommand().word : "Free build.");
+  }
+
+  function startTimer() {
+    state.timer = setInterval(() => {
+      if (!state.running || state.mode !== "game") return;
+      state.time -= 1;
+      if (state.time <= 0) {
+        state.time = 0;
+        setHud();
+        fail("Clock hit zero. Verify or reset.");
+        state.running = false;
+        stopTimer();
+        return;
+      }
+      setHud();
+    }, 1000);
+  }
+
+  function stopTimer() {
+    if (state.timer) clearInterval(state.timer);
+    state.timer = null;
+  }
+
+  function openSheet() {
+    progressOut.textContent = `${Math.min(state.commandIndex, commands.length)}/${commands.length} commands complete.`;
+    sheet.classList.add("open");
+  }
+
+  function closeSheet() {
+    sheet.classList.remove("open");
+  }
+
+  function addLog(text) {
+    const div = document.createElement("div");
+    div.className = "log-item";
+    div.textContent = text;
+    logEl.prepend(div);
+    while (logEl.children.length > 24) logEl.lastElementChild.remove();
+  }
+
+  function showToast(message) {
+    toastEl.textContent = message;
+    toastEl.classList.add("show");
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toastEl.classList.remove("show"), 1700);
+    announce(message);
+  }
+
+  function announce(message) {
+    announcerEl.textContent = message;
+  }
+
+  function vibrate(pattern) {
+    if (state.haptic && navigator.vibrate) navigator.vibrate(pattern);
+  }
+
+  function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  }
+
+  function ping(freq, duration) {
+    if (!state.sound) return;
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "square";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration + 0.02);
+  }
+
+  function buzz() {
+    ping(120, 0.16);
+    vibrate([30, 30, 30]);
+  }
+
+  document.querySelectorAll(".stone").forEach((button) => {
+    button.addEventListener("click", () => selectStone(button.dataset.stone));
+  });
+
+  canvas.addEventListener("pointermove", (event) => {
+    state.hoverCell = pickCell(event.clientX, event.clientY);
+    draw();
+  });
+
+  canvas.addEventListener("pointerleave", () => {
+    state.hoverCell = null;
+    draw();
+  });
+
+  canvas.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    initAudio();
+    placeAt(pickCell(event.clientX, event.clientY));
+  });
+
+  document.getElementById("verifyBtn").addEventListener("click", verify);
+  document.getElementById("undoBtn").addEventListener("click", undo);
+  document.getElementById("newBtn").addEventListener("click", () => resetGame(state.mode));
+  document.getElementById("menuBtn").addEventListener("click", openSheet);
+  document.getElementById("closeSheetBtn").addEventListener("click", closeSheet);
+  document.getElementById("startBtn").addEventListener("click", () => resetGame("game"));
+  document.getElementById("freeBtn").addEventListener("click", () => resetGame("free"));
+  document.getElementById("gameModeBtn").addEventListener("click", () => {
+    document.getElementById("gameModeBtn").classList.add("active");
+    document.getElementById("freeModeBtn").classList.remove("active");
+    resetGame("game");
+  });
+  document.getElementById("freeModeBtn").addEventListener("click", () => {
+    document.getElementById("freeModeBtn").classList.add("active");
+    document.getElementById("gameModeBtn").classList.remove("active");
+    resetGame("free");
+  });
+  document.getElementById("soundBtn").addEventListener("click", (event) => {
+    state.sound = !state.sound;
+    event.currentTarget.classList.toggle("active", state.sound);
+  });
+  document.getElementById("hapticBtn").addEventListener("click", (event) => {
+    state.haptic = !state.haptic;
+    event.currentTarget.classList.toggle("active", state.haptic);
+  });
+
+  window.addEventListener("resize", resize);
+  resize();
+  setHud();
+  draw();
+  </script>
+</body>
+</html>
