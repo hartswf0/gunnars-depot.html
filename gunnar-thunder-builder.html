@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Gunnar's Depot - Builder Inspector</title>
+  <title>Gunnar Thunder Builder</title>
   <link rel="icon" type="image/svg+xml" href="assets/branding/favicon.svg">
   <style>
     :root {
@@ -573,6 +573,136 @@
       display: none;
     }
 
+    #loadModulesBtn,
+    #loadConceptsBtn,
+    #movieBtn,
+    #clientViewBtn {
+      display: none;
+    }
+
+    .legacy-add {
+      display: none;
+    }
+
+    .layer-board,
+    .scene-tree {
+      display: grid;
+      gap: 8px;
+    }
+
+    .layer-row,
+    .tree-row {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 8px;
+      align-items: center;
+      min-height: 48px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #181818;
+    }
+
+    .layer-row.selected,
+    .tree-row.selected {
+      border-color: var(--hot);
+      box-shadow: inset 0 0 0 1px var(--hot);
+    }
+
+    .layer-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.35);
+    }
+
+    .row-title {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .row-title strong,
+    .row-title span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .row-title span {
+      color: var(--concrete);
+      font-family: var(--mono);
+      font-size: 11px;
+    }
+
+    button.row-title {
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      text-align: left;
+      font-weight: inherit;
+    }
+
+    button.row-title:hover {
+      background: transparent;
+      color: inherit;
+    }
+
+    .mini-actions {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .mini-actions button {
+      min-width: 34px;
+      min-height: 34px;
+      padding: 0 7px;
+      font-size: 12px;
+    }
+
+    .widget-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .widget-grid button {
+      display: grid;
+      place-items: center;
+      gap: 3px;
+      min-height: 60px;
+      padding: 7px 4px;
+      font-size: 12px;
+    }
+
+    .widget-grid .icon {
+      width: 28px;
+      height: 20px;
+      border: 2px solid currentColor;
+      border-radius: 3px;
+      opacity: 0.78;
+    }
+
+    .widget-grid [data-add="stud"] .icon,
+    .widget-grid [data-add="beam"] .icon {
+      width: 8px;
+      height: 28px;
+    }
+
+    .widget-grid [data-add="wheel"] .icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+    }
+
+    .widget-grid [data-add="roof"] .icon {
+      transform: skewX(-18deg);
+    }
+
     @media (max-width: 980px) {
       html,
       body {
@@ -856,8 +986,10 @@
         box-shadow: 0 1px 0 rgba(0,0,0,0.08);
       }
 
-      .top-actions #openProjectBtn,
+      .top-actions #loadModulesBtn,
       .top-actions #loadConceptsBtn,
+      .top-actions #movieBtn,
+      .top-actions #openProjectBtn,
       .top-actions #exportSelectedBtn,
       .top-actions #exportAllBtn,
       .top-actions #clientViewBtn {
@@ -1031,6 +1163,8 @@
 
       .item,
       .module-card,
+      .layer-row,
+      .tree-row,
       .readout,
       .metric,
       .log li {
@@ -1045,6 +1179,8 @@
       }
 
       .module-card.selected,
+      .layer-row.selected,
+      .tree-row.selected,
       .item.selected {
         border-color: #111111;
         background: #F2F1EC;
@@ -1080,6 +1216,24 @@
         grid-template-columns: 1fr;
       }
 
+      .widget-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 7px;
+      }
+
+      .widget-grid button {
+        min-height: 54px;
+        font-size: 11px;
+        border-radius: 12px;
+      }
+
+      .mini-actions button {
+        min-height: 34px;
+        min-width: 34px;
+        border-radius: 9px;
+        font-size: 11px;
+      }
+
       .module-actions {
         grid-template-columns: repeat(4, minmax(0, 1fr));
       }
@@ -1105,9 +1259,7 @@
         grid-row: auto;
       }
 
-      .left .block:nth-child(3),
-      .left .block:nth-child(5),
-      .left .block:nth-child(6),
+      .left .block:nth-child(n+5),
       .right .block:last-child {
         display: none;
       }
@@ -1212,21 +1364,21 @@
       <div class="brand">
         <div class="mark">GD</div>
         <div>
-          <h1>Gunnar</h1>
-          <p class="subtitle">Split. Inspect. Build.</p>
+          <h1>Thunder Builder</h1>
+          <p class="subtitle">Parts. Layers. Build.</p>
         </div>
       </div>
       <div id="status">Ready.</div>
       <div class="top-actions">
-        <button id="openFilesBtn" class="primary" type="button">Load</button>
-        <button id="loadModulesBtn" type="button">Split</button>
+        <button id="openFilesBtn" class="primary" type="button">Import</button>
+        <button id="loadModulesBtn" type="button">Starter</button>
         <button id="loadConceptsBtn" type="button">Studies</button>
-        <button id="movieBtn" type="button">Movie</button>
+        <button id="movieBtn" type="button">Inspect</button>
         <button id="openProjectBtn" type="button">Open</button>
-        <button id="saveProjectBtn" type="button">Plan</button>
+        <button id="saveProjectBtn" type="button">Save</button>
         <button id="exportSelectedBtn" type="button">Export Part</button>
         <button id="exportAllBtn" class="primary" type="button">Export Build</button>
-        <button id="clientViewBtn" type="button">Client View</button>
+        <button id="clientViewBtn" type="button">Clean View</button>
       </div>
     </header>
 
@@ -1243,8 +1395,8 @@
     <aside class="panel left">
       <div class="panel-inner">
         <section class="block">
-          <h2>Split</h2>
-          <div id="dropZone" class="drop">Drop file</div>
+          <h2>Source</h2>
+          <div id="dropZone" class="drop">Drop one DAE/STL as the base</div>
           <div class="grid2">
             <label>Target Module
               <select id="moduleTarget">
@@ -1283,7 +1435,33 @@
         </section>
 
         <section class="block">
-          <h2>Parts</h2>
+          <h2>Widgets</h2>
+          <div class="widget-grid">
+            <button data-add="block" type="button"><span class="icon"></span>Block</button>
+            <button data-add="panel" type="button"><span class="icon"></span>Panel</button>
+            <button data-add="stud" type="button"><span class="icon"></span>Stud</button>
+            <button data-add="deck" type="button"><span class="icon"></span>Deck</button>
+            <button data-add="wheel" type="button"><span class="icon"></span>Wheel</button>
+            <button data-add="roof" type="button"><span class="icon"></span>Roof</button>
+            <button data-add="door" type="button"><span class="icon"></span>Door</button>
+            <button data-add="window" type="button"><span class="icon"></span>Window</button>
+            <button data-add="cabinet" type="button"><span class="icon"></span>Case</button>
+            <button data-add="bed" type="button"><span class="icon"></span>Bed</button>
+          </div>
+        </section>
+
+        <section class="block">
+          <h2>Layers</h2>
+          <div id="layerBoard" class="layer-board"></div>
+        </section>
+
+        <section class="block">
+          <h2>Scene Tree</h2>
+          <div id="sceneTree" class="scene-tree"></div>
+        </section>
+
+        <section class="block">
+          <h2>Modules</h2>
           <div id="moduleBoard" class="list"></div>
         </section>
 
@@ -1297,7 +1475,7 @@
           <button id="applyStageBtn" type="button">Rebuild Build Envelope</button>
         </section>
 
-        <section class="block">
+        <section class="block legacy-add">
           <h2>Add</h2>
           <div class="grid2">
             <button data-add="block" type="button">Block</button>
@@ -1357,6 +1535,7 @@
               <option value="walls">Walls / exterior shell</option>
               <option value="roof">Roof / cover system</option>
               <option value="interior">Interior / finish layer</option>
+              <option value="widgets">Loose widget part</option>
               <option value="usonian">Wright / Usonian study</option>
               <option value="ban">Shigeru Ban shelter study</option>
               <option value="lacaton">Lacaton & Vassal economy study</option>
@@ -1438,12 +1617,12 @@
         <section id="fieldTools" class="block">
           <h2>Tools</h2>
           <div class="tool-grid">
-            <button id="movieToolBtn" type="button">Movie</button>
-            <button id="stopMovieBtn" type="button">Stop</button>
             <button id="hapticBtn" type="button">Tap: On</button>
             <button id="soundBtn" type="button">Tone: On</button>
             <button id="snapBtn" type="button">Snap: On</button>
             <button id="measureBtn" type="button">Measure</button>
+            <button id="movieToolBtn" class="hidden-file" type="button">Inspect</button>
+            <button id="stopMovieBtn" class="hidden-file" type="button">Stop</button>
           </div>
           <div class="metric-grid">
             <div class="metric"><strong id="metricModules">0</strong><span>modules</span></div>
@@ -1453,7 +1632,7 @@
         </section>
 
         <section id="planPanel" class="block">
-          <h2>Plan</h2>
+          <h2>Takeoff</h2>
           <div id="costReadout" class="readout">No material estimate yet.</div>
         </section>
 
@@ -1470,7 +1649,7 @@
     <button data-jump="viewport" class="active" type="button">View</button>
     <button data-jump="modules" type="button">Modules</button>
     <button data-jump="edit" type="button">Edit</button>
-    <button data-jump="plan" type="button">Plan</button>
+    <button data-jump="plan" type="button">Takeoff</button>
   </nav>
 
   <input id="fileInput" class="hidden-file" type="file" multiple accept=".dae,.stl,.obj,.glb">
@@ -1540,10 +1719,22 @@
     { id: "contractor-reality", name: "Contractor Reality Trailer", runtimeFile: "assets/models/concepts/contractor-reality-trailer.stl", file: "assets/models/concepts/contractor-reality-trailer.dae", glb: "assets/models/concepts/contractor-reality-trailer.glb", role: "contractor", color: "#F97316", notes: "Cheapest plausible build with off-the-shelf material logic." }
   ]);
 
+  const THUNDER_LAYERS = Object.freeze([
+    { id: "foundation", name: "Base", color: "#242424" },
+    { id: "frame", name: "Frame", color: "#C08457" },
+    { id: "walls", name: "Shell", color: "#8B5E34" },
+    { id: "roof", name: "Roof", color: "#A3A3A3" },
+    { id: "interior", name: "Inside", color: "#D09A5F" },
+    { id: "widgets", name: "Widgets", color: "#16A34A" },
+    { id: "studies", name: "Studies", color: "#2563EB" }
+  ]);
+
   const canvas = document.getElementById("viewport");
   const statusEl = document.getElementById("status");
   const modelListEl = document.getElementById("modelList");
   const moduleBoardEl = document.getElementById("moduleBoard");
+  const layerBoardEl = document.getElementById("layerBoard");
+  const sceneTreeEl = document.getElementById("sceneTree");
   const quickRailEl = document.getElementById("quickRail");
   const selectedReadoutEl = document.getElementById("selectedReadout");
   const snapReadoutEl = document.getElementById("snapReadout");
@@ -2137,12 +2328,96 @@
 
   function refreshAll() {
     refreshModuleBoard();
+    refreshLayerBoard();
+    refreshSceneTree();
     refreshList();
     refreshQuickRail();
     refreshInspector();
     refreshStats();
     refreshCostReadout();
     requestRender();
+  }
+
+  function layerForModel(model) {
+    if (!model) return "widgets";
+    if (model.moduleId) return model.moduleId;
+    if (["foundation", "frame", "walls", "roof", "interior"].includes(model.role)) return model.role;
+    if (["usonian", "ban", "lacaton", "alexander", "contractor"].includes(model.role)) return "studies";
+    return "widgets";
+  }
+
+  function layerMeta(layerId) {
+    return THUNDER_LAYERS.find((layer) => layer.id === layerId) || THUNDER_LAYERS[5];
+  }
+
+  function modelsInLayer(layerId) {
+    return state.models.filter((model) => layerForModel(model) === layerId);
+  }
+
+  function refreshLayerBoard() {
+    if (!layerBoardEl) return;
+    layerBoardEl.textContent = "";
+    for (let i = 0; i < THUNDER_LAYERS.length; i += 1) {
+      const layer = THUNDER_LAYERS[i];
+      const models = modelsInLayer(layer.id);
+      const visibleCount = models.filter((model) => model.visible).length;
+      const active = models.some((model) => model.id === state.selectedId);
+      const row = document.createElement("div");
+      row.className = "layer-row" + (active ? " selected" : "");
+      row.innerHTML = `
+        <span class="layer-dot" style="background:${escapeText(layer.color)}"></span>
+        <span class="row-title"><strong>${escapeText(layer.name)}</strong><span>${models.length} parts / ${visibleCount} on</span></span>
+        <span class="mini-actions">
+          <button data-layer-toggle="${escapeText(layer.id)}" type="button">${visibleCount ? "Eye" : "Off"}</button>
+          <button data-layer-solo="${escapeText(layer.id)}" type="button">Solo</button>
+        </span>`;
+      layerBoardEl.appendChild(row);
+    }
+  }
+
+  function refreshSceneTree() {
+    if (!sceneTreeEl) return;
+    sceneTreeEl.textContent = "";
+    if (!state.models.length) {
+      const empty = document.createElement("div");
+      empty.className = "readout";
+      empty.textContent = "Import one DAE/STL as the base, then add blocks, panels, studs, roof, wheels, doors, and cabinets.";
+      sceneTreeEl.appendChild(empty);
+      return;
+    }
+    for (let i = 0; i < state.models.length; i += 1) {
+      const model = state.models[i];
+      const layer = layerMeta(layerForModel(model));
+      const row = document.createElement("div");
+      row.className = "tree-row" + (model.id === state.selectedId ? " selected" : "");
+      row.innerHTML = `
+        <span class="layer-dot" style="background:${escapeText(layer.color)}"></span>
+        <button class="row-title" data-tree-select="${model.id}" type="button">
+          <strong>${escapeText(compactName(model))}</strong>
+          <span>${escapeText(layer.name)} / ${Math.round(model.positions.length / 9)} tris</span>
+        </button>
+        <span class="mini-actions">
+          <button data-tree-visible="${model.id}" type="button">${model.visible ? "On" : "Off"}</button>
+          <button data-tree-copy="${model.id}" type="button">Copy</button>
+        </span>`;
+      sceneTreeEl.appendChild(row);
+    }
+  }
+
+  function toggleLayerVisibility(layerId) {
+    const models = modelsInLayer(layerId);
+    const next = !models.some((model) => model.visible);
+    models.forEach((model) => { model.visible = next; });
+    const module = state.modules.find((item) => item.id === layerId);
+    if (module) module.visible = next;
+    refreshAll();
+  }
+
+  function soloLayer(layerId) {
+    state.models.forEach((model) => { model.visible = layerForModel(model) === layerId; });
+    state.modules.forEach((module) => { module.visible = module.id === layerId; });
+    state.view.isolate = false;
+    refreshAll();
   }
 
   function refreshQuickRail() {
@@ -2153,12 +2428,18 @@
     all.textContent = "All";
     all.className = state.view.isolate ? "" : "active";
     quickRailEl.appendChild(all);
-    const movie = document.createElement("button");
-    movie.type = "button";
-    movie.dataset.quickMovie = "true";
-    movie.textContent = state.tour.active ? "Stop" : "Movie";
-    movie.className = state.tour.active ? "active" : "";
-    quickRailEl.appendChild(movie);
+    for (let i = 0; i < THUNDER_LAYERS.length; i += 1) {
+      const layer = THUNDER_LAYERS[i];
+      const models = modelsInLayer(layer.id);
+      if (!models.length) continue;
+      const layerButton = document.createElement("button");
+      layerButton.type = "button";
+      layerButton.dataset.quickLayer = layer.id;
+      layerButton.textContent = layer.name;
+      layerButton.className = models.some((model) => model.id === state.selectedId) ? "active" : "";
+      quickRailEl.appendChild(layerButton);
+    }
+    if (mobileUiActive()) return;
     const cap = Math.min(state.models.length, 12);
     for (let i = 0; i < cap; i += 1) {
       const model = state.models[i];
@@ -2191,8 +2472,8 @@
         <div class="module-actions">
           <button data-module-select="${escapeText(module.id)}" type="button">Inspect</button>
           <button data-module-solo="${escapeText(module.id)}" type="button">Solo</button>
-          <button data-module-movie="${escapeText(module.id)}" type="button">Movie</button>
-          <button data-module-load="${escapeText(module.id)}" type="button">Load</button>
+          <button data-module-focus="${escapeText(module.id)}" type="button">Focus</button>
+          <button data-module-load="${escapeText(module.id)}" type="button">Replace</button>
         </div>`;
       moduleBoardEl.appendChild(card);
     }
@@ -2203,7 +2484,7 @@
     if (!state.models.length) {
       const div = document.createElement("div");
       div.className = "readout";
-      div.textContent = "No structure loaded yet. Drop in a module, split the build, and start commanding the vision.";
+      div.textContent = "No parts yet. Import a DAE/STL base or add a widget.";
       modelListEl.appendChild(div);
       return;
     }
@@ -2897,16 +3178,18 @@
     let mesh = makeBox(24, 24, 24);
     let name = "Block";
     let color = Colors.block;
-    if (kind === "panel") { mesh = makeBox(48, 2, 36); name = "Plywood panel"; color = Colors.panel; }
-    if (kind === "stud") { mesh = makeBox(1.5, 3.5, 96); name = "2x stud"; color = Colors.stud; }
-    if (kind === "deck") { mesh = makeBox(72, 144, 2); name = "6x12 deck"; color = Colors.deck; }
-    if (kind === "wheel") { mesh = makeCylinder(12, 6, 24); name = "Trailer wheel"; color = Colors.wheel; }
-    if (kind === "roof") { mesh = makeBox(84, 156, 1.5); name = "Roof sheet"; color = Colors.roof; }
-    if (kind === "door") { mesh = makeBox(28, 2, 64); name = "Stock door"; color = Colors.panel; }
-    if (kind === "window") { mesh = makeBox(30, 2, 24); name = "Stock window"; color = Colors.bone; }
-    if (kind === "cabinet") { mesh = makeBox(24, 18, 34); name = "Utility cabinet"; color = Colors.block; }
-    if (kind === "bed") { mesh = makeBox(34, 72, 14); name = "Sleeping platform"; color = Colors.deck; }
-    const m = addModel(name, kind, mesh, color, "custom");
+    let role = "widgets";
+    let material = "plywood";
+    if (kind === "panel") { mesh = makeBox(48, 2, 36); name = "Plywood panel"; color = Colors.panel; role = "walls"; }
+    if (kind === "stud") { mesh = makeBox(1.5, 3.5, 96); name = "2x stud"; color = Colors.stud; role = "frame"; material = "treated_wood"; }
+    if (kind === "deck") { mesh = makeBox(72, 144, 2); name = "6x12 deck"; color = Colors.deck; role = "foundation"; material = "treated_wood"; }
+    if (kind === "wheel") { mesh = makeCylinder(12, 6, 24); name = "Trailer wheel"; color = Colors.wheel; role = "foundation"; material = "steel"; }
+    if (kind === "roof") { mesh = makeBox(84, 156, 1.5); name = "Roof sheet"; color = Colors.roof; role = "roof"; material = "corrugated_metal"; }
+    if (kind === "door") { mesh = makeBox(28, 2, 64); name = "Stock door"; color = Colors.panel; role = "walls"; }
+    if (kind === "window") { mesh = makeBox(30, 2, 24); name = "Stock window"; color = Colors.bone; role = "walls"; material = "polycarbonate"; }
+    if (kind === "cabinet") { mesh = makeBox(24, 18, 34); name = "Utility cabinet"; color = Colors.block; role = "interior"; }
+    if (kind === "bed") { mesh = makeBox(34, 72, 14); name = "Sleeping platform"; color = Colors.deck; role = "interior"; material = "treated_wood"; }
+    const m = addModel(name, kind, mesh, color, role, { material });
     m.position = [state.camera.target[0], state.camera.target[1], state.camera.target[2]];
     refreshAll();
   }
@@ -2945,6 +3228,8 @@
       state.mode = fields.mode.value;
       refreshList();
       refreshModuleBoard();
+      refreshLayerBoard();
+      refreshSceneTree();
       requestRender();
       return;
     }
@@ -2978,6 +3263,8 @@
       button.classList.toggle("active", button.dataset.builderMode === state.mode);
     });
     refreshModuleBoard();
+    refreshLayerBoard();
+    refreshSceneTree();
     refreshList();
     refreshStats();
     refreshCostReadout();
@@ -3143,7 +3430,7 @@
     const tris = models.reduce((sum, m) => sum + m.positions.length / 9, 0);
     if (tris <= 0) return log("nothing to export", "bad");
     if (tris > Limits.maxExportTriangles) return log(`export rejected: ${tris} triangles exceeds cap`, "bad");
-    const lines = ["solid gunnars_build"];
+    const lines = ["solid gunnar_thunder_builder"];
     for (let i = 0; i < models.length; i += 1) {
       if (!models[i].visible) continue;
       const triangles = transformedTriangles(models[i]);
@@ -3153,14 +3440,14 @@
         lines.push(`facet normal ${n[0]} ${n[1]} ${n[2]}`, "outer loop", `vertex ${tri[0][0]} ${tri[0][1]} ${tri[0][2]}`, `vertex ${tri[1][0]} ${tri[1][1]} ${tri[1][2]}`, `vertex ${tri[2][0]} ${tri[2][1]} ${tri[2][2]}`, "endloop", "endfacet");
       }
     }
-    lines.push("endsolid gunnars_build");
+    lines.push("endsolid gunnar_thunder_builder");
     download(filename, lines.join("\n"), "model/stl");
     log(`exported ${filename}`, "good");
   }
 
   function projectObject() {
     return {
-      app: "gunnars-depot",
+      app: "gunnar-thunder-builder",
       version: 1,
       stage: state.stage,
       modules: state.modules.map((module) => ({ ...module })),
@@ -3191,7 +3478,7 @@
   }
 
   function saveProject() {
-    download("gunnars-build-package.gunnar.json", JSON.stringify(projectObject(), null, 2), "application/json");
+    download("gunnar-thunder-builder.gunnar.json", JSON.stringify(projectObject(), null, 2), "application/json");
     log("package exported", "good");
   }
 
@@ -3200,7 +3487,7 @@
     try {
       if (file.size > Limits.maxFileBytes) throw new Error("project file too large");
       const data = JSON.parse(await file.text());
-      if (!data || !["gunnars-depot", "gunnars-forge"].includes(data.app) || !Array.isArray(data.models)) throw new Error("not a build project");
+      if (!data || !["gunnar-thunder-builder", "gunnars-depot", "gunnars-forge"].includes(data.app) || !Array.isArray(data.models)) throw new Error("not a build project");
       if (data.models.length > Limits.maxObjects) throw new Error("object cap exceeded");
       state.stage = data.stage || state.stage;
       if (Array.isArray(data.modules)) state.modules = data.modules.map((module) => ({ ...module }));
@@ -3294,7 +3581,7 @@
     document.getElementById("builderAddFab").addEventListener("click", openBuilderDrawer);
     document.getElementById("openProjectBtn").addEventListener("click", () => { pulse("tap"); projectInput.click(); });
     document.getElementById("saveProjectBtn").addEventListener("click", () => { pulse("success"); saveProject(); });
-    document.getElementById("exportAllBtn").addEventListener("click", () => { pulse("success"); exportStl(state.models, "gunnars-build.stl"); });
+    document.getElementById("exportAllBtn").addEventListener("click", () => { pulse("success"); exportStl(state.models, "gunnar-thunder-builder.stl"); });
     document.getElementById("exportSelectedBtn").addEventListener("click", () => {
       const m = selectedModel();
         if (m) { pulse("success"); exportStl([m], `${m.name.replace(/[^a-z0-9_-]+/gi, "_")}.stl`); }
@@ -3369,6 +3656,7 @@
     quickRailEl.addEventListener("click", (event) => {
       const all = event.target.closest("[data-quick-all]");
       const movie = event.target.closest("[data-quick-movie]");
+      const layer = event.target.closest("[data-quick-layer]");
       const part = event.target.closest("[data-quick-model]");
       if (all) {
         pulse("tap");
@@ -3383,6 +3671,10 @@
       if (movie) {
         if (state.tour.active) stopMovie(true);
         else startMovie();
+      }
+      if (layer) {
+        pulse("tap");
+        soloLayer(layer.dataset.quickLayer);
       }
       if (part) {
         pulse("tap");
@@ -3402,7 +3694,7 @@
     moduleBoardEl.addEventListener("click", (event) => {
       const selectBtn = event.target.closest("[data-module-select]");
       const soloBtn = event.target.closest("[data-module-solo]");
-      const movieModuleBtn = event.target.closest("[data-module-movie]");
+      const focusModuleBtn = event.target.closest("[data-module-focus]");
       const loadBtn = event.target.closest("[data-module-load]");
       if (selectBtn) {
         pulse("tap");
@@ -3414,9 +3706,9 @@
         const module = state.modules.find((item) => item.id === soloBtn.dataset.moduleSolo);
         if (module && module.modelId) inspectModel(module.modelId, true);
       }
-      if (movieModuleBtn) {
-        const module = state.modules.find((item) => item.id === movieModuleBtn.dataset.moduleMovie);
-        if (module && module.modelId) startMovie([module.modelId]);
+      if (focusModuleBtn) {
+        const module = state.modules.find((item) => item.id === focusModuleBtn.dataset.moduleFocus);
+        if (module && module.modelId) inspectModel(module.modelId, false);
         else pulse("warn");
       }
       if (loadBtn) {
@@ -3435,6 +3727,38 @@
       const model = state.models.find((item) => item.id === module.modelId);
       if (model) model.visible = checkbox.checked;
       refreshAll();
+    });
+    layerBoardEl.addEventListener("click", (event) => {
+      const toggle = event.target.closest("[data-layer-toggle]");
+      const solo = event.target.closest("[data-layer-solo]");
+      if (toggle) {
+        pulse("tap");
+        toggleLayerVisibility(toggle.dataset.layerToggle);
+      }
+      if (solo) {
+        pulse("tap");
+        soloLayer(solo.dataset.layerSolo);
+      }
+    });
+    sceneTreeEl.addEventListener("click", (event) => {
+      const select = event.target.closest("[data-tree-select]");
+      const visible = event.target.closest("[data-tree-visible]");
+      const copy = event.target.closest("[data-tree-copy]");
+      if (select) {
+        pulse("tap");
+        inspectModel(Number(select.dataset.treeSelect), false);
+      }
+      if (visible) {
+        pulse("tap");
+        const model = state.models.find((item) => item.id === Number(visible.dataset.treeVisible));
+        if (model) model.visible = !model.visible;
+        refreshAll();
+      }
+      if (copy) {
+        pulse("success");
+        state.selectedId = Number(copy.dataset.treeCopy);
+        duplicateSelected();
+      }
     });
     modelListEl.addEventListener("click", (event) => {
       const item = event.target.closest("[data-id]");
@@ -3586,13 +3910,13 @@
       initGL();
       bindEvents();
       runSelfTests();
-      refreshModuleBoard();
+      refreshAll();
       loadDepotStarter();
-      setStatus("Ready. Split the build, edit modules, export the plan.", "good");
-      window.__GUNNARS_DEPOT_READY__ = true;
+      setStatus("Ready. Import a DAE/STL base or start adding parts.", "good");
+      window.__GUNNAR_THUNDER_BUILDER_READY__ = true;
     } catch (error) {
-      setStatus(`Depot failed: ${error.message}`, "bad");
-      window.__GUNNARS_DEPOT_READY__ = false;
+      setStatus(`Thunder failed: ${error.message}`, "bad");
+      window.__GUNNAR_THUNDER_BUILDER_READY__ = false;
     }
   }
 
