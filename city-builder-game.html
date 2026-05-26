@@ -1,0 +1,1261 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Gunnar City Builder</title>
+  <link rel="icon" type="image/svg+xml" href="assets/branding/favicon.svg">
+  <style>
+    :root {
+      --paper: #f8f7f2;
+      --ink: #101010;
+      --line: #101010;
+      --soft: #e7e1d6;
+      --orange: #f97316;
+      --green: #16a34a;
+      --blue: #2563eb;
+      --red: #dc2626;
+      --yellow: #facc15;
+      --violet: #7c3aed;
+      --gray: #737373;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      min-height: 42px;
+      border: 3px solid var(--line);
+      border-radius: 0;
+      background: #fff;
+      color: var(--ink);
+      font-family: var(--mono);
+      font-weight: 900;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    button:active,
+    button.active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    button.primary {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    button.good {
+      background: var(--green);
+      color: #fff;
+    }
+
+    button.warn {
+      background: var(--orange);
+      color: var(--ink);
+    }
+
+    button:disabled {
+      opacity: 0.35;
+      border-style: dashed;
+    }
+
+    #app {
+      width: min(660px, 100%);
+      height: 100%;
+      margin: 0 auto;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      position: relative;
+      overflow: hidden;
+      border-left: 4px solid var(--line);
+      border-right: 4px solid var(--line);
+      background: var(--paper);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 58px;
+      padding: max(8px, env(safe-area-inset-top)) 10px 8px;
+      border-bottom: 4px solid var(--line);
+      background: #fff;
+      z-index: 4;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 4px solid var(--line);
+      background: var(--yellow);
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 900;
+      flex: none;
+    }
+
+    h1 {
+      font-family: var(--mono);
+      font-size: 17px;
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: -0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sub {
+      margin-top: 2px;
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 900;
+      color: var(--gray);
+      text-transform: uppercase;
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(58px, 1fr));
+      gap: 5px;
+      flex: 0 0 auto;
+      min-width: 130px;
+    }
+
+    .badge {
+      padding: 5px 7px;
+      background: var(--ink);
+      color: var(--paper);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 900;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
+    .brief {
+      display: grid;
+      gap: 6px;
+      padding: 8px;
+      border-bottom: 4px solid var(--line);
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .brief-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .mission {
+      display: grid;
+      gap: 4px;
+    }
+
+    .mission-title {
+      font-family: var(--mono);
+      font-size: clamp(22px, 7vw, 38px);
+      font-weight: 900;
+      letter-spacing: -0.08em;
+      line-height: 0.94;
+      text-transform: uppercase;
+    }
+
+    .mission-line {
+      min-height: 18px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 900;
+      color: #d8d4ca;
+      text-transform: uppercase;
+    }
+
+    .city-wrap {
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(90deg, rgba(16,16,16,0.08) 1px, transparent 1px),
+        linear-gradient(rgba(16,16,16,0.08) 1px, transparent 1px),
+        var(--paper);
+      background-size: 18px 18px;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    .toast {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      top: 12px;
+      z-index: 5;
+      display: none;
+      padding: 10px;
+      border: 4px solid var(--line);
+      background: #fff;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+      box-shadow: 5px 5px 0 var(--line);
+    }
+
+    .toast.show {
+      display: block;
+    }
+
+    .toolbar {
+      display: grid;
+      gap: 7px;
+      padding: 8px;
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+      border-top: 4px solid var(--line);
+      background: #fff;
+      z-index: 4;
+    }
+
+    .tools {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 5px;
+    }
+
+    .tool {
+      display: grid;
+      gap: 3px;
+      place-items: center;
+      min-height: 58px;
+      padding: 4px 2px;
+      background: #fff;
+      font-size: 10px;
+    }
+
+    .swatch {
+      width: 25px;
+      height: 20px;
+      border: 3px solid var(--line);
+      background: var(--soft);
+      position: relative;
+    }
+
+    .swatch.road { background: #9ca3af; }
+    .swatch.home { background: #60a5fa; }
+    .swatch.shop { background: #f59e0b; }
+    .swatch.factory { background: #a3a3a3; }
+    .swatch.power { background: #facc15; }
+    .swatch.water { background: #38bdf8; }
+    .swatch.park { background: #22c55e; }
+    .swatch.dozer { background: #fff; }
+
+    .swatch.road::after {
+      content: "";
+      position: absolute;
+      inset: 7px -3px;
+      border-top: 3px dashed #fff;
+    }
+
+    .swatch.dozer::after {
+      content: "X";
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      font-family: var(--mono);
+      font-weight: 900;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 5px;
+    }
+
+    .actions button {
+      min-height: 38px;
+      font-size: 11px;
+    }
+
+    .intro,
+    .sheet {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      background: var(--paper);
+      display: grid;
+      grid-template-rows: 1fr auto;
+    }
+
+    .intro.hidden,
+    .sheet.hidden {
+      display: none;
+    }
+
+    .intro-body {
+      display: grid;
+      align-content: center;
+      gap: 12px;
+      padding: 18px;
+      overflow: auto;
+    }
+
+    .intro h2 {
+      font-family: var(--mono);
+      font-size: clamp(36px, 12vw, 74px);
+      line-height: 0.84;
+      letter-spacing: -0.1em;
+      text-transform: uppercase;
+    }
+
+    .rule {
+      border: 4px solid var(--line);
+      padding: 10px;
+      background: #fff;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .intro-actions,
+    .sheet-head {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-top: 4px solid var(--line);
+      background: #fff;
+    }
+
+    .sheet {
+      transform: translateY(100%);
+      transition: transform 180ms ease;
+      z-index: 12;
+    }
+
+    .sheet:not(.hidden) {
+      transform: translateY(0);
+    }
+
+    .sheet-head {
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      border-top: 0;
+      border-bottom: 4px solid var(--line);
+    }
+
+    .sheet-head strong {
+      font-family: var(--mono);
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      text-transform: uppercase;
+    }
+
+    .sheet-body {
+      min-height: 0;
+      overflow: auto;
+      display: grid;
+      gap: 10px;
+      align-content: start;
+      padding: 12px;
+    }
+
+    .panel {
+      display: grid;
+      gap: 8px;
+      border: 4px solid var(--line);
+      padding: 10px;
+      background: #fff;
+    }
+
+    .panel h2 {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .panel p,
+    .panel li {
+      font-size: 13px;
+      line-height: 1.25;
+      font-weight: 800;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .stat {
+      border: 3px solid var(--line);
+      padding: 7px;
+      background: var(--paper);
+    }
+
+    .log {
+      max-height: 160px;
+      overflow: auto;
+      display: grid;
+      gap: 5px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .sr {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
+
+    @media (max-height: 680px) {
+      .tool {
+        min-height: 48px;
+      }
+
+      .brief {
+        padding: 7px;
+      }
+
+      .mission-title {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="brand">
+        <div class="mark">CB</div>
+        <div>
+          <h1>City Builder</h1>
+          <div class="sub">make the grid live</div>
+        </div>
+      </div>
+      <div class="hud" aria-label="city scoreboard">
+        <div class="badge">$<span id="cashOut">2400</span></div>
+        <div class="badge">POP <span id="popOut">0</span></div>
+        <div class="badge">HAP <span id="happyOut">50</span></div>
+        <div class="badge">DAY <span id="dayOut">1</span></div>
+      </div>
+    </header>
+
+    <section class="brief" aria-live="polite">
+      <div class="brief-top">
+        <span id="advisorOut">Mayor says</span>
+        <span id="speedOut">RUN</span>
+      </div>
+      <div class="mission">
+        <div id="missionTitle" class="mission-title">Roads First</div>
+        <div id="missionLine" class="mission-line">Build roads, then zone homes beside them.</div>
+      </div>
+    </section>
+
+    <section class="city-wrap">
+      <canvas id="city" aria-label="City build grid"></canvas>
+      <div id="toast" class="toast"></div>
+    </section>
+
+    <section class="toolbar">
+      <div class="tools" role="group" aria-label="city tools">
+        <button class="tool active" data-tool="road" type="button"><span class="swatch road"></span><span>Road</span></button>
+        <button class="tool" data-tool="home" type="button"><span class="swatch home"></span><span>Home</span></button>
+        <button class="tool" data-tool="shop" type="button"><span class="swatch shop"></span><span>Shop</span></button>
+        <button class="tool" data-tool="factory" type="button"><span class="swatch factory"></span><span>Factory</span></button>
+        <button class="tool" data-tool="power" type="button"><span class="swatch power"></span><span>Power</span></button>
+        <button class="tool" data-tool="water" type="button"><span class="swatch water"></span><span>Water</span></button>
+        <button class="tool" data-tool="park" type="button"><span class="swatch park"></span><span>Park</span></button>
+        <button class="tool" data-tool="dozer" type="button"><span class="swatch dozer"></span><span>Doze</span></button>
+      </div>
+      <div class="actions">
+        <button id="pauseBtn" type="button">Pause</button>
+        <button id="speedBtn" type="button">Speed</button>
+        <button id="newBtn" type="button">New</button>
+        <button id="menuBtn" type="button">City Hall</button>
+      </div>
+    </section>
+
+    <section id="intro" class="intro">
+      <div class="intro-body">
+        <h2>Build<br>A Tiny<br>City</h2>
+        <div class="rule">Roads carry meaning. Zones only work when they connect.</div>
+        <div class="rule">Homes need jobs, power, water, parks, and clean air.</div>
+        <div class="rule">Balance cash, population, happiness, utilities, and pollution.</div>
+      </div>
+      <div class="intro-actions">
+        <button id="startBtn" class="primary" type="button">Start City</button>
+        <button id="loadBtn" type="button">Load Saved City</button>
+      </div>
+    </section>
+
+    <section id="sheet" class="sheet hidden" aria-label="city hall">
+      <div class="sheet-head">
+        <strong>City Hall</strong>
+        <button id="closeSheetBtn" type="button">Close</button>
+      </div>
+      <div class="sheet-body">
+        <div class="panel">
+          <h2>Advisor Report</h2>
+          <p id="reportOut">A city is a language-game made of roads, zones, taxes, pipes, and power.</p>
+        </div>
+        <div class="panel">
+          <h2>Live Systems</h2>
+          <div class="stats">
+            <div class="stat">Income <span id="incomeOut">$0</span></div>
+            <div class="stat">Upkeep <span id="upkeepOut">$0</span></div>
+            <div class="stat">Jobs <span id="jobsOut">0</span></div>
+            <div class="stat">Pollution <span id="pollutionOut">0</span></div>
+            <div class="stat">Power <span id="powerOut">0/0</span></div>
+            <div class="stat">Water <span id="waterOut">0/0</span></div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Tool Costs</h2>
+          <div class="stats" id="costList"></div>
+        </div>
+        <div class="panel">
+          <h2>Ledger</h2>
+          <div id="log" class="log"></div>
+        </div>
+        <button id="saveBtn" class="primary" type="button">Save City</button>
+      </div>
+    </section>
+
+    <div id="announcer" class="sr" aria-live="assertive">READY.</div>
+  </div>
+
+  <script>
+  const canvas = document.getElementById("city");
+  const ctx = canvas.getContext("2d");
+  const toastEl = document.getElementById("toast");
+  const logEl = document.getElementById("log");
+  const sheet = document.getElementById("sheet");
+  const intro = document.getElementById("intro");
+  const announcerEl = document.getElementById("announcer");
+
+  const ui = {
+    cash: document.getElementById("cashOut"),
+    pop: document.getElementById("popOut"),
+    happy: document.getElementById("happyOut"),
+    day: document.getElementById("dayOut"),
+    speed: document.getElementById("speedOut"),
+    advisor: document.getElementById("advisorOut"),
+    missionTitle: document.getElementById("missionTitle"),
+    missionLine: document.getElementById("missionLine"),
+    report: document.getElementById("reportOut"),
+    income: document.getElementById("incomeOut"),
+    upkeep: document.getElementById("upkeepOut"),
+    jobs: document.getElementById("jobsOut"),
+    pollution: document.getElementById("pollutionOut"),
+    power: document.getElementById("powerOut"),
+    water: document.getElementById("waterOut")
+  };
+
+  const tools = {
+    road: { name: "Road", cost: 20, upkeep: 1, color: "#9ca3af" },
+    home: { name: "Home", cost: 90, upkeep: 2, color: "#60a5fa", pop: 18, power: 1, water: 1, income: 7 },
+    shop: { name: "Shop", cost: 160, upkeep: 4, color: "#f59e0b", jobs: 16, power: 1, water: 1, income: 22 },
+    factory: { name: "Factory", cost: 250, upkeep: 7, color: "#a3a3a3", jobs: 34, power: 2, water: 1, income: 48, pollution: 12 },
+    power: { name: "Power", cost: 380, upkeep: 9, color: "#facc15", powerSupply: 14, pollution: 8 },
+    water: { name: "Water", cost: 260, upkeep: 6, color: "#38bdf8", waterSupply: 14 },
+    park: { name: "Park", cost: 120, upkeep: 5, color: "#22c55e", happy: 8 },
+    dozer: { name: "Doze", cost: 10, upkeep: 0, color: "#ffffff" }
+  };
+
+  const missions = [
+    {
+      title: "Roads First",
+      line: "Build 6 roads and 3 homes beside roads.",
+      reward: 350,
+      done: (s) => count("road") >= 6 && count("home") >= 3 && s.population >= 45
+    },
+    {
+      title: "Lights On",
+      line: "Add power and water so every zone can work.",
+      reward: 450,
+      done: (s) => count("power") >= 1 && count("water") >= 1 && s.powerDemand <= s.powerSupply && s.waterDemand <= s.waterSupply
+    },
+    {
+      title: "Main Street",
+      line: "Build 2 shops and reach 30 jobs.",
+      reward: 520,
+      done: (s) => count("shop") >= 2 && s.jobs >= 30
+    },
+    {
+      title: "Working Town",
+      line: "Reach 120 people with happiness above 55.",
+      reward: 700,
+      done: (s) => s.population >= 120 && s.happiness >= 55
+    },
+    {
+      title: "Clean Growth",
+      line: "Reach 180 people and keep pollution below 30.",
+      reward: 900,
+      done: (s) => s.population >= 180 && s.pollution < 30 && s.cash > 0
+    }
+  ];
+
+  const state = {
+    cols: 11,
+    rows: 11,
+    cash: 2400,
+    day: 1,
+    selected: "road",
+    paused: false,
+    speed: 1,
+    cells: [],
+    hover: null,
+    mission: 0,
+    metrics: {},
+    timer: null,
+    tickMs: 2200
+  };
+
+  let audioCtx = null;
+
+  function blankCells() {
+    return Array.from({ length: state.rows }, () => Array.from({ length: state.cols }, () => null));
+  }
+
+  function seedCity() {
+    state.cells = blankCells();
+    for (let x = 1; x <= 5; x += 1) state.cells[8][x] = { type: "road", age: 0, active: true };
+    for (let y = 6; y <= 9; y += 1) state.cells[y][3] = { type: "road", age: 0, active: true };
+  }
+
+  function resetCity() {
+    state.cash = 2400;
+    state.day = 1;
+    state.selected = "road";
+    state.paused = false;
+    state.speed = 1;
+    state.mission = 0;
+    state.hover = null;
+    seedCity();
+    logEl.innerHTML = "";
+    addLog("Survey crew marked the first road.");
+    setTool("road");
+    scheduleTick();
+    evaluate(false);
+    intro.classList.add("hidden");
+    announce("New city started.");
+  }
+
+  function saveCity() {
+    const payload = {
+      cash: state.cash,
+      day: state.day,
+      cells: state.cells,
+      mission: state.mission
+    };
+    localStorage.setItem("gunnar_city_builder_save", JSON.stringify(payload));
+    showToast("City saved.");
+    announce("City saved.");
+  }
+
+  function loadCity() {
+    const raw = localStorage.getItem("gunnar_city_builder_save");
+    if (!raw) {
+      showToast("No saved city yet.");
+      return;
+    }
+    try {
+      const payload = JSON.parse(raw);
+      state.cash = payload.cash || 2400;
+      state.day = payload.day || 1;
+      state.cells = payload.cells || blankCells();
+      state.mission = payload.mission || 0;
+      state.paused = false;
+      logEl.innerHTML = "";
+      addLog("Saved city restored.");
+      intro.classList.add("hidden");
+      scheduleTick();
+      evaluate(false);
+      announce("Saved city loaded.");
+    } catch (error) {
+      showToast("Save file failed.");
+    }
+  }
+
+  function scheduleTick() {
+    clearInterval(state.timer);
+    state.timer = setInterval(() => {
+      if (!state.paused) tick();
+    }, state.tickMs / state.speed);
+    ui.speed.textContent = state.paused ? "PAUSE" : state.speed > 1 ? `RUN X${state.speed}` : "RUN";
+  }
+
+  function tick() {
+    state.day += 1;
+    evaluate(true);
+  }
+
+  function tile(x, y) {
+    if (x < 0 || y < 0 || x >= state.cols || y >= state.rows) return null;
+    return state.cells[y][x];
+  }
+
+  function neighbors(x, y) {
+    return [
+      [x + 1, y],
+      [x - 1, y],
+      [x, y + 1],
+      [x, y - 1]
+    ].filter(([nx, ny]) => nx >= 0 && ny >= 0 && nx < state.cols && ny < state.rows);
+  }
+
+  function nearRoad(x, y) {
+    return tile(x, y)?.type === "road" || neighbors(x, y).some(([nx, ny]) => tile(nx, ny)?.type === "road");
+  }
+
+  function nearType(x, y, type, radius) {
+    for (let yy = Math.max(0, y - radius); yy <= Math.min(state.rows - 1, y + radius); yy += 1) {
+      for (let xx = Math.max(0, x - radius); xx <= Math.min(state.cols - 1, x + radius); xx += 1) {
+        const distance = Math.abs(xx - x) + Math.abs(yy - y);
+        if (distance <= radius && tile(xx, yy)?.type === type) return true;
+      }
+    }
+    return false;
+  }
+
+  function forEachCell(callback) {
+    for (let y = 0; y < state.rows; y += 1) {
+      for (let x = 0; x < state.cols; x += 1) {
+        callback(state.cells[y][x], x, y);
+      }
+    }
+  }
+
+  function count(type) {
+    let n = 0;
+    forEachCell((cell) => {
+      if (cell?.type === type) n += 1;
+    });
+    return n;
+  }
+
+  function evaluate(applyCash) {
+    const metrics = {
+      income: 0,
+      upkeep: 0,
+      population: 0,
+      jobs: 0,
+      pollution: 0,
+      powerSupply: 0,
+      powerDemand: 0,
+      waterSupply: 0,
+      waterDemand: 0,
+      happiness: 50,
+      inactive: 0
+    };
+
+    forEachCell((cell, x, y) => {
+      if (!cell) return;
+      const def = tools[cell.type];
+      metrics.upkeep += def.upkeep || 0;
+      if (cell.type === "power" && nearRoad(x, y)) metrics.powerSupply += def.powerSupply || 0;
+      if (cell.type === "water" && nearRoad(x, y)) metrics.waterSupply += def.waterSupply || 0;
+      metrics.powerDemand += def.power || 0;
+      metrics.waterDemand += def.water || 0;
+    });
+
+    const powerOk = metrics.powerDemand <= metrics.powerSupply || metrics.powerDemand === 0;
+    const waterOk = metrics.waterDemand <= metrics.waterSupply || metrics.waterDemand === 0;
+
+    forEachCell((cell, x, y) => {
+      if (!cell) return;
+      const def = tools[cell.type];
+      const connected = nearRoad(x, y);
+      const needsUtilities = Boolean(def.power || def.water) && cell.type !== "home";
+      cell.active = connected && (!needsUtilities || (powerOk && waterOk));
+      if (cell.type === "road") cell.active = true;
+      if (cell.active) {
+        metrics.income += def.income || 0;
+        metrics.population += def.pop || 0;
+        metrics.jobs += def.jobs || 0;
+        metrics.pollution += def.pollution || 0;
+        if (cell.type === "home" && nearType(x, y, "park", 2)) metrics.happiness += 4;
+      } else {
+        metrics.inactive += 1;
+      }
+    });
+
+    const jobGap = Math.abs(metrics.population * 0.45 - metrics.jobs);
+    metrics.pollution = Math.round(metrics.pollution);
+    metrics.happiness += Math.min(18, count("park") * 5);
+    metrics.happiness -= Math.min(26, Math.round(metrics.pollution * 0.7));
+    metrics.happiness -= Math.min(18, Math.round(jobGap / 10));
+    if (!powerOk && metrics.powerDemand > 0) metrics.happiness -= 9;
+    if (!waterOk && metrics.waterDemand > 0) metrics.happiness -= 9;
+    if (metrics.inactive > 0) metrics.happiness -= Math.min(14, metrics.inactive * 3);
+    metrics.happiness = Math.max(0, Math.min(100, Math.round(metrics.happiness)));
+    metrics.net = Math.round(metrics.income - metrics.upkeep + Math.max(0, metrics.population * 0.15));
+
+    if (applyCash) {
+      state.cash += metrics.net;
+      if (state.cash < -500) {
+        state.paused = true;
+        showToast("City insolvent. Pause and fix upkeep.");
+      }
+    }
+
+    state.metrics = metrics;
+    checkMission();
+    setHud();
+    draw();
+  }
+
+  function checkMission() {
+    const mission = missions[state.mission];
+    if (!mission) return;
+    if (mission.done(state.metrics)) {
+      state.cash += mission.reward;
+      addLog(`Mission complete: ${mission.title}. Reward $${mission.reward}.`);
+      showToast(`Mission complete. +$${mission.reward}`);
+      state.mission = Math.min(state.mission + 1, missions.length - 1);
+      ping(720, 0.12);
+      vibrate([20, 30, 20]);
+    }
+  }
+
+  function setHud() {
+    const m = state.metrics;
+    ui.cash.textContent = String(Math.round(state.cash));
+    ui.pop.textContent = String(m.population || 0);
+    ui.happy.textContent = String(m.happiness || 50);
+    ui.day.textContent = String(state.day);
+    ui.speed.textContent = state.paused ? "PAUSE" : state.speed > 1 ? `RUN X${state.speed}` : "RUN";
+    const mission = missions[state.mission] || missions[missions.length - 1];
+    ui.missionTitle.textContent = mission.title;
+    ui.missionLine.textContent = mission.line;
+    ui.advisor.textContent = state.cash < 0 ? "Treasurer warns" : m.happiness < 40 ? "Residents complain" : "Mayor says";
+    ui.report.textContent = reportText();
+    ui.income.textContent = `$${Math.round(m.income || 0)}`;
+    ui.upkeep.textContent = `$${Math.round(m.upkeep || 0)}`;
+    ui.jobs.textContent = String(m.jobs || 0);
+    ui.pollution.textContent = String(m.pollution || 0);
+    ui.power.textContent = `${m.powerSupply || 0}/${m.powerDemand || 0}`;
+    ui.water.textContent = `${m.waterSupply || 0}/${m.waterDemand || 0}`;
+    document.querySelectorAll(".tool").forEach((button) => {
+      const def = tools[button.dataset.tool];
+      button.disabled = button.dataset.tool !== "dozer" && state.cash < def.cost;
+    });
+  }
+
+  function reportText() {
+    const m = state.metrics;
+    if ((m.powerDemand || 0) > (m.powerSupply || 0)) return "Power is short. Add a power plant near a road.";
+    if ((m.waterDemand || 0) > (m.waterSupply || 0)) return "Water is short. Add water near a road.";
+    if ((m.inactive || 0) > 0) return "Some zones are inactive. Put them next to roads and utilities.";
+    if ((m.pollution || 0) > 35) return "Pollution is choking growth. Add parks and separate factories.";
+    if ((m.jobs || 0) < (m.population || 0) * 0.35) return "Residents need work. Zone shops or factories.";
+    if ((m.happiness || 0) > 70) return "City is humming. Grow carefully.";
+    return "Roads, zones, utilities, parks, and taxes are holding together.";
+  }
+
+  function cellMetrics() {
+    const rect = canvas.getBoundingClientRect();
+    const margin = 12;
+    const size = Math.min((rect.width - margin * 2) / state.cols, (rect.height - margin * 2) / state.rows);
+    const w = state.cols * size;
+    const h = state.rows * size;
+    return {
+      size,
+      ox: (rect.width - w) / 2,
+      oy: (rect.height - h) / 2,
+      w,
+      h
+    };
+  }
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.max(320, Math.floor(rect.width * dpr));
+    canvas.height = Math.max(280, Math.floor(rect.height * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    draw();
+  }
+
+  function draw() {
+    const rect = canvas.getBoundingClientRect();
+    const m = cellMetrics();
+    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.fillStyle = "#f8f7f2";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+
+    ctx.fillStyle = "rgba(16,16,16,0.04)";
+    ctx.fillRect(m.ox, m.oy, m.w, m.h);
+
+    for (let y = 0; y < state.rows; y += 1) {
+      for (let x = 0; x < state.cols; x += 1) {
+        const cell = state.cells[y][x];
+        drawCellBase(m, x, y);
+        if (cell) drawTile(m, cell, x, y);
+      }
+    }
+
+    if (state.hover) drawHover(m, state.hover.x, state.hover.y);
+    drawGrid(m);
+  }
+
+  function drawCellBase(m, x, y) {
+    const px = m.ox + x * m.size;
+    const py = m.oy + y * m.size;
+    ctx.fillStyle = (x + y) % 2 === 0 ? "#f3efe6" : "#ebe4d8";
+    ctx.fillRect(px, py, m.size, m.size);
+  }
+
+  function drawGrid(m) {
+    ctx.strokeStyle = "rgba(16,16,16,0.24)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= state.cols; x += 1) {
+      ctx.beginPath();
+      ctx.moveTo(m.ox + x * m.size, m.oy);
+      ctx.lineTo(m.ox + x * m.size, m.oy + m.h);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= state.rows; y += 1) {
+      ctx.beginPath();
+      ctx.moveTo(m.ox, m.oy + y * m.size);
+      ctx.lineTo(m.ox + m.w, m.oy + y * m.size);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = "#101010";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(m.ox, m.oy, m.w, m.h);
+  }
+
+  function drawTile(m, cell, x, y) {
+    const px = m.ox + x * m.size;
+    const py = m.oy + y * m.size;
+    const s = m.size;
+    const def = tools[cell.type];
+    ctx.save();
+    ctx.fillStyle = def.color;
+    ctx.strokeStyle = "#101010";
+    ctx.lineWidth = 3;
+
+    if (cell.type === "road") {
+      ctx.fillStyle = "#9ca3af";
+      ctx.fillRect(px, py + s * 0.28, s, s * 0.44);
+      ctx.fillRect(px + s * 0.28, py, s * 0.44, s);
+      ctx.strokeRect(px + 2, py + s * 0.28, s - 4, s * 0.44);
+      ctx.strokeRect(px + s * 0.28, py + 2, s * 0.44, s - 4);
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(px + s * 0.5, py + 4);
+      ctx.lineTo(px + s * 0.5, py + s - 4);
+      ctx.moveTo(px + 4, py + s * 0.5);
+      ctx.lineTo(px + s - 4, py + s * 0.5);
+      ctx.stroke();
+    } else if (cell.type === "home") {
+      ctx.fillRect(px + s * 0.18, py + s * 0.42, s * 0.64, s * 0.42);
+      ctx.strokeRect(px + s * 0.18, py + s * 0.42, s * 0.64, s * 0.42);
+      ctx.beginPath();
+      ctx.moveTo(px + s * 0.14, py + s * 0.44);
+      ctx.lineTo(px + s * 0.5, py + s * 0.14);
+      ctx.lineTo(px + s * 0.86, py + s * 0.44);
+      ctx.closePath();
+      ctx.fillStyle = "#bfdbfe";
+      ctx.fill();
+      ctx.stroke();
+    } else if (cell.type === "shop") {
+      ctx.fillRect(px + s * 0.14, py + s * 0.24, s * 0.72, s * 0.58);
+      ctx.strokeRect(px + s * 0.14, py + s * 0.24, s * 0.72, s * 0.58);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(px + s * 0.2, py + s * 0.34, s * 0.6, s * 0.16);
+      ctx.strokeRect(px + s * 0.2, py + s * 0.34, s * 0.6, s * 0.16);
+    } else if (cell.type === "factory") {
+      ctx.fillRect(px + s * 0.12, py + s * 0.43, s * 0.76, s * 0.4);
+      ctx.strokeRect(px + s * 0.12, py + s * 0.43, s * 0.76, s * 0.4);
+      ctx.fillRect(px + s * 0.2, py + s * 0.18, s * 0.12, s * 0.26);
+      ctx.fillRect(px + s * 0.58, py + s * 0.12, s * 0.13, s * 0.32);
+      ctx.strokeRect(px + s * 0.2, py + s * 0.18, s * 0.12, s * 0.26);
+      ctx.strokeRect(px + s * 0.58, py + s * 0.12, s * 0.13, s * 0.32);
+    } else if (cell.type === "power") {
+      ctx.fillRect(px + s * 0.18, py + s * 0.18, s * 0.64, s * 0.64);
+      ctx.strokeRect(px + s * 0.18, py + s * 0.18, s * 0.64, s * 0.64);
+      ctx.fillStyle = "#101010";
+      ctx.beginPath();
+      ctx.moveTo(px + s * 0.55, py + s * 0.25);
+      ctx.lineTo(px + s * 0.38, py + s * 0.54);
+      ctx.lineTo(px + s * 0.52, py + s * 0.54);
+      ctx.lineTo(px + s * 0.44, py + s * 0.78);
+      ctx.lineTo(px + s * 0.66, py + s * 0.46);
+      ctx.lineTo(px + s * 0.52, py + s * 0.46);
+      ctx.closePath();
+      ctx.fill();
+    } else if (cell.type === "water") {
+      ctx.beginPath();
+      ctx.ellipse(px + s * 0.5, py + s * 0.34, s * 0.28, s * 0.17, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillRect(px + s * 0.22, py + s * 0.34, s * 0.56, s * 0.36);
+      ctx.strokeRect(px + s * 0.22, py + s * 0.34, s * 0.56, s * 0.36);
+      ctx.beginPath();
+      ctx.ellipse(px + s * 0.5, py + s * 0.7, s * 0.28, s * 0.16, 0, 0, Math.PI);
+      ctx.stroke();
+    } else if (cell.type === "park") {
+      ctx.fillRect(px + s * 0.1, py + s * 0.1, s * 0.8, s * 0.8);
+      ctx.strokeRect(px + s * 0.1, py + s * 0.1, s * 0.8, s * 0.8);
+      ctx.fillStyle = "#bbf7d0";
+      ctx.beginPath();
+      ctx.arc(px + s * 0.34, py + s * 0.38, s * 0.14, 0, Math.PI * 2);
+      ctx.arc(px + s * 0.62, py + s * 0.52, s * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    if (!cell.active && cell.type !== "road") {
+      ctx.fillStyle = "rgba(255,255,255,0.58)";
+      ctx.fillRect(px, py, s, s);
+      ctx.strokeStyle = "#dc2626";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(px + 6, py + 6);
+      ctx.lineTo(px + s - 6, py + s - 6);
+      ctx.moveTo(px + s - 6, py + 6);
+      ctx.lineTo(px + 6, py + s - 6);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function drawHover(m, x, y) {
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = state.selected === "dozer" ? "#dc2626" : tools[state.selected].color;
+    ctx.strokeRect(m.ox + x * m.size + 4, m.oy + y * m.size + 4, m.size - 8, m.size - 8);
+  }
+
+  function pickCell(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const m = cellMetrics();
+    const x = Math.floor((clientX - rect.left - m.ox) / m.size);
+    const y = Math.floor((clientY - rect.top - m.oy) / m.size);
+    if (x < 0 || y < 0 || x >= state.cols || y >= state.rows) return null;
+    return { x, y };
+  }
+
+  function place(cell) {
+    if (!cell) return;
+    const current = tile(cell.x, cell.y);
+    if (state.selected === "dozer") {
+      if (!current) {
+        showToast("Nothing to clear.");
+        return;
+      }
+      if (state.cash < tools.dozer.cost) {
+        showToast("Not enough cash.");
+        buzz();
+        return;
+      }
+      state.cash -= tools.dozer.cost;
+      state.cells[cell.y][cell.x] = null;
+      addLog(`Bulldozed ${current.type} at ${cell.x},${cell.y}.`);
+      ping(120, 0.08);
+      vibrate(20);
+      evaluate(false);
+      return;
+    }
+
+    if (current) {
+      showToast("Tile already occupied.");
+      buzz();
+      return;
+    }
+
+    const def = tools[state.selected];
+    if (state.cash < def.cost) {
+      showToast(`Need $${def.cost}.`);
+      buzz();
+      return;
+    }
+
+    state.cash -= def.cost;
+    state.cells[cell.y][cell.x] = { type: state.selected, age: 0, active: true };
+    addLog(`${def.name} built at ${cell.x},${cell.y}. -$${def.cost}.`);
+    ping(260 + Object.keys(tools).indexOf(state.selected) * 55, 0.07);
+    vibrate(8);
+    evaluate(false);
+  }
+
+  function setTool(tool) {
+    state.selected = tool;
+    document.querySelectorAll(".tool").forEach((button) => {
+      button.classList.toggle("active", button.dataset.tool === tool);
+    });
+    const def = tools[tool];
+    announce(`${def.name} selected. Cost ${def.cost}.`);
+  }
+
+  function addLog(text) {
+    const item = document.createElement("div");
+    item.textContent = text;
+    logEl.prepend(item);
+    while (logEl.children.length > 22) logEl.lastChild.remove();
+  }
+
+  function showToast(text) {
+    toastEl.textContent = text;
+    toastEl.classList.add("show");
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toastEl.classList.remove("show"), 1500);
+    announce(text);
+  }
+
+  function announce(text) {
+    announcerEl.textContent = text;
+  }
+
+  function vibrate(pattern) {
+    if (navigator.vibrate) navigator.vibrate(pattern);
+  }
+
+  function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  }
+
+  function ping(freq, duration) {
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "square";
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.09, audioCtx.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration + 0.02);
+  }
+
+  function buzz() {
+    initAudio();
+    ping(95, 0.16);
+    vibrate([20, 30, 20]);
+  }
+
+  function openSheet() {
+    sheet.classList.remove("hidden");
+  }
+
+  function closeSheet() {
+    sheet.classList.add("hidden");
+  }
+
+  function buildCostList() {
+    const costList = document.getElementById("costList");
+    Object.keys(tools).forEach((key) => {
+      const item = document.createElement("div");
+      item.className = "stat";
+      item.textContent = `${tools[key].name}: $${tools[key].cost}`;
+      costList.appendChild(item);
+    });
+  }
+
+  document.querySelectorAll(".tool").forEach((button) => {
+    button.addEventListener("click", () => setTool(button.dataset.tool));
+  });
+
+  canvas.addEventListener("pointermove", (event) => {
+    state.hover = pickCell(event.clientX, event.clientY);
+    draw();
+  });
+
+  canvas.addEventListener("pointerleave", () => {
+    state.hover = null;
+    draw();
+  });
+
+  canvas.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    initAudio();
+    place(pickCell(event.clientX, event.clientY));
+  });
+
+  document.getElementById("startBtn").addEventListener("click", resetCity);
+  document.getElementById("loadBtn").addEventListener("click", loadCity);
+  document.getElementById("saveBtn").addEventListener("click", saveCity);
+  document.getElementById("menuBtn").addEventListener("click", openSheet);
+  document.getElementById("closeSheetBtn").addEventListener("click", closeSheet);
+  document.getElementById("newBtn").addEventListener("click", resetCity);
+  document.getElementById("pauseBtn").addEventListener("click", () => {
+    state.paused = !state.paused;
+    document.getElementById("pauseBtn").classList.toggle("active", state.paused);
+    setHud();
+  });
+  document.getElementById("speedBtn").addEventListener("click", () => {
+    state.speed = state.speed === 1 ? 2 : state.speed === 2 ? 4 : 1;
+    scheduleTick();
+    setHud();
+  });
+
+  window.addEventListener("resize", resize);
+
+  buildCostList();
+  seedCity();
+  evaluate(false);
+  resize();
+  </script>
+</body>
+</html>
