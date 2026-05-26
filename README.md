@@ -11,7 +11,7 @@ The GitHub Pages entry point is `index.html`. The new mobile-first builder base 
 - `index.html` - mobile-friendly launcher for GitHub Pages.
 - `gunnar-thunder-builder.html` - mobile-first parts/layers builder for importing one DAE/STL as the base and building with editable widgets.
 - `builders-game.html` - mobile Builder's Language trailer game where commands become parts on a build grid.
-- `city-builder-game.html` - mobile city-builder sim where roads, zones, utilities, cash, and happiness interact.
+- `city-builder-game.html` - mobile city-builder sim with map layers, reversible planning, Gemini advisor/drafts, roads, zones, utilities, cash, and happiness.
 - `gunnars-depot.html` - branded modular 3D structure command center.
 - `gunnar-trailer-configurer.html` - earlier trailer-focused DAE/STL/OBJ configurator.
 - `thors-forge.html` - single-file STL editor/viewer.
@@ -29,7 +29,7 @@ Open `index.html` on GitHub Pages, then launch:
 - **Gunnar's Depot**: main branded modular structure tool.
 - **Gunnar Thunder Builder**: sharper builder surface with widgets, scene hierarchy, layer visibility, haptics, sound, DAE/STL import, and STL/JSON export.
 - **Builder's Game**: family-friendly mobile game where block, pillar, slab, and beam commands become trailer-building actions.
-- **City Builder**: family-friendly city sim where roads, homes, shops, factories, power, water, and parks drive population, budget, and happiness.
+- **City Builder**: family-friendly city sim where roads, homes, shops, factories, power, water, parks, map layers, and Gemini planning drive population, budget, and happiness.
 - **Gunnar Trailer Configurer**: simple trailer iteration tool.
 - **Thor's Forge**: STL-oriented editor and primitive builder.
 

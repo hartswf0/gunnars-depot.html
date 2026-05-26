@@ -41,8 +41,29 @@
     }
 
     button,
-    input {
+    input,
+    textarea {
       font: inherit;
+    }
+
+    input,
+    textarea {
+      width: 100%;
+      border: 3px solid var(--line);
+      border-radius: 0;
+      background: var(--paper);
+      color: var(--ink);
+      padding: 9px;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    textarea {
+      min-height: 72px;
+      resize: vertical;
+      line-height: 1.25;
+      text-transform: uppercase;
     }
 
     button {
@@ -210,6 +231,24 @@
       text-transform: uppercase;
     }
 
+    .system-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 5px;
+    }
+
+    .system-chip {
+      min-height: 32px;
+      padding: 5px;
+      border: 2px solid rgba(248,247,242,0.55);
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 900;
+      text-align: center;
+      text-transform: uppercase;
+      background: rgba(255,255,255,0.08);
+    }
+
     .city-wrap {
       min-height: 0;
       position: relative;
@@ -247,6 +286,56 @@
 
     .toast.show {
       display: block;
+    }
+
+    .inspector {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      z-index: 3;
+      min-height: 44px;
+      padding: 8px;
+      border: 4px solid var(--line);
+      background: rgba(255,255,255,0.93);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1.2;
+      text-transform: uppercase;
+      box-shadow: 4px 4px 0 var(--line);
+      pointer-events: none;
+    }
+
+    .draft-banner {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      top: 8px;
+      z-index: 4;
+      display: none;
+      gap: 6px;
+      padding: 8px;
+      border: 4px solid var(--line);
+      background: var(--yellow);
+      box-shadow: 4px 4px 0 var(--line);
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      pointer-events: auto;
+    }
+
+    .draft-banner.show {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      align-items: center;
+    }
+
+    .draft-banner button {
+      min-height: 34px;
+      padding: 5px 8px;
+      font-size: 10px;
     }
 
     .toolbar {
@@ -311,13 +400,25 @@
 
     .actions {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 5px;
     }
 
     .actions button {
       min-height: 38px;
       font-size: 11px;
+    }
+
+    .view-modes {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 5px;
+    }
+
+    .view-modes button {
+      min-height: 34px;
+      padding: 5px 2px;
+      font-size: 9px;
     }
 
     .intro,
@@ -359,6 +460,29 @@
       font-size: 13px;
       font-weight: 900;
       text-transform: uppercase;
+    }
+
+    .lesson {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px;
+      align-items: start;
+      border: 4px solid var(--line);
+      padding: 10px;
+      background: #fff;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .lesson span {
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      background: var(--ink);
+      color: var(--paper);
     }
 
     .intro-actions,
@@ -442,6 +566,33 @@
       background: var(--paper);
     }
 
+    .ai-actions {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .ai-actions button {
+      min-height: 38px;
+      font-size: 10px;
+      padding: 6px 4px;
+    }
+
+    .planner-output {
+      min-height: 74px;
+      max-height: 180px;
+      overflow: auto;
+      border: 3px solid var(--line);
+      background: var(--paper);
+      padding: 8px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1.25;
+      text-transform: uppercase;
+      white-space: pre-wrap;
+    }
+
     .log {
       max-height: 160px;
       overflow: auto;
@@ -504,11 +655,23 @@
         <div id="missionTitle" class="mission-title">Roads First</div>
         <div id="missionLine" class="mission-line">Build roads, then zone homes beside them.</div>
       </div>
+      <div class="system-row" aria-label="visible city systems">
+        <div class="system-chip">Net <span id="netOut">$0</span></div>
+        <div class="system-chip">Power <span id="powerMiniOut">0/0</span></div>
+        <div class="system-chip">Water <span id="waterMiniOut">0/0</span></div>
+        <div class="system-chip">Dirty <span id="pollutionMiniOut">0</span></div>
+      </div>
     </section>
 
     <section class="city-wrap">
       <canvas id="city" aria-label="City build grid"></canvas>
       <div id="toast" class="toast"></div>
+      <div id="draftBanner" class="draft-banner" aria-live="polite">
+        <span id="draftSummary">Gemini draft ready.</span>
+        <button id="applyDraftBtn" class="primary" type="button">Build Draft</button>
+        <button id="discardDraftBtn" type="button">Drop</button>
+      </div>
+      <div id="inspector" class="inspector" aria-live="polite">Tap a tile to inspect access, utilities, jobs, and pollution.</div>
     </section>
 
     <section class="toolbar">
@@ -522,23 +685,32 @@
         <button class="tool" data-tool="park" type="button"><span class="swatch park"></span><span>Park</span></button>
         <button class="tool" data-tool="dozer" type="button"><span class="swatch dozer"></span><span>Doze</span></button>
       </div>
+      <div class="view-modes" role="group" aria-label="map views">
+        <button class="view-btn active" data-view="build" type="button">Base</button>
+        <button class="view-btn" data-view="access" type="button">Access</button>
+        <button class="view-btn" data-view="power" type="button">Power</button>
+        <button class="view-btn" data-view="pollution" type="button">Dirty</button>
+        <button class="view-btn" data-view="happy" type="button">Happy</button>
+      </div>
       <div class="actions">
+        <button id="undoBtn" type="button">Undo</button>
         <button id="pauseBtn" type="button">Pause</button>
         <button id="speedBtn" type="button">Speed</button>
         <button id="newBtn" type="button">New</button>
-        <button id="menuBtn" type="button">City Hall</button>
+        <button id="menuBtn" type="button">Hall</button>
       </div>
     </section>
 
     <section id="intro" class="intro">
       <div class="intro-body">
         <h2>Build<br>A Tiny<br>City</h2>
-        <div class="rule">Roads carry meaning. Zones only work when they connect.</div>
-        <div class="rule">Homes need jobs, power, water, parks, and clean air.</div>
-        <div class="rule">Balance cash, population, happiness, utilities, and pollution.</div>
+        <div class="lesson"><span>1</span><div>Roads are the grammar. Homes, shops, utilities, and parks only make sense when they connect.</div></div>
+        <div class="lesson"><span>2</span><div>Use map views to reveal invisible systems: access, power demand, pollution, and happiness.</div></div>
+        <div class="lesson"><span>3</span><div>Gemini can advise or draft a plan, but you approve before anything changes.</div></div>
       </div>
       <div class="intro-actions">
-        <button id="startBtn" class="primary" type="button">Start City</button>
+        <button id="startBtn" class="primary" type="button">Guided Start</button>
+        <button id="sandboxBtn" type="button">Sandbox Start</button>
         <button id="loadBtn" type="button">Load Saved City</button>
       </div>
     </section>
@@ -563,6 +735,18 @@
             <div class="stat">Power <span id="powerOut">0/0</span></div>
             <div class="stat">Water <span id="waterOut">0/0</span></div>
           </div>
+        </div>
+        <div class="panel">
+          <h2>Gemini City Planner</h2>
+          <p>Paste a Gemini API key if you want live planning. The key stays in this browser. Requests are sent only when you tap a Gemini button.</p>
+          <input id="geminiKey" type="password" autocomplete="off" placeholder="Gemini API key">
+          <textarea id="plannerPrompt" placeholder="Ask for a plan, e.g. make a clean town with more jobs."></textarea>
+          <div class="ai-actions">
+            <button id="saveKeyBtn" type="button">Save Key</button>
+            <button id="askGeminiBtn" class="primary" type="button">Ask</button>
+            <button id="draftGeminiBtn" class="warn" type="button">Draft</button>
+          </div>
+          <div id="plannerOutput" class="planner-output">Gemini output will appear here. Drafts show yellow ghosts on the map before you build.</div>
         </div>
         <div class="panel">
           <h2>Tool Costs</h2>
@@ -603,7 +787,17 @@
     jobs: document.getElementById("jobsOut"),
     pollution: document.getElementById("pollutionOut"),
     power: document.getElementById("powerOut"),
-    water: document.getElementById("waterOut")
+    water: document.getElementById("waterOut"),
+    net: document.getElementById("netOut"),
+    powerMini: document.getElementById("powerMiniOut"),
+    waterMini: document.getElementById("waterMiniOut"),
+    pollutionMini: document.getElementById("pollutionMiniOut"),
+    inspector: document.getElementById("inspector"),
+    draftBanner: document.getElementById("draftBanner"),
+    draftSummary: document.getElementById("draftSummary"),
+    plannerOutput: document.getElementById("plannerOutput"),
+    geminiKey: document.getElementById("geminiKey"),
+    plannerPrompt: document.getElementById("plannerPrompt")
   };
 
   const tools = {
@@ -660,8 +854,13 @@
     speed: 1,
     cells: [],
     hover: null,
+    selectedCell: null,
+    view: "build",
     mission: 0,
     metrics: {},
+    history: [],
+    draft: null,
+    tutorial: true,
     timer: null,
     tickMs: 2200
   };
@@ -672,13 +871,45 @@
     return Array.from({ length: state.rows }, () => Array.from({ length: state.cols }, () => null));
   }
 
+  function cloneCells(cells = state.cells) {
+    return cells.map((row) => row.map((cell) => cell ? { ...cell } : null));
+  }
+
+  function pushHistory(label) {
+    state.history.push({
+      label,
+      cash: state.cash,
+      day: state.day,
+      mission: state.mission,
+      cells: cloneCells()
+    });
+    if (state.history.length > 35) state.history.shift();
+  }
+
+  function undo() {
+    const previous = state.history.pop();
+    if (!previous) {
+      showToast("Nothing to undo.");
+      return;
+    }
+    state.cash = previous.cash;
+    state.day = previous.day;
+    state.mission = previous.mission;
+    state.cells = cloneCells(previous.cells);
+    state.draft = null;
+    addLog(`Undo: ${previous.label}.`);
+    updateDraftUI();
+    evaluate(false);
+    announce("Last city action undone.");
+  }
+
   function seedCity() {
     state.cells = blankCells();
     for (let x = 1; x <= 5; x += 1) state.cells[8][x] = { type: "road", age: 0, active: true };
     for (let y = 6; y <= 9; y += 1) state.cells[y][3] = { type: "road", age: 0, active: true };
   }
 
-  function resetCity() {
+  function resetCity(tutorial = true) {
     state.cash = 2400;
     state.day = 1;
     state.selected = "road";
@@ -686,14 +917,21 @@
     state.speed = 1;
     state.mission = 0;
     state.hover = null;
+    state.selectedCell = null;
+    state.view = "build";
+    state.history = [];
+    state.draft = null;
+    state.tutorial = tutorial;
     seedCity();
     logEl.innerHTML = "";
     addLog("Survey crew marked the first road.");
     setTool("road");
+    setView("build");
+    updateDraftUI();
     scheduleTick();
     evaluate(false);
     intro.classList.add("hidden");
-    announce("New city started.");
+    announce(tutorial ? "Guided city started. Build roads and homes first." : "Sandbox city started.");
   }
 
   function saveCity() {
@@ -721,9 +959,12 @@
       state.cells = payload.cells || blankCells();
       state.mission = payload.mission || 0;
       state.paused = false;
+      state.history = [];
+      state.draft = null;
       logEl.innerHTML = "";
       addLog("Saved city restored.");
       intro.classList.add("hidden");
+      updateDraftUI();
       scheduleTick();
       evaluate(false);
       announce("Saved city loaded.");
@@ -867,7 +1108,7 @@
       state.cash += mission.reward;
       addLog(`Mission complete: ${mission.title}. Reward $${mission.reward}.`);
       showToast(`Mission complete. +$${mission.reward}`);
-      state.mission = Math.min(state.mission + 1, missions.length - 1);
+      state.mission += 1;
       ping(720, 0.12);
       vibrate([20, 30, 20]);
     }
@@ -880,9 +1121,9 @@
     ui.happy.textContent = String(m.happiness || 50);
     ui.day.textContent = String(state.day);
     ui.speed.textContent = state.paused ? "PAUSE" : state.speed > 1 ? `RUN X${state.speed}` : "RUN";
-    const mission = missions[state.mission] || missions[missions.length - 1];
-    ui.missionTitle.textContent = mission.title;
-    ui.missionLine.textContent = mission.line;
+    const mission = missions[state.mission];
+    ui.missionTitle.textContent = mission ? mission.title : "City Complete";
+    ui.missionLine.textContent = mission ? mission.line : "Keep improving the city or start a new scenario.";
     ui.advisor.textContent = state.cash < 0 ? "Treasurer warns" : m.happiness < 40 ? "Residents complain" : "Mayor says";
     ui.report.textContent = reportText();
     ui.income.textContent = `$${Math.round(m.income || 0)}`;
@@ -891,10 +1132,15 @@
     ui.pollution.textContent = String(m.pollution || 0);
     ui.power.textContent = `${m.powerSupply || 0}/${m.powerDemand || 0}`;
     ui.water.textContent = `${m.waterSupply || 0}/${m.waterDemand || 0}`;
+    ui.net.textContent = `$${Math.round(m.net || 0)}`;
+    ui.powerMini.textContent = `${m.powerSupply || 0}/${m.powerDemand || 0}`;
+    ui.waterMini.textContent = `${m.waterSupply || 0}/${m.waterDemand || 0}`;
+    ui.pollutionMini.textContent = String(m.pollution || 0);
     document.querySelectorAll(".tool").forEach((button) => {
       const def = tools[button.dataset.tool];
       button.disabled = button.dataset.tool !== "dozer" && state.cash < def.cost;
     });
+    updateInspector(state.selectedCell || state.hover);
   }
 
   function reportText() {
@@ -946,10 +1192,12 @@
       for (let x = 0; x < state.cols; x += 1) {
         const cell = state.cells[y][x];
         drawCellBase(m, x, y);
+        drawSystemOverlay(m, x, y);
         if (cell) drawTile(m, cell, x, y);
       }
     }
 
+    drawDraft(m);
     if (state.hover) drawHover(m, state.hover.x, state.hover.y);
     drawGrid(m);
   }
@@ -979,6 +1227,88 @@
     ctx.strokeStyle = "#101010";
     ctx.lineWidth = 4;
     ctx.strokeRect(m.ox, m.oy, m.w, m.h);
+  }
+
+  function drawSystemOverlay(m, x, y) {
+    if (state.view === "build") return;
+    const px = m.ox + x * m.size;
+    const py = m.oy + y * m.size;
+    const cell = tile(x, y);
+    let color = null;
+    let alpha = 0;
+
+    if (state.view === "access") {
+      color = nearRoad(x, y) ? "#16a34a" : "#dc2626";
+      alpha = nearRoad(x, y) ? 0.18 : 0.2;
+    } else if (state.view === "power") {
+      if (cell?.type === "power") {
+        color = "#facc15";
+        alpha = 0.5;
+      } else if (cell && tools[cell.type].power) {
+        color = state.metrics.powerSupply >= state.metrics.powerDemand ? "#16a34a" : "#dc2626";
+        alpha = 0.22;
+      } else {
+        color = "#facc15";
+        alpha = 0.07;
+      }
+    } else if (state.view === "pollution") {
+      const dirty = pollutionAt(x, y);
+      if (dirty <= 0) return;
+      color = dirty > 10 ? "#dc2626" : "#f97316";
+      alpha = Math.min(0.42, 0.08 + dirty / 40);
+    } else if (state.view === "happy") {
+      const value = happinessAt(x, y);
+      color = value >= 2 ? "#22c55e" : value < 0 ? "#dc2626" : "#60a5fa";
+      alpha = value >= 2 ? 0.24 : value < 0 ? 0.2 : 0.1;
+    }
+
+    if (!color) return;
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.globalAlpha = alpha;
+    ctx.fillRect(px, py, m.size, m.size);
+    ctx.restore();
+  }
+
+  function drawDraft(m) {
+    if (!state.draft?.actions?.length) return;
+    state.draft.actions.forEach((action, index) => {
+      const px = m.ox + action.x * m.size;
+      const py = m.oy + action.y * m.size;
+      ctx.save();
+      ctx.globalAlpha = 0.78;
+      ctx.fillStyle = tools[action.tool]?.color || "#facc15";
+      ctx.strokeStyle = "#101010";
+      ctx.lineWidth = 4;
+      ctx.setLineDash([6, 4]);
+      ctx.fillRect(px + 5, py + 5, m.size - 10, m.size - 10);
+      ctx.strokeRect(px + 5, py + 5, m.size - 10, m.size - 10);
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#101010";
+      ctx.font = "900 10px ui-monospace, monospace";
+      ctx.fillText(`AI ${index + 1}`, px + 7, py + 15);
+      ctx.restore();
+    });
+  }
+
+  function pollutionAt(x, y) {
+    let dirty = 0;
+    forEachCell((cell, cx, cy) => {
+      if (!cell) return;
+      const source = tools[cell.type].pollution || 0;
+      if (!source) return;
+      const dist = Math.abs(cx - x) + Math.abs(cy - y);
+      if (dist <= 3) dirty += Math.max(0, source - dist * 3);
+    });
+    return dirty;
+  }
+
+  function happinessAt(x, y) {
+    let value = 0;
+    if (nearType(x, y, "park", 2)) value += 3;
+    if (pollutionAt(x, y) > 8) value -= 2;
+    if (!nearRoad(x, y)) value -= 1;
+    return value;
   }
 
   function drawTile(m, cell, x, y) {
@@ -1108,6 +1438,7 @@
         buzz();
         return;
       }
+      pushHistory(`bulldoze ${current.type}`);
       state.cash -= tools.dozer.cost;
       state.cells[cell.y][cell.x] = null;
       addLog(`Bulldozed ${current.type} at ${cell.x},${cell.y}.`);
@@ -1130,6 +1461,7 @@
       return;
     }
 
+    pushHistory(`build ${def.name}`);
     state.cash -= def.cost;
     state.cells[cell.y][cell.x] = { type: state.selected, age: 0, active: true };
     addLog(`${def.name} built at ${cell.x},${cell.y}. -$${def.cost}.`);
@@ -1145,6 +1477,199 @@
     });
     const def = tools[tool];
     announce(`${def.name} selected. Cost ${def.cost}.`);
+  }
+
+  function setView(view) {
+    state.view = view;
+    document.querySelectorAll(".view-btn").forEach((button) => {
+      button.classList.toggle("active", button.dataset.view === view);
+    });
+    const labels = {
+      build: "Build view.",
+      access: "Access view shows road connection.",
+      power: "Power view shows demand and supply pressure.",
+      pollution: "Pollution view shows dirty pressure.",
+      happy: "Happiness view shows parks and stress."
+    };
+    announce(labels[view] || "Map view changed.");
+    draw();
+  }
+
+  function updateInspector(cell) {
+    if (!cell) {
+      ui.inspector.textContent = "Tap a tile to inspect access, utilities, jobs, and pollution.";
+      return;
+    }
+    const current = tile(cell.x, cell.y);
+    const type = current ? tools[current.type].name : "Empty";
+    const access = nearRoad(cell.x, cell.y) ? "road access" : "no road";
+    const dirty = pollutionAt(cell.x, cell.y);
+    const happy = happinessAt(cell.x, cell.y);
+    const powered = state.metrics.powerDemand <= state.metrics.powerSupply ? "power ok" : "power short";
+    const watered = state.metrics.waterDemand <= state.metrics.waterSupply ? "water ok" : "water short";
+    ui.inspector.textContent = `${cell.x},${cell.y}: ${type}. ${access}. ${powered}. ${watered}. pollution ${dirty}. local mood ${happy}.`;
+  }
+
+  function citySummary() {
+    const occupied = [];
+    forEachCell((cell, x, y) => {
+      if (cell) occupied.push({ x, y, type: cell.type, active: Boolean(cell.active) });
+    });
+    return {
+      cash: Math.round(state.cash),
+      day: state.day,
+      mission: missions[state.mission]?.title,
+      missionGoal: missions[state.mission]?.line,
+      metrics: state.metrics,
+      counts: Object.fromEntries(Object.keys(tools).map((key) => [key, count(key)])),
+      occupied
+    };
+  }
+
+  function localPlan() {
+    const actions = [];
+    const needsRoads = count("road") < 6;
+    const needsHomes = count("home") < 3;
+    const needsPower = state.metrics.powerDemand > state.metrics.powerSupply;
+    const needsWater = state.metrics.waterDemand > state.metrics.waterSupply;
+    const candidates = [
+      { tool: "road", x: 6, y: 8 },
+      { tool: "road", x: 7, y: 8 },
+      { tool: "home", x: 2, y: 7 },
+      { tool: "home", x: 4, y: 7 },
+      { tool: "home", x: 5, y: 9 },
+      { tool: "power", x: 7, y: 9 },
+      { tool: "water", x: 7, y: 7 },
+      { tool: "shop", x: 4, y: 6 },
+      { tool: "park", x: 2, y: 6 }
+    ];
+    candidates.forEach((candidate) => {
+      if (actions.length >= 5 || tile(candidate.x, candidate.y)) return;
+      if (candidate.tool === "road" && needsRoads) actions.push(candidate);
+      if (candidate.tool === "home" && needsHomes && nearRoad(candidate.x, candidate.y)) actions.push(candidate);
+      if (candidate.tool === "power" && needsPower && nearRoad(candidate.x, candidate.y)) actions.push(candidate);
+      if (candidate.tool === "water" && needsWater && nearRoad(candidate.x, candidate.y)) actions.push(candidate);
+      if (candidate.tool === "shop" && count("home") >= 3 && nearRoad(candidate.x, candidate.y)) actions.push(candidate);
+      if (candidate.tool === "park" && state.metrics.happiness < 55) actions.push(candidate);
+    });
+    return {
+      summary: "Local planner recommends safe starter moves near the existing road spine.",
+      actions,
+      warnings: ["Gemini key missing, so this is an offline heuristic."]
+    };
+  }
+
+  function stageDraft(plan, source = "Gemini") {
+    const actions = (plan.actions || []).filter((action) => {
+      return tools[action.tool] && action.tool !== "dozer" && Number.isInteger(action.x) && Number.isInteger(action.y) && !tile(action.x, action.y) && action.x >= 0 && action.y >= 0 && action.x < state.cols && action.y < state.rows;
+    }).slice(0, 8);
+    if (!actions.length) {
+      showToast("Planner found no legal empty tiles.");
+      return;
+    }
+    state.draft = {
+      source,
+      summary: plan.summary || `${source} draft ready.`,
+      actions,
+      warnings: plan.warnings || []
+    };
+    updateDraftUI();
+    closeSheet();
+    draw();
+    announce(`${source} draft staged. Review yellow tiles before building.`);
+  }
+
+  function updateDraftUI() {
+    if (!state.draft?.actions?.length) {
+      ui.draftBanner.classList.remove("show");
+      return;
+    }
+    ui.draftSummary.textContent = `${state.draft.source}: ${state.draft.actions.length} proposed moves.`;
+    ui.draftBanner.classList.add("show");
+  }
+
+  function applyDraft() {
+    if (!state.draft?.actions?.length) return;
+    const total = state.draft.actions.reduce((sum, action) => sum + tools[action.tool].cost, 0);
+    if (state.cash < total) {
+      showToast(`Need $${total} for draft.`);
+      return;
+    }
+    pushHistory("apply planner draft");
+    state.draft.actions.forEach((action) => {
+      if (!tile(action.x, action.y)) {
+        state.cash -= tools[action.tool].cost;
+        state.cells[action.y][action.x] = { type: action.tool, age: 0, active: true };
+        addLog(`${state.draft.source} built ${tools[action.tool].name} at ${action.x},${action.y}.`);
+      }
+    });
+    state.draft = null;
+    updateDraftUI();
+    evaluate(false);
+    showToast("Draft built.");
+  }
+
+  function discardDraft() {
+    state.draft = null;
+    updateDraftUI();
+    draw();
+    announce("Draft discarded.");
+  }
+
+  function parsePlannerJson(text) {
+    const cleaned = text.trim().replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim();
+    return JSON.parse(cleaned);
+  }
+
+  async function callGemini(mode) {
+    const key = ui.geminiKey.value.trim() || localStorage.getItem("gunnar_gemini_api_key") || "";
+    if (!key) {
+      const fallback = localPlan();
+      ui.plannerOutput.textContent = `${fallback.summary}\n\n${fallback.actions.map((a) => `${a.tool} ${a.x},${a.y}`).join("\n")}`;
+      if (mode === "draft") stageDraft(fallback, "Local planner");
+      return;
+    }
+
+    const ask = ui.plannerPrompt.value.trim() || "Improve this city safely while preserving cash.";
+    const basePrompt = `You are Gemini City Planner inside a tiny mobile city simulator.
+Return practical advice for this current city state.
+Use these principles: surface invisible systems, reduce cognitive load, support multiple map modes, direct manipulation, semantic zoom, constrained reversible play.
+Current city JSON: ${JSON.stringify(citySummary())}
+User request: ${ask}`;
+
+    const draftPrompt = `${basePrompt}
+Return ONLY JSON using this schema:
+{"summary":"short uppercase summary","actions":[{"tool":"road|home|shop|factory|power|water|park","x":0,"y":0}],"warnings":["short warning"]}
+Rules: max 8 actions, use empty coordinates from 0 to 10, avoid bankrupting the city, prefer road-connected moves.`;
+
+    ui.plannerOutput.textContent = "Calling Gemini...";
+    try {
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": key
+        },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: mode === "draft" ? draftPrompt : basePrompt }] }],
+          generationConfig: mode === "draft" ? { responseMimeType: "application/json" } : {}
+        })
+      });
+      if (!response.ok) throw new Error(`Gemini HTTP ${response.status}`);
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      if (!text) throw new Error("Gemini returned no text.");
+      if (mode === "draft") {
+        const plan = parsePlannerJson(text);
+        ui.plannerOutput.textContent = `${plan.summary || "Draft received."}\n\n${(plan.actions || []).map((a) => `${a.tool} ${a.x},${a.y}`).join("\n")}\n\n${(plan.warnings || []).join("\n")}`;
+        stageDraft(plan, "Gemini");
+      } else {
+        ui.plannerOutput.textContent = text;
+      }
+    } catch (error) {
+      ui.plannerOutput.textContent = `Gemini failed: ${error.message}\n\nUsing local fallback instead.`;
+      if (mode === "draft") stageDraft(localPlan(), "Local planner");
+    }
   }
 
   function addLog(text) {
@@ -1217,28 +1742,53 @@
     button.addEventListener("click", () => setTool(button.dataset.tool));
   });
 
+  document.querySelectorAll(".view-btn").forEach((button) => {
+    button.addEventListener("click", () => setView(button.dataset.view));
+  });
+
   canvas.addEventListener("pointermove", (event) => {
     state.hover = pickCell(event.clientX, event.clientY);
+    updateInspector(state.hover);
     draw();
   });
 
   canvas.addEventListener("pointerleave", () => {
     state.hover = null;
+    updateInspector(state.selectedCell);
     draw();
   });
 
   canvas.addEventListener("pointerdown", (event) => {
     event.preventDefault();
     initAudio();
-    place(pickCell(event.clientX, event.clientY));
+    const cell = pickCell(event.clientX, event.clientY);
+    state.selectedCell = cell;
+    updateInspector(cell);
+    place(cell);
   });
 
-  document.getElementById("startBtn").addEventListener("click", resetCity);
+  document.getElementById("startBtn").addEventListener("click", () => resetCity(true));
+  document.getElementById("sandboxBtn").addEventListener("click", () => resetCity(false));
   document.getElementById("loadBtn").addEventListener("click", loadCity);
   document.getElementById("saveBtn").addEventListener("click", saveCity);
   document.getElementById("menuBtn").addEventListener("click", openSheet);
   document.getElementById("closeSheetBtn").addEventListener("click", closeSheet);
-  document.getElementById("newBtn").addEventListener("click", resetCity);
+  document.getElementById("newBtn").addEventListener("click", () => resetCity(state.tutorial));
+  document.getElementById("undoBtn").addEventListener("click", undo);
+  document.getElementById("applyDraftBtn").addEventListener("click", applyDraft);
+  document.getElementById("discardDraftBtn").addEventListener("click", discardDraft);
+  document.getElementById("saveKeyBtn").addEventListener("click", () => {
+    const key = ui.geminiKey.value.trim();
+    if (!key) {
+      localStorage.removeItem("gunnar_gemini_api_key");
+      showToast("Gemini key cleared.");
+      return;
+    }
+    localStorage.setItem("gunnar_gemini_api_key", key);
+    showToast("Gemini key saved locally.");
+  });
+  document.getElementById("askGeminiBtn").addEventListener("click", () => callGemini("ask"));
+  document.getElementById("draftGeminiBtn").addEventListener("click", () => callGemini("draft"));
   document.getElementById("pauseBtn").addEventListener("click", () => {
     state.paused = !state.paused;
     document.getElementById("pauseBtn").classList.toggle("active", state.paused);
@@ -1253,6 +1803,7 @@
   window.addEventListener("resize", resize);
 
   buildCostList();
+  ui.geminiKey.value = localStorage.getItem("gunnar_gemini_api_key") || "";
   seedCity();
   evaluate(false);
   resize();
