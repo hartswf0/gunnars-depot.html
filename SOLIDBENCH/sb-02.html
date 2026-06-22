@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOLIDBENCH — co-build printable solids, live</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+  :root{
+    --bed:#0a0c0f; --panel:#101317; --panel2:#0c0f12; --ink:#e7ebef; --dim:#828d97;
+    --line:#212730; --hot:#ff5d3b; --warn:#ffb02e; --good:#39d98a; --accent:#c8ff4d;
+    --probe:#4ea8ff;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+    --sans:"Space Grotesk",-apple-system,Segoe UI,Roboto,sans-serif;
+    --tap:44px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bed);color:var(--ink);font-family:var(--sans);height:100vh;overflow:hidden;-webkit-text-size-adjust:100%}
+
+  .app{display:grid;grid-template-columns:minmax(300px,360px) 1fr minmax(290px,340px);grid-template-rows:auto auto 1fr;height:100vh}
+  header{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:11px 18px;border-bottom:1px solid var(--line);background:var(--panel)}
+  .mark{width:20px;height:20px;border:2px solid var(--accent);position:relative;flex:none}
+  .mark::before{content:"";position:absolute;inset:auto auto 3px 3px;width:7px;height:7px;background:var(--accent)}
+  header h1{font-size:14px;font-weight:700;letter-spacing:.16em}
+  header .sub{font-family:var(--mono);font-size:10.5px;color:var(--dim);letter-spacing:.03em}
+  header .right{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--dim)}
+
+  /* ---------- ROOM BAR (spans all columns, under header) ---------- */
+  .roombar{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:9px 18px;border-bottom:1px solid var(--line);background:var(--panel2);flex-wrap:wrap}
+  .roombar .rb-state{font-family:var(--mono);font-size:10.5px;display:flex;align-items:center;gap:7px}
+  .roombar .rb-state .dot{width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
+  .roombar.solo .dot{background:var(--dim)}
+  .roombar.flight .dot{background:var(--warn);animation:pulse 1s infinite}
+  .roombar.live .dot{background:var(--good)}
+  .roombar.sev .dot{background:var(--hot)}
+  @keyframes pulse{50%{opacity:.3}}
+  .roombar .rb-code{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:600;letter-spacing:.05em}
+  .roombar .rb-actions{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .roombar input{background:var(--bed);border:1px solid var(--line);color:var(--ink);font-family:var(--mono);font-size:11px;padding:7px 9px;min-height:36px;width:130px}
+  .roombar button{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;background:transparent;color:var(--ink);border:1px solid var(--line);padding:7px 11px;cursor:pointer;text-transform:uppercase;min-height:36px}
+  .roombar button:hover{border-color:var(--dim)}
+  .roombar button.primary{border-color:var(--accent);color:var(--accent)}
+  .roombar button:disabled{opacity:.4;cursor:not-allowed}
+  .roombar .peers{display:flex;gap:5px;align-items:center}
+  .roombar .peer{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;color:#04121f;border:1px solid rgba(255,255,255,.2)}
+  .roombar .rb-hint{font-family:var(--mono);font-size:10px;color:var(--dim)}
+
+  .col{overflow:auto;background:var(--panel);display:flex;flex-direction:column;min-height:0}
+  .col.left{border-right:1px solid var(--line)}
+  .col.right{border-left:1px solid var(--line)}
+  .secthead{font-family:var(--mono);font-size:9.5px;letter-spacing:.2em;color:var(--dim);text-transform:uppercase;padding:12px 16px 8px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;flex:none}
+  .secthead .n{color:var(--accent)}
+
+  .gen{padding:14px 16px;border-bottom:1px solid var(--line);flex:none}
+  .gen label{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:8px}
+  .gen .row{display:flex;border:1px solid var(--line)}
+  .gen textarea{flex:1;border:none;outline:none;resize:none;background:var(--panel2);color:var(--ink);font-family:var(--sans);font-size:14px;padding:11px 12px;min-height:var(--tap);line-height:1.4}
+  .gen .go{min-width:84px;min-height:var(--tap);border:none;border-left:1px solid var(--line);background:var(--accent);color:var(--panel2);font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+  .gen .go:disabled{background:var(--panel2);color:var(--dim);cursor:not-allowed}
+  .gen .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .gen .chip{font-family:var(--mono);font-size:10px;color:var(--dim);border:1px solid var(--line);padding:5px 9px;cursor:pointer;background:transparent}
+  .gen .chip:hover{border-color:var(--dim);color:var(--ink)}
+  .gen .genstate{font-family:var(--mono);font-size:10px;margin-top:9px;min-height:14px;line-height:1.4}
+  .gen .genstate.flight{color:var(--probe)} .gen .genstate.sev{color:var(--hot)} .gen .genstate.ok{color:var(--good)}
+  .gen .dots::after{content:"";animation:dots 1.2s steps(4,end) infinite}
+  @keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}100%{content:""}}
+
+  #editor{flex:1;min-height:110px;width:100%;resize:none;border:none;outline:none;background:var(--panel2);color:var(--ink);font-family:var(--mono);font-size:12.5px;line-height:1.6;padding:12px 16px;tab-size:2;white-space:pre}
+  .remote-flash{animation:flash .8s ease-out}
+  @keyframes flash{0%{background:#1a2a14}100%{background:var(--panel2)}}
+  .controls{display:flex;gap:8px;padding:11px 16px;border-top:1px solid var(--line);flex-wrap:wrap;flex:none}
+  button.act{font-family:var(--mono);font-size:11px;letter-spacing:.05em;background:transparent;color:var(--ink);border:1px solid var(--line);padding:8px 12px;cursor:pointer;text-transform:uppercase;min-height:var(--tap)}
+  button.act:hover{border-color:var(--dim)}
+  button.act.primary{border-color:var(--accent);color:var(--accent)}
+  button.act.primary:hover{background:var(--accent);color:var(--panel2)}
+  button.act:disabled{opacity:.35;cursor:not-allowed}
+  button.act:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .err{font-family:var(--mono);font-size:11px;line-height:1.5;color:var(--hot);padding:0 16px 11px;white-space:pre-wrap;display:none;flex:none}
+  .err.show{display:block}
+
+  #stage{position:relative;background:radial-gradient(circle at 50% 28%,#13171c,#0a0c0f 72%);overflow:hidden;min-height:0}
+  #gl{display:block;width:100%;height:100%}
+  .stagetop{position:absolute;left:12px;top:12px;right:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;pointer-events:none}
+  .modeset,.viewset{display:flex;gap:6px;pointer-events:auto}
+  .viewset{margin-left:auto}
+  .stagetop button{min-height:0;padding:6px 10px;background:rgba(10,12,15,.78);backdrop-filter:blur(4px);font-size:10px;font-family:var(--mono);color:var(--ink);border:1px solid var(--line);text-transform:uppercase;cursor:pointer}
+  .modeset button.on{border-color:var(--accent);color:var(--accent)}
+  .sectionbar{position:absolute;left:12px;right:12px;bottom:42px;display:none;align-items:center;gap:10px;pointer-events:auto;background:rgba(10,12,15,.82);backdrop-filter:blur(4px);border:1px solid var(--line);padding:8px 12px}
+  .sectionbar.show{display:flex}
+  .sectionbar label{font-family:var(--mono);font-size:10px;color:var(--dim);white-space:nowrap}
+  .sectionbar input[type=range]{flex:1;accent-color:var(--accent);height:var(--tap)}
+  .sectionbar .zval{font-family:var(--mono);font-size:10.5px;color:var(--accent);min-width:60px;text-align:right}
+  .legend{position:absolute;right:12px;bottom:12px;font-family:var(--mono);font-size:10px;color:var(--dim);display:flex;gap:12px;pointer-events:none}
+  .legend .sw{display:inline-block;width:9px;height:9px;margin-right:4px;vertical-align:middle}
+  .probe{position:absolute;font-family:var(--mono);font-size:11px;background:var(--probe);color:#03121f;padding:6px 9px;border-radius:2px;pointer-events:none;display:none;white-space:nowrap;font-weight:600;transform:translate(-50%,-130%);z-index:4}
+  .probe.show{display:block}
+  .booting{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;font-family:var(--mono);font-size:12px;color:var(--dim);background:var(--bed);z-index:5;text-align:center;padding:24px}
+  .booting .bar{width:160px;height:2px;background:var(--line);overflow:hidden}
+  .booting .bar i{display:block;height:100%;width:40%;background:var(--accent);animation:slide 1.1s ease-in-out infinite}
+  @keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}
+
+  .verdict{padding:14px 16px;border-bottom:1px solid var(--line)}
+  .verdict .badge{font-family:var(--mono);font-size:12px;letter-spacing:.09em;font-weight:600;display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid}
+  .verdict.ok .badge{color:var(--good);border-color:var(--good)}
+  .verdict.bad .badge{color:var(--hot);border-color:var(--hot)}
+  .verdict.idle .badge{color:var(--dim);border-color:var(--line)}
+  .verdict .badge .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+  .verdict .plain{font-family:var(--sans);font-size:12.5px;color:var(--ink);margin-top:10px;line-height:1.45}
+  .verdict .byline{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:8px}
+
+  .metric{padding:11px 16px;border-bottom:1px solid var(--line)}
+  .metric.locatable{cursor:pointer}
+  .metric.locatable:hover{background:var(--panel2)}
+  .metric .row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .metric .label{font-family:var(--mono);font-size:11px;color:var(--ink)}
+  .metric .tag{font-family:var(--mono);font-size:8.5px;letter-spacing:.06em;padding:2px 5px;border:1px solid var(--line);margin-left:6px;text-transform:uppercase}
+  .metric .tag.exact{color:var(--good);border-color:#1f3d2e}
+  .metric .tag.est{color:var(--warn);border-color:#3d3320}
+  .metric .tag.find{color:var(--probe);border-color:#1c3a52}
+  .metric .val{font-family:var(--mono);font-size:13px;font-weight:600}
+  .metric .val.pass{color:var(--good)} .metric .val.fail{color:var(--hot)} .metric .val.idle{color:var(--dim)}
+  .metric .desc{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:4px;line-height:1.5}
+  .metric .desc b{color:var(--ink);font-weight:500}
+
+  .lineage{display:flex;flex-direction:column}
+  .ver{display:flex;gap:10px;padding:9px 16px;border-bottom:1px solid var(--line);cursor:pointer;align-items:center}
+  .ver:hover{background:var(--panel2)}
+  .ver .thumb{width:42px;height:42px;flex:none;background:var(--panel2);border:1px solid var(--line);object-fit:cover}
+  .ver .meta{flex:1;min-width:0}
+  .ver .vid{font-family:var(--mono);font-size:12px;font-weight:600}
+  .ver .vstat{font-family:var(--mono);font-size:9.5px;margin-top:2px;color:var(--dim)}
+  .ver .vstat .ok{color:var(--good)} .ver .vstat .bad{color:var(--hot)}
+  .lineage-empty{font-family:var(--mono);font-size:10.5px;color:var(--dim);padding:13px 16px;line-height:1.6}
+
+  .tabbar{display:none}
+
+  @media (max-width:900px){
+    .app{display:block;height:100vh;overflow:hidden}
+    header{position:sticky;top:0;z-index:6} header .sub{display:none}
+    .roombar{position:sticky;top:46px;z-index:6}
+    .col,#stage{display:none}
+    .app.tab-build .col.left{display:flex;height:calc(100vh - 46px - 50px - 56px);overflow:auto}
+    .app.tab-view  #stage{display:block;height:calc(100vh - 46px - 50px - 56px)}
+    .app.tab-report .col.right{display:flex;height:calc(100vh - 46px - 50px - 56px);overflow:auto}
+    .roombar .rb-hint{display:none}
+    .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;height:56px;z-index:7;background:var(--panel);border-top:1px solid var(--line)}
+    .tabbar button{flex:1;border:none;background:transparent;color:var(--dim);font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:0}
+    .tabbar button .ic{font-size:15px;line-height:1}
+    .tabbar button.on{color:var(--accent)}
+    .tabbar button.flagbad.on{color:var(--hot)}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app tab-build" id="app">
+  <header>
+    <span class="mark" aria-hidden="true"></span>
+    <h1>SOLIDBENCH</h1>
+    <span class="sub">co-build printable solids, live &middot; the script is shared, the kernel is local</span>
+    <span class="right" id="meshstat">booting&hellip;</span>
+  </header>
+
+  <!-- ROOM BAR -->
+  <div class="roombar solo" id="roombar">
+    <div class="rb-state"><span class="dot"></span><span id="rb-label">solo</span></div>
+    <span class="rb-code" id="rb-code"></span>
+    <div class="peers" id="peers"></div>
+    <div class="rb-actions">
+      <span class="rb-hint" id="rb-hint">start a room, share the code, build together</span>
+      <input id="joincode" placeholder="enter room code" autocomplete="off" spellcheck="false">
+      <button id="joinbtn">join</button>
+      <button class="primary" id="hostbtn">start room</button>
+    </div>
+  </div>
+
+  <!-- LEFT / BUILD -->
+  <section class="col left">
+    <div class="gen">
+      <label>describe it &mdash; the result is shared with the room</label>
+      <div class="row">
+        <textarea id="prompt" rows="2" placeholder="a phone stand that leans 15 degrees with a cable slot"></textarea>
+        <button class="go" id="gen" disabled>make</button>
+      </div>
+      <div class="chips" id="chips">
+        <button class="chip" data-p="a hexagonal pencil holder with 6 compartments">pencil holder</button>
+        <button class="chip" data-p="a keychain tag, rounded rectangle with a hole">keychain</button>
+        <button class="chip" data-p="a simple gear with 12 teeth and a center bore">gear</button>
+      </div>
+      <div class="genstate" id="genstate"></div>
+    </div>
+    <div class="secthead"><span><span class="n">&middot;</span>&nbsp; shared script</span><span id="editlabel">editable</span></div>
+    <textarea id="editor" spellcheck="false"></textarea>
+    <div class="err" id="err"></div>
+    <div class="controls">
+      <button class="act primary" id="run" disabled>&#9656; evaluate</button>
+      <button class="act" id="snap" disabled>+ version</button>
+      <button class="act" id="export" disabled>&#8595; stl</button>
+    </div>
+  </section>
+
+  <!-- CENTER / VIEW -->
+  <section id="stage">
+    <canvas id="gl"></canvas>
+    <div class="stagetop">
+      <div class="modeset" id="modeset">
+        <button data-mode="solid" class="on">solid</button>
+        <button data-mode="overhang">overhangs</button>
+        <button data-mode="section">section</button>
+      </div>
+      <div class="viewset" id="viewset">
+        <button data-view="iso">iso</button>
+        <button data-view="front">front</button>
+        <button data-view="top">top</button>
+      </div>
+    </div>
+    <div class="sectionbar" id="sectionbar">
+      <label>cut Z</label><input type="range" id="sectionz" min="0" max="100" value="100"><span class="zval" id="zval">top</span>
+    </div>
+    <div class="probe" id="probe"></div>
+    <div class="legend">
+      <span><span class="sw" style="background:#9aa6b2"></span>face</span>
+      <span><span class="sw" style="background:#ffb02e"></span>overhang</span>
+      <span><span class="sw" style="background:#4ea8ff"></span>probe</span>
+    </div>
+    <div class="booting" id="booting"><div>loading the manifold-3d kernel (WASM)</div><div class="bar"><i></i></div></div>
+  </section>
+
+  <!-- RIGHT / REPORT -->
+  <section class="col right">
+    <div class="secthead"><span><span class="n">&deg;</span>&nbsp; printability</span><span id="vstamp">&mdash;</span></div>
+    <div class="verdict idle" id="verdict">
+      <span class="badge"><span class="dot"></span><span id="verdicttext">awaiting evaluation</span></span>
+      <div class="plain" id="verdictplain"></div>
+      <div class="byline" id="byline"></div>
+    </div>
+    <div class="metric locatable" id="row-overhang">
+      <div class="row"><span class="label">Max overhang<span class="tag find" id="find-overhang">find</span></span><span class="val idle" id="m-overhang">&mdash;</span></div>
+      <div class="desc">Steepest downward face vs the plate. &gt;45&deg; wants support. <b>Tap any face to read its angle.</b></div>
+    </div>
+    <div class="metric locatable" id="row-wall">
+      <div class="row"><span class="label">Min wall<span class="tag est">est</span><span class="tag find" id="find-wall">find</span></span><span class="val idle" id="m-wall">&mdash;</span></div>
+      <div class="desc"><b>Three-axis</b> ray sample &mdash; catches vertical walls. Marks the thinnest spot. &lt;0.4mm is below one extrusion.</div>
+    </div>
+    <div class="metric"><div class="row"><span class="label">Volume / tris<span class="tag exact">exact</span></span><span class="val idle" id="m-vt">&mdash;</span></div></div>
+    <div class="secthead"><span>versions</span><span id="vcount">0</span></div>
+    <div class="lineage" id="lineage"><div class="lineage-empty">Each version stores script + thumbnail + report. Tap to revert &mdash; reverts broadcast to the room.</div></div>
+  </section>
+
+  <nav class="tabbar" id="tabbar">
+    <button data-tab="build" class="on"><span class="ic">&#9636;</span>build</button>
+    <button data-tab="view"><span class="ic">&#9673;</span>view</button>
+    <button data-tab="report" id="tab-report"><span class="ic">&#9650;</span>report</button>
+  </nav>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://unpkg.com/peerjs@1/dist/peerjs.min.js"></script>
+<script type="importmap">
+{ "imports": { "manifold-3d": "https://cdn.jsdelivr.net/npm/manifold-3d@3.5.0/manifold.js" } }
+</script>
+
+<script type="module">
+/* ============================================================
+   SOLIDBENCH v5 — live multiplayer co-build.
+   --------------------------------------------------------
+   SHARED STATE = the CSG script (+ author + seq). The mesh is NEVER
+   sent; every device regenerates it identically from the same script
+   via its own local manifold-3d kernel. Sync the source, not the solid.
+   TOPOLOGY = star: the room host's peer id IS the room code; others
+   connect to it; the host re-broadcasts edits to all. One ordering
+   authority, no N-by-N mesh.
+   MERGE = last-writer-wins by seq, author-id tie-break (verified to
+   converge). A remote edit only overwrites your editor when you are
+   not mid-type, and flashes so you see it arrive.
+   NETWORK FAILURE LAW (from the Operational Pragmatist POML): every
+   channel state is VISIBLE — solo / connecting / live / severed —
+   with a reason. A broker that is unreachable shows the cut, never a
+   fake "connected". The public PeerJS broker + STUN are required for
+   peers to find each other; if blocked, you stay solo and are told so.
+   Everything geometric (kernel, measurements, export) is real and local.
+   ============================================================ */
+import Module from 'manifold-3d';
+let Manifold; let kernelReady=false;
+const Q=1000; const q = v => Math.round(v*Q)/Q;
+const GEN_DEADLINE_MS=30000, GEN_MAX_TOKENS=1500;
+
+/* ---------------- kernel DSL ---------------- */
+function dsl(){
+  const M=Manifold;
+  const box=(w,d,h)=>M.cube([q(w),q(d),q(h)], true);
+  const cyl=(r,h,seg)=>M.cylinder(q(h), q(r), q(r), seg||48, true);
+  const sphere=(r,seg)=>M.sphere(q(r), seg||48);
+  const union=(...a)=>{const f=a.flat();return f.reduce((acc,s)=>acc?acc.add(s):s);};
+  const diff=(...a)=>{const f=a.flat();return f.slice(1).reduce((acc,s)=>acc.subtract(s), f[0]);};
+  const intersect=(...a)=>{const f=a.flat();return f.reduce((acc,s)=>acc?acc.intersect(s):s);};
+  const hull=(...a)=>{const f=a.flat();
+    if(f.length===1) return f[0].hull ? f[0].hull() : M.hull(f);
+    if(typeof M.hull==='function'){ try{ return M.hull(f); }catch(_){} }
+    return f.slice(1).reduce((acc,s)=>acc.hull(s), f[0]);};
+  const move=(x,y,z,s)=>s.translate([q(x),q(y),q(z)]);
+  const rot=(x,y,z,s)=>s.rotate([x,y,z]);
+  const scale=(x,y,z,s)=>s.scale([x,y,z]);
+  return {box,cyl,sphere,union,diff,intersect,hull,move,rot,scale};
+}
+function evaluateScript(src){
+  const {box,cyl,sphere,union,diff,intersect,hull,move,rot,scale}=dsl();
+  const f=new Function('box','cyl','sphere','union','diff','intersect','hull','move','rot','scale','PI','sin','cos','tan','sqrt','abs','round','min','max','floor',
+    '"use strict";\n'+src);
+  const out=f(box,cyl,sphere,union,diff,intersect,hull,move,rot,scale,Math.PI,Math.sin,Math.cos,Math.tan,Math.sqrt,Math.abs,Math.round,Math.min,Math.max,Math.floor);
+  if(!out || typeof out.getMesh!=='function') throw new Error('Script must return a solid. End with:  return <a solid>;');
+  if(out.isEmpty && out.isEmpty()) throw new Error('Result is empty — the booleans cancelled to nothing.');
+  return out;
+}
+function meshToThree(mesh){
+  const stride=mesh.numProp, vp=mesh.vertProperties, tv=mesh.triVerts;
+  const positions=new Float32Array(tv.length*3);
+  for(let i=0;i<tv.length;i++){const vi=tv[i]*stride;positions[i*3]=vp[vi];positions[i*3+1]=vp[vi+1];positions[i*3+2]=vp[vi+2];}
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+  g.computeVertexNormals();
+  return g;
+}
+
+/* ============================================================
+   MULTIPLAYER — PeerJS star. Verified merge logic from the bench.
+   ============================================================ */
+const NET = {
+  peer:null, isHost:false, conns:[],          // host: many; client: one (to host)
+  selfId:null, seq:0, lastAuthor:null,
+  me:{ id:null, name:null, color:null },
+  roster:new Map(),                            // id -> {id,name,color}
+};
+const COLORS=["#c8ff4d","#4ea8ff","#ff5d3b","#ffb02e","#39d98a","#b98cff","#ff8cc6"];
+function randName(){ const a=["ash","bo","cy","del","eli","fox","gus","ivy","jo","kit","lux","mo"]; return a[Math.floor(Math.random()*a.length)]+Math.floor(Math.random()*90+10); }
+
+function setRoomState(cls, label, code){
+  const rb=$('roombar');
+  rb.className='roombar '+cls;
+  $('rb-label').textContent=label;
+  $('rb-code').textContent=code?('room '+code):'';
+}
+function renderPeers(){
+  const box=$('peers'); box.innerHTML='';
+  NET.roster.forEach(p=>{
+    const d=document.createElement('div'); d.className='peer';
+    d.style.background=p.color; d.title=p.name; d.textContent=p.name.slice(0,2);
+    box.appendChild(d);
+  });
+}
+function rosterJoin(id,name,color){ NET.roster.set(id,{id,name,color}); renderPeers(); }
+function rosterLeave(id){ NET.roster.delete(id); renderPeers(); }
+
+function brokerMissing(){ return (typeof Peer!=="function"); }
+
+function hostRoom(){
+  if(brokerMissing()){ setRoomState('sev','signaling unavailable',''); $('rb-hint').textContent='PeerJS broker did not load — multiplayer needs network access.'; return; }
+  teardownNet();
+  NET.me.name=randName(); NET.me.color=COLORS[0];
+  setRoomState('flight','starting room…','');
+  try{
+    NET.peer=new Peer();                       // random id from public broker = the room code
+  }catch(e){ setRoomState('sev','could not start',''); return; }
+  NET.isHost=true;
+  NET.peer.on('open', id=>{
+    NET.selfId=id; NET.me.id=id;
+    rosterJoin(id, NET.me.name+" (you)", NET.me.color);
+    setRoomState('live','hosting', id);
+    $('rb-hint').textContent='share this room code; others tap join';
+  });
+  NET.peer.on('connection', conn=>{ wireHostConn(conn); });
+  NET.peer.on('error', e=> netError(e));
+  NET.peer.on('disconnected', ()=>{ setRoomState('sev','broker disconnected', NET.selfId); });
+}
+
+function wireHostConn(conn){
+  conn.on('open', ()=>{
+    NET.conns.push(conn);
+    // give the newcomer a color and the current state
+    const color=COLORS[(NET.conns.length)%COLORS.length];
+    conn.send({type:"welcome", color, host:NET.me.name, code:NET.selfId});
+    conn.send({type:"state", code:$('editor').value, author:NET.me.name, seq:NET.seq});
+    conn.send({type:"roster", peers:[...NET.roster.values()]});
+  });
+  conn.on('data', msg=> hostOnData(conn, msg));
+  conn.on('close', ()=>{
+    NET.conns=NET.conns.filter(c=>c!==conn);
+    if(conn._pid){ rosterLeave(conn._pid); broadcast({type:"leave", id:conn._pid}, null); }
+  });
+  conn.on('error', e=> netError(e));
+}
+function hostOnData(conn, msg){
+  if(!msg||typeof msg!=='object') return;
+  if(msg.type==="hello"){
+    conn._pid=msg.id; rosterJoin(msg.id, msg.name, msg.color);
+    broadcast({type:"join", id:msg.id, name:msg.name, color:msg.color}, conn);
+    broadcast({type:"roster", peers:[...NET.roster.values()]}, null);
+    return;
+  }
+  if(msg.type==="state"){
+    if(applyRemoteState(msg)){ broadcast(msg, conn); }   // relay to everyone else
+    return;
+  }
+}
+function broadcast(msg, except){
+  NET.conns.forEach(c=>{ if(c!==except){ try{ c.send(msg); }catch(_){} } });
+}
+
+function joinRoom(){
+  const code=$('joincode').value.trim();
+  if(!code){ return; }
+  if(brokerMissing()){ setRoomState('sev','signaling unavailable',''); $('rb-hint').textContent='PeerJS broker did not load — multiplayer needs network access.'; return; }
+  teardownNet();
+  NET.me.name=randName();
+  setRoomState('flight','connecting…','');
+  try{ NET.peer=new Peer(); }catch(e){ setRoomState('sev','could not start',''); return; }
+  NET.isHost=false;
+  NET.peer.on('open', id=>{
+    NET.selfId=id; NET.me.id=id;
+    const conn=NET.peer.connect(code, {reliable:true});
+    NET.conns=[conn];
+    wireClientConn(conn, code);
+  });
+  NET.peer.on('error', e=> netError(e));
+  NET.peer.on('disconnected', ()=>{ setRoomState('sev','broker disconnected',''); });
+}
+function wireClientConn(conn, code){
+  let opened=false;
+  const giveUp=setTimeout(()=>{ if(!opened){ setRoomState('sev','room not found / no answer',''); $('rb-hint').textContent='check the code, or the host may be offline.'; } }, 12000);
+  conn.on('open', ()=>{
+    opened=true; clearTimeout(giveUp);
+    setRoomState('live','in room', code);
+    conn.send({type:"hello", id:NET.selfId, name:NET.me.name, color:NET.me.color||COLORS[1]});
+  });
+  conn.on('data', msg=> clientOnData(msg));
+  conn.on('close', ()=>{ setRoomState('sev','disconnected from host', code); });
+  conn.on('error', e=> netError(e));
+}
+function clientOnData(msg){
+  if(!msg||typeof msg!=='object') return;
+  switch(msg.type){
+    case "welcome": NET.me.color=msg.color; rosterJoin(NET.selfId, NET.me.name+" (you)", msg.color); break;
+    case "state":   applyRemoteState(msg); break;
+    case "roster":  NET.roster.clear(); (msg.peers||[]).forEach(p=>NET.roster.set(p.id, p.id===NET.selfId?{...p,name:p.name+" (you)"}:p)); renderPeers(); break;
+    case "join":    rosterJoin(msg.id, msg.name, msg.color); break;
+    case "leave":   rosterLeave(msg.id); break;
+  }
+}
+
+/* verified merge: accept iff newer (seq, then author tie-break) */
+function applyRemoteState(msg){
+  const newer = (msg.seq>NET.seq) || (msg.seq===NET.seq && (msg.author||"")>(NET.lastAuthor||""));
+  if(!newer) return false;
+  NET.seq=msg.seq; NET.lastAuthor=msg.author;
+  applyIncomingCode(msg.code, msg.author);
+  return true;
+}
+function broadcastLocalEdit(code){
+  if(!NET.peer) return;                          // solo: nothing to send
+  NET.seq+=1; NET.lastAuthor=NET.me.name;
+  const msg={type:"state", code, author:NET.me.name, seq:NET.seq};
+  if(NET.isHost) broadcast(msg, null); else { const c=NET.conns[0]; if(c){ try{ c.send(msg); }catch(_){} } }
+}
+function netError(e){
+  const t=(e&&e.type)?e.type:"error";
+  let reason;
+  if(t==="peer-unavailable") reason="room not found (code may be wrong or host left)";
+  else if(t==="network"||t==="server-error"||t==="socket-error") reason="signaling broker unreachable";
+  else if(t==="browser-incompatible") reason="this browser lacks WebRTC";
+  else reason=t;
+  setRoomState('sev', reason, NET.selfId||'');
+  $('rb-hint').textContent="multiplayer needs the public broker reachable; you can still build solo.";
+}
+function teardownNet(){
+  try{ NET.conns.forEach(c=>c.close && c.close()); }catch(_){}
+  try{ NET.peer && NET.peer.destroy(); }catch(_){}
+  NET.peer=null; NET.isHost=false; NET.conns=[]; NET.roster.clear(); NET.seq=0; NET.lastAuthor=null; renderPeers();
+}
+
+/* apply code arriving from the network: don't yank a cursor mid-type */
+let typingUntil=0;
+function applyIncomingCode(code, author){
+  const ed=$('editor');
+  const midType = Date.now() < typingUntil;
+  if(midType){
+    // queue a gentle nudge instead of overwriting
+    genHint('remote edit from '+author+' waiting — stop typing to receive', 'flight');
+    pendingRemote={code, author};
+    return;
+  }
+  ed.value=code;
+  ed.classList.remove('remote-flash'); void ed.offsetWidth; ed.classList.add('remote-flash');
+  $('byline').textContent='last edit by '+author;
+  run();
+}
+let pendingRemote=null;
+function genHint(msg, cls){ const el=$('genstate'); el.className='genstate'+(cls?(' '+cls):''); el.textContent=msg; }
+
+/* ---- validate (kernel topology + three-axis thin-spot location) ---- */
+function validate(solid, geom){
+  const pos=geom.attributes.position.array, triCount=pos.length/9;
+  let genus=0, volume=0;
+  try{ genus = typeof solid.genus==='function' ? solid.genus() : 0; }catch(_){ genus=0; }
+  try{ volume = typeof solid.volume==='function' ? solid.volume() : 0; }catch(_){ volume=0; }
+  let maxOverhang=0; const overhangFlags=new Uint8Array(triCount);
+  for(let t=0;t<triCount;t++){
+    const i=t*9;
+    const ux=pos[i+3]-pos[i],uy=pos[i+4]-pos[i+1],uz=pos[i+5]-pos[i+2];
+    const vx=pos[i+6]-pos[i],vy=pos[i+7]-pos[i+1],vz=pos[i+8]-pos[i+2];
+    let nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx;
+    const nl=Math.hypot(nx,ny,nz)||1; nz/=nl;
+    if(nz<-1e-5){const ang=Math.acos(Math.min(1,-nz))*180/Math.PI; if(ang>maxOverhang)maxOverhang=ang; if(ang>45)overhangFlags[t]=1;}
+  }
+  const thin=locateThinThreeAxis(pos,triCount);
+  const minWall=thin?thin.gap:null;
+  const overhangOK=maxOverhang<=45.5, wallOK=(minWall===null)||(minWall>=0.4);
+  return {triCount,genus,volume,maxOverhang,overhangFlags,minWall,thin,overhangOK,wallOK,pass:overhangOK&&wallOK};
+}
+function rayTriAxis(a,b,pos,o,axis){
+  function perm(p){ if(axis===2)return p; if(axis===0)return [p[1],p[2],p[0]]; return [p[0],p[2],p[1]]; }
+  const A=perm([pos[o],pos[o+1],pos[o+2]]),B=perm([pos[o+3],pos[o+4],pos[o+5]]),C=perm([pos[o+6],pos[o+7],pos[o+8]]);
+  const ax=A[0],ay=A[1],az=A[2],bx=B[0],by=B[1],bz=B[2],cx=C[0],cy=C[1],cz=C[2];
+  const e1x=bx-ax,e1y=by-ay,e1z=bz-az,e2x=cx-ax,e2y=cy-ay,e2z=cz-az;
+  const Hx=-e2y,Hy=e2x,Hz=0;
+  const det=e1x*Hx+e1y*Hy+e1z*Hz; if(Math.abs(det)<1e-9)return null;
+  const f=1/det,sx=a-ax,sy=b-ay,sz=-az;
+  const u=f*(sx*Hx+sy*Hy+sz*Hz); if(u<0||u>1)return null;
+  const Qx=sy*e1z-sz*e1y,Qy=sz*e1x-sx*e1z,Qz=sx*e1y-sy*e1x;
+  const v=f*Qz; if(v<0||u+v>1)return null;
+  return f*(e2x*Qx+e2y*Qy+e2z*Qz);
+}
+function locateThinThreeAxis(pos,triCount){
+  let mn=[1e9,1e9,1e9],mx=[-1e9,-1e9,-1e9];
+  for(let i=0;i<pos.length;i+=3)for(let d=0;d<3;d++){mn[d]=Math.min(mn[d],pos[i+d]);mx[d]=Math.max(mx[d],pos[i+d]);}
+  const N=9; let best=null;
+  for(let axis=0;axis<3;axis++){
+    const la=(axis===0)?1:0, lb=(axis===2)?1:2;
+    for(let i=1;i<N;i++)for(let j=1;j<N;j++){
+      const a=mn[la]+(mx[la]-mn[la])*i/N, b=mn[lb]+(mx[lb]-mn[lb])*j/N;
+      const hits=[];
+      for(let t=0;t<triCount;t++){const h=rayTriAxis(a,b,pos,t*9,axis);if(h!==null)hits.push(h);}
+      hits.sort((p,r)=>p-r);
+      for(let k=0;k+1<hits.length;k+=2){
+        const gap=hits[k+1]-hits[k];
+        if(gap>1e-3 && (best===null||gap<best.gap)){
+          const mid=(hits[k]+hits[k+1])/2;
+          let p3; if(axis===2)p3=[a,b,mid]; else if(axis===0)p3=[mid,a,b]; else p3=[a,mid,b];
+          best={gap:Math.round(gap*100)/100,x:p3[0],y:p3[1],z:p3[2],axis};
+        }
+      }
+    }
+  }
+  return best;
+}
+function topologyPlain(genus,pass,overhangOK,wallOK){
+  let s;
+  if(genus<=0) s="A single closed solid, no holes through it.";
+  else if(genus===1) s="A closed solid with one hole through it (like a ring).";
+  else s="A closed solid with "+genus+" holes through it.";
+  if(pass) return s+" Nothing here stops it printing.";
+  let p=[]; if(!overhangOK)p.push("a face too steep to print without support"); if(!wallOK)p.push("a wall thinner than your nozzle");
+  return s+" But it has "+p.join(" and ")+" — marked on the model.";
+}
+
+/* ---- render ---- */
+let renderer,scene,camera,raf,meshObj,markerObj,clipPlane;
+let camTheta=0.9,camPhi=1.0,camR=120,camTarget=new THREE.Vector3(0,0,0);
+let viewMode="solid"; let lastGeom=null,lastReport=null,modelZ={min:0,max:1};
+const meshOffset=new THREE.Vector3(); const raycaster=new THREE.Raycaster();
+
+function initGL(){
+  const canvas=document.getElementById('gl');
+  renderer=new THREE.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true});
+  renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+  renderer.localClippingEnabled=true;
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(45,1,0.1,9000);
+  scene.add(new THREE.AmbientLight(0xffffff,0.55));
+  const d1=new THREE.DirectionalLight(0xffffff,0.85);d1.position.set(60,80,120);scene.add(d1);
+  const d2=new THREE.DirectionalLight(0x88aaff,0.35);d2.position.set(-80,-40,-60);scene.add(d2);
+  const grid=new THREE.GridHelper(200,20,0x2a3138,0x171d24);grid.rotation.x=Math.PI/2;scene.add(grid);
+  clipPlane=new THREE.Plane(new THREE.Vector3(0,0,-1), 9999);
+  resize();window.addEventListener('resize',resize);
+  bindOrbit(canvas); bindProbe(canvas); loop();
+}
+function resize(){const s=document.getElementById('stage'); if(!s.clientWidth)return; const w=s.clientWidth,h=s.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/(h||1);camera.updateProjectionMatrix();}
+function bindOrbit(canvas){
+  let down=false,moved=false,lx=0,ly=0;
+  canvas.addEventListener('pointerdown',e=>{down=true;moved=false;lx=e.clientX;ly=e.clientY;canvas.setPointerCapture(e.pointerId);});
+  canvas.addEventListener('pointermove',e=>{if(!down)return;
+    if(Math.abs(e.clientX-lx)+Math.abs(e.clientY-ly)>3)moved=true;
+    camTheta-=(e.clientX-lx)*0.008;camPhi-=(e.clientY-ly)*0.008;camPhi=Math.max(0.05,Math.min(Math.PI-0.05,camPhi));lx=e.clientX;ly=e.clientY;});
+  canvas.addEventListener('pointerup',()=>{down=false;canvas._dragged=moved;});
+  canvas.addEventListener('wheel',e=>{e.preventDefault();camR*=(1+Math.sign(e.deltaY)*0.1);camR=Math.max(15,Math.min(3000,camR));},{passive:false});
+}
+function loop(){raf=requestAnimationFrame(loop);
+  const x=camTarget.x+camR*Math.sin(camPhi)*Math.cos(camTheta);
+  const y=camTarget.y+camR*Math.sin(camPhi)*Math.sin(camTheta);
+  const z=camTarget.z+camR*Math.cos(camPhi);
+  camera.position.set(x,y,z);camera.up.set(0,0,1);camera.lookAt(camTarget);
+  if(document.getElementById('stage').clientWidth) renderer.render(scene,camera);}
+function setView(v){if(v==='iso'){camTheta=0.9;camPhi=1.0;}if(v==='front'){camTheta=-Math.PI/2;camPhi=Math.PI/2;}if(v==='top'){camTheta=0;camPhi=0.08;}if(v==='right'){camTheta=0;camPhi=Math.PI/2;}}
+function showGeometry(geom,report){
+  if(meshObj){scene.remove(meshObj);meshObj.geometry.dispose();meshObj.material.dispose();}
+  clearMarker(); lastGeom=geom; lastReport=report;
+  const pos=geom.attributes.position.array,triCount=pos.length/9;
+  const colors=new Float32Array(pos.length);
+  const isolate=(viewMode==="overhang");
+  const neutral=isolate?[0.16,0.18,0.20]:[0.60,0.65,0.70]; const hot=[1.0,0.69,0.18];
+  for(let t=0;t<triCount;t++){const c=report.overhangFlags[t]?hot:neutral;for(let k=0;k<3;k++){const idx=t*9+k*3;colors[idx]=c[0];colors[idx+1]=c[1];colors[idx+2]=c[2];}}
+  geom.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+  const useClip=(viewMode==="section");
+  const mat=new THREE.MeshStandardMaterial({vertexColors:true,metalness:0.08,roughness:0.62,flatShading:true,side:THREE.DoubleSide,clippingPlanes:useClip?[clipPlane]:[],clipShadows:true});
+  meshObj=new THREE.Mesh(geom,mat);scene.add(meshObj);
+  geom.computeBoundingBox();const bb=geom.boundingBox;
+  const cx=(bb.min.x+bb.max.x)/2,cy=(bb.min.y+bb.max.y)/2;
+  meshObj.position.set(-cx,-cy,-bb.min.z); meshOffset.set(-cx,-cy,-bb.min.z);
+  modelZ={min:0,max:bb.max.z-bb.min.z};
+  const size=bb.getSize(new THREE.Vector3());
+  camTarget.set(0,0,size.z/2); camR=Math.max(size.x,size.y,size.z)*2.3+25;
+  meshObj.updateMatrixWorld(); updateSectionRange();
+}
+function clearMarker(){ if(markerObj){scene.remove(markerObj);markerObj.geometry.dispose&&markerObj.geometry.dispose();markerObj=null;} }
+function markPoint(x,y,z,color){
+  clearMarker();
+  const g=new THREE.SphereGeometry(1.0,16,12);
+  markerObj=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:color||0x4ea8ff}));
+  const s=Math.max(1.2,(modelZ.max||10)*0.045); markerObj.scale.set(s,s,s);
+  markerObj.position.set(x+meshOffset.x,y+meshOffset.y,z+meshOffset.z); scene.add(markerObj);
+}
+function updateSectionRange(){ $('sectionz').value=100; setClipFromSlider(); }
+function setClipFromSlider(){
+  const t=parseInt($('sectionz').value,10)/100;
+  const zCut=modelZ.min+(modelZ.max-modelZ.min)*t;
+  clipPlane.set(new THREE.Vector3(0,0,-1), zCut);
+  $('zval').textContent=(t>=0.999)?"top":zCut.toFixed(1)+" mm";
+}
+function bindProbe(canvas){
+  canvas.addEventListener('pointerup',e=>{
+    if(canvas._dragged) return; if(!meshObj) return;
+    const rect=canvas.getBoundingClientRect();
+    const ndc=new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-((e.clientY-rect.top)/rect.height)*2+1);
+    raycaster.setFromCamera(ndc,camera);
+    const hit=raycaster.intersectObject(meshObj,false)[0];
+    const probe=$('probe');
+    if(!hit){ probe.classList.remove('show'); return; }
+    const n=hit.face.normal.clone().transformDirection(meshObj.matrixWorld);
+    let label;
+    if(n.z<-1e-3){ const ang=Math.acos(Math.min(1,-n.z))*180/Math.PI; label=(ang>45?"overhang ":"underside ")+ang.toFixed(0)+"\u00B0"+(ang>45?" needs support":""); }
+    else if(n.z>1e-3){ label="top face \u00B7 "+(Math.acos(Math.min(1,n.z))*180/Math.PI).toFixed(0)+"\u00B0 from vertical"; }
+    else { label="vertical wall \u00B7 90\u00B0"; }
+    probe.textContent=label; probe.style.left=(e.clientX-rect.left)+"px"; probe.style.top=(e.clientY-rect.top)+"px"; probe.classList.add('show');
+  });
+}
+
+/* ---- UI / app ---- */
+const $=id=>document.getElementById(id);
+let currentGeom=null,currentReport=null,currentName='model',versions=[];
+
+function extractCode(text){
+  let t=String(text||"").trim();
+  const m=t.match(/```(?:javascript|js|scad|openscad)?\s*([\s\S]*?)```/i);
+  if(m) return m[1].trim();
+  return t.replace(/^```(?:javascript|js|scad|openscad)?\s*/i,"").replace(/```\s*$/,"").trim();
+}
+function generate(){
+  if(!kernelReady) return;
+  const desc=$('prompt').value.trim(); if(!desc) return;
+  $('gen').disabled=true; genHint('<span class="dots">asking the model</span> &middot; deadline '+(GEN_DEADLINE_MS/1000)+'s','flight');
+  const sys =
+    "You write 3D models as JavaScript for a constructive-solid-geometry kernel. " +
+    "Functions (units mm, +Z up, solids centered unless moved): box(w,d,h), cyl(radius,height,segments), sphere(radius,segments), " +
+    "union(...solids), diff(base,...cutters), intersect(...solids), hull(...solids), move(x,y,z,solid), rot(xDeg,yDeg,zDeg,solid), scale(x,y,z,solid). " +
+    "Math: PI,sin,cos,tan,sqrt,abs,round,min,max,floor. let/const and for-loops allowed. " +
+    "RULES: return exactly one solid with `return`. Walls >= 1mm, avoid overhangs steeper than 45 degrees where you can. Output ONLY JavaScript code, no prose, no fences.";
+  const body={ model:"claude-sonnet-4-6", max_tokens:GEN_MAX_TOKENS, messages:[{role:"user", content:sys+"\n\nDESCRIPTION:\n"+desc}] };
+  let timedOut=false;
+  const timer=setTimeout(()=>{ timedOut=true; $('gen').disabled=false; genHint('severed &middot; model did not answer in '+(GEN_DEADLINE_MS/1000)+'s. try again.','sev'); }, GEN_DEADLINE_MS);
+  fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+    .then(r=>{ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+    .then(data=>{
+      if(timedOut) return; clearTimeout(timer);
+      let text=""; if(data&&Array.isArray(data.content)){ for(const b of data.content){ if(b&&b.type==="text"&&typeof b.text==="string") text+=b.text; } }
+      const code=extractCode(text);
+      if(!code){ genHint('severed &middot; model returned nothing usable. rephrase.','sev'); $('gen').disabled=false; return; }
+      $('editor').value=code; $('gen').disabled=false;
+      run();
+      broadcastLocalEdit(code);                       // share the generated solid
+      genHint(currentReport && currentReport.pass ? 'generated &middot; shared with room' : 'generated &middot; needs review (see report)', currentReport&&currentReport.pass?'ok':'sev');
+    })
+    .catch(err=>{ if(timedOut) return; clearTimeout(timer); $('gen').disabled=false; genHint('severed &middot; channel error: '+(err&&err.message?err.message:err),'sev'); });
+}
+
+function run(){
+  if(!kernelReady)return;
+  const src=$('editor').value;$('err').classList.remove('show');$('probe').classList.remove('show');
+  let solid,geom,report;
+  try{ solid=evaluateScript(src); }catch(e){ fail('evaluate error \u203a '+e.message); return; }
+  try{ const mesh=solid.getMesh(); geom=meshToThree(mesh); report=validate(solid,geom); }
+  catch(e){ fail('kernel/validation error \u203a '+e.message); return; }
+  currentGeom=geom;currentReport=report;
+  showGeometry(geom,report); paintReport(report);
+  $('export').disabled=!report.pass; $('snap').disabled=false;
+  $('meshstat').textContent=report.triCount+' tris \u00b7 '+(report.pass?'print-ready':'review');
+  flagReportTab(!report.pass);
+  try{ solid.delete && solid.delete(); }catch(_){}
+}
+function fail(msg){ $('err').textContent=msg; $('err').classList.add('show'); }
+function paintReport(r){
+  const v=$('verdict'); v.className='verdict '+(r.pass?'ok':'bad');
+  $('verdicttext').textContent=r.pass?'PRINT-READY':'REVIEW NEEDED';
+  $('verdictplain').textContent=topologyPlain(r.genus,r.pass,r.overhangOK,r.wallOK);
+  setM('m-overhang', r.maxOverhang.toFixed(1)+'\u00B0', r.overhangOK?'pass':'fail');
+  setM('m-wall', r.minWall===null?'n/a':r.minWall.toFixed(2)+' mm', r.minWall===null?'idle':(r.wallOK?'pass':'fail'));
+  $('m-vt').textContent=fmtVol(r.volume)+' \u00b7 '+r.triCount+' tri'; $('m-vt').className='val idle';
+  $('vstamp').textContent=r.pass?'print-ready':'review';
+  $('find-wall').style.display=r.thin?'inline-block':'none';
+}
+function setM(id,text,cls){const el=$(id);el.textContent=text;el.className='val '+cls;}
+function fmtVol(mm3){ if(mm3>=1000) return (mm3/1000).toFixed(1)+' cm\u00B3'; return Math.round(mm3)+' mm\u00B3'; }
+function findThin(){ if(!currentReport||!currentReport.thin) return; const t=currentReport.thin; markPoint(t.x,t.y,t.z,0x4ea8ff); camTarget.set(t.x+meshOffset.x,t.y+meshOffset.y,t.z+meshOffset.z); if(isMobile()) switchTab('view'); }
+function findOverhang(){ setView('front'); camPhi=2.0; if(viewMode!=="overhang") setMode("overhang"); if(isMobile()) switchTab('view'); }
+
+function snapshot(){
+  if(!currentGeom)return;
+  const vid=String(versions.length+1).padStart(3,'0');
+  const thumb=renderer.domElement.toDataURL('image/png');
+  versions.push({vid,src:$('editor').value,report:currentReport,thumb}); renderLineage();
+}
+function renderLineage(){
+  const box=$('lineage');$('vcount').textContent=versions.length;
+  if(!versions.length){box.innerHTML='<div class="lineage-empty">Each version stores script + thumbnail + report. Tap to revert.</div>';return;}
+  box.innerHTML='';
+  versions.slice().reverse().forEach(v=>{
+    const row=document.createElement('div');row.className='ver';
+    const stat=v.report.pass?'<span class="ok">print-ready</span>':'<span class="bad">review</span>';
+    row.innerHTML='<img class="thumb" src="'+v.thumb+'" alt="version '+v.vid+'">'+
+      '<div class="meta"><div class="vid">'+currentName+'_'+v.vid+'</div><div class="vstat">'+v.report.triCount+' tris \u00b7 '+stat+'</div></div>';
+    row.addEventListener('click',()=>{ $('editor').value=v.src; run(); broadcastLocalEdit(v.src); if(isMobile())switchTab('view'); });
+    box.appendChild(row);
+  });
+}
+function setMode(m){
+  viewMode=m;
+  document.querySelectorAll('#modeset button').forEach(b=>b.classList.toggle('on', b.dataset.mode===m));
+  $('sectionbar').classList.toggle('show', m==="section");
+  if(lastGeom && lastReport){ showGeometry(lastGeom,lastReport); }
+}
+function exportSTL(){
+  if(!currentGeom||!currentReport||!currentReport.pass)return;
+  const pos=currentGeom.attributes.position.array, triCount=pos.length/9;
+  const buf=new ArrayBuffer(84+triCount*50), dv=new DataView(buf); let o=84;
+  dv.setUint32(80,triCount,true);
+  for(let t=0;t<triCount;t++){const i=t*9;
+    const ax=pos[i],ay=pos[i+1],az=pos[i+2],bx=pos[i+3],by=pos[i+4],bz=pos[i+5],cx=pos[i+6],cy=pos[i+7],cz=pos[i+8];
+    let nx=(by-ay)*(cz-az)-(bz-az)*(cy-ay),ny=(bz-az)*(cx-ax)-(bx-ax)*(cz-az),nz=(bx-ax)*(cy-ay)-(by-ay)*(cx-ax);
+    const nl=Math.hypot(nx,ny,nz)||1;nx/=nl;ny/=nl;nz/=nl;
+    dv.setFloat32(o,nx,true);dv.setFloat32(o+4,ny,true);dv.setFloat32(o+8,nz,true);o+=12;
+    for(const c of [[ax,ay,az],[bx,by,bz],[cx,cy,cz]]){dv.setFloat32(o,c[0],true);dv.setFloat32(o+4,c[1],true);dv.setFloat32(o+8,c[2],true);o+=12;}
+    dv.setUint16(o,0,true);o+=2;}
+  const blob=new Blob([buf],{type:'application/octet-stream'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=currentName+'_'+(versions.length?String(versions.length).padStart(3,'0'):'001')+'.stl'; a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* ---- mobile tabs ---- */
+function isMobile(){ return window.matchMedia('(max-width:900px)').matches; }
+function switchTab(name){
+  const app=$('app'); app.classList.remove('tab-build','tab-view','tab-report'); app.classList.add('tab-'+name);
+  document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('on', b.dataset.tab===name));
+  if(name==='view'){ requestAnimationFrame(resize); }
+}
+function flagReportTab(bad){ const t=$('tab-report'); if(t) t.classList.toggle('flagbad', !!bad); }
+
+/* ---- editor: track typing + broadcast debounced ---- */
+let editTimer=null;
+function onEditorInput(){
+  typingUntil = Date.now()+1500;               // protect cursor for 1.5s after last keypress
+  clearTimeout(editTimer);
+  editTimer=setTimeout(()=>{
+    run();
+    broadcastLocalEdit($('editor').value);
+    if(pendingRemote){ /* a remote edit waited; if it's still newer it will reassert on next message */ pendingRemote=null; }
+  }, 600);
+}
+
+/* ---- wiring ---- */
+$('gen').addEventListener('click',generate);
+$('prompt').addEventListener('keydown',e=>{ if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();generate();} });
+document.querySelectorAll('#chips .chip').forEach(c=>c.addEventListener('click',()=>{ $('prompt').value=c.dataset.p; generate(); }));
+$('run').addEventListener('click',()=>{ run(); broadcastLocalEdit($('editor').value); });
+$('snap').addEventListener('click',snapshot);
+$('export').addEventListener('click',exportSTL);
+$('editor').addEventListener('input',onEditorInput);
+document.querySelectorAll('#viewset button').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+document.querySelectorAll('#modeset button').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+$('sectionz').addEventListener('input',setClipFromSlider);
+$('find-wall').addEventListener('click',e=>{e.stopPropagation();findThin();});
+$('row-wall').addEventListener('click',findThin);
+$('row-overhang').addEventListener('click',findOverhang);
+$('hostbtn').addEventListener('click',hostRoom);
+$('joinbtn').addEventListener('click',joinRoom);
+$('joincode').addEventListener('keydown',e=>{ if(e.key==='Enter') joinRoom(); });
+document.querySelectorAll('#tabbar button').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
+$('editor').addEventListener('keydown',e=>{
+  if(e.key==='Tab'){e.preventDefault();const s=e.target.selectionStart;e.target.value=e.target.value.slice(0,s)+'  '+e.target.value.slice(e.target.selectionEnd);e.target.selectionStart=e.target.selectionEnd=s+2;}
+});
+window.addEventListener('beforeunload',teardownNet);
+
+/* ---- boot ---- */
+$('editor').value='// describe a thing above and press make,\n// or write CSG here. start a room to co-build.\nlet plate = box(40, 24, 5);\nlet h1 = move(-12, 0, 0, cyl(3.2, 12, 48));\nlet h2 = move( 12, 0, 0, cyl(3.2, 12, 48));\nreturn diff(plate, h1, h2);';
+if(brokerMissing()){ $('rb-hint').textContent='PeerJS broker did not load — multiplayer disabled, build solo.'; $('hostbtn').disabled=true; $('joinbtn').disabled=true; }
+initGL();
+(async function boot(){
+  try{
+    const wasm=await Module(); wasm.setup(); Manifold=wasm.Manifold;
+    kernelReady=true; $('booting').style.display='none';
+    $('run').disabled=false; $('gen').disabled=false; $('meshstat').textContent='kernel ready';
+    run();
+  }catch(e){
+    $('booting').innerHTML='<div style="color:var(--hot);max-width:280px;line-height:1.6">kernel failed to load.<br>manifold-3d needs network access to the CDN. If offline or blocked, the geometry kernel cannot start.<br><br><span style="color:var(--dim)">'+(e&&e.message?e.message:e)+'</span></div>';
+    $('meshstat').textContent='kernel unavailable';
+  }
+})();
+</script>
+</body>
+</html>
