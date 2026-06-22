@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SOLIDBENCH — build it together</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/peerjs@1/dist/peerjs.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;overflow:hidden;background:#f4f4f5;font-family:'Inter',sans-serif;touch-action:none;overscroll-behavior:none}
+  canvas{display:block;width:100vw;height:100vh;outline:none}
+  .mono{font-family:'JetBrains Mono',monospace}
+  ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:2px}
+  input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+  input[type=range]{-webkit-appearance:none;width:100%;background:transparent;height:24px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;height:20px;width:20px;border-radius:50%;background:#16a34a;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);cursor:pointer;margin-top:-8px}
+  input[type=range]::-webkit-slider-runnable-track{width:100%;height:4px;background:#e2e8f0;border-radius:2px}
+  #bottom-sheet{transition:transform .3s cubic-bezier(.4,0,.2,1),height .3s cubic-bezier(.4,0,.2,1)}
+  .notransition{transition:none!important}
+  .sheet-closed{transform:translateY(120%);pointer-events:none}
+  .modal-closed{opacity:0;pointer-events:none}.modal-open{opacity:1;pointer-events:auto}
+  .tab-active{color:#d97706;border-bottom-color:#d97706;font-weight:700}
+  .tab-inactive{color:#64748b;border-bottom-color:transparent}
+  #editor{font-family:'JetBrains Mono',monospace;tab-size:2;white-space:pre}
+  .scan-line{width:100%;height:2px;background:#3b82f6;position:absolute;top:0;left:0;box-shadow:0 0 10px #3b82f6,0 0 20px #3b82f6;animation:scan 2s linear infinite;z-index:10;opacity:.8;pointer-events:none}
+  @keyframes scan{0%{top:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:100%;opacity:0}}
+  .blueprint-grid{background-size:40px 40px;background-image:linear-gradient(to right,rgba(59,130,246,.1) 1px,transparent 1px),linear-gradient(to bottom,rgba(59,130,246,.1) 1px,transparent 1px)}
+  .blink{animation:blink 1s step-end infinite}@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+  .remote-flash{animation:rflash .8s ease-out}@keyframes rflash{0%{background:#dbeafe}100%{background:transparent}}
+</style>
+<script type="importmap">
+{ "imports": {
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+  "manifold-3d":"https://cdn.jsdelivr.net/npm/manifold-3d@3.5.0/manifold.js"
+} }
+</script>
+</head>
+<body class="text-slate-800 select-none bg-zinc-100 relative">
+
+<!-- HEADER -->
+<header class="absolute top-0 w-full bg-white/90 backdrop-blur-md border-b border-slate-200 z-50 shadow-sm flex flex-col">
+  <div class="flex items-center justify-between px-4 h-14">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-full border-2 border-slate-800 flex items-center justify-center font-bold text-xs">SB</div>
+      <h1 class="text-slate-900 font-extrabold tracking-wide uppercase text-sm">Solidbench</h1>
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- room status pill -->
+      <button id="btn-room" class="flex items-center gap-1.5 h-8 px-2.5 rounded-full border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors">
+        <span id="room-dot" class="w-2 h-2 rounded-full bg-slate-300"></span>
+        <span id="room-pill" class="text-[10px] font-bold uppercase tracking-wide mono">Solo</span>
+        <span id="room-peers" class="flex -space-x-1"></span>
+      </button>
+      <button id="btn-open-info" class="w-8 h-8 rounded-full border border-slate-300 flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </button>
+    </div>
+  </div>
+  <div class="px-4 pb-2 text-xs font-medium text-slate-600 flex justify-between items-center">
+    <span>Status: <span class="font-bold text-slate-900" id="global-status">Booting kernel…</span></span>
+    <span id="report-pill" class="text-[10px] font-bold mono px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">—</span>
+  </div>
+</header>
+
+<!-- UNDO FAB -->
+<div class="absolute left-3 top-24 z-40">
+  <button id="btn-undo" class="w-10 h-10 rounded-full flex items-center justify-center bg-white/95 backdrop-blur-md border border-slate-200 text-slate-700 shadow-lg hover:bg-slate-50 transition-all duration-300 opacity-0 pointer-events-none -translate-x-4" title="Undo">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+  </button>
+</div>
+
+<!-- TOOL RAIL -->
+<div class="absolute right-3 top-24 z-40 flex flex-col gap-1.5 bg-white/90 backdrop-blur-md border border-slate-200 rounded-2xl p-1.5 shadow-xl" id="tool-rail">
+  <button class="tool-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-700 bg-slate-100" data-mode="orbit" title="Orbit">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+  </button>
+  <button class="tool-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700" data-mode="translate" title="Move">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+  </button>
+  <button class="tool-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700" data-mode="rotate" title="Rotate">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+  </button>
+  <button class="tool-btn w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700" data-mode="scale" title="Scale">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+  </button>
+  <div class="w-full h-px bg-slate-200 my-0.5"></div>
+  <button id="btn-toggle-snap" class="w-9 h-9 rounded-xl flex items-center justify-center text-orange-500 bg-orange-50" title="Grid snap">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+  </button>
+  <button id="btn-view-modes" class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700" title="View: solid / overhang / section">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.036 12.322a1 1 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"></path></svg>
+  </button>
+</div>
+
+<!-- CONTEXTUAL QUICK ACTIONS (only when a part is selected) -->
+<div id="quick-actions" class="absolute top-24 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-white/95 backdrop-blur-md border border-slate-200 rounded-full shadow-lg p-1.5 z-40 transition-all duration-300 -translate-y-8 opacity-0 pointer-events-none">
+  <button id="btn-quick-deselect" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 shadow-sm" title="Deselect">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+  </button>
+  <div class="w-px h-6 bg-slate-200 mx-1"></div>
+  <button id="btn-quick-duplicate" class="w-10 h-10 rounded-full flex items-center justify-center text-blue-600 bg-blue-50 hover:bg-blue-100 shadow-sm" title="Duplicate">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+  </button>
+  <button id="btn-quick-hide" class="w-10 h-10 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-100 shadow-sm" title="Hide / show part">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
+  </button>
+  <button id="btn-quick-cut" class="w-10 h-10 rounded-full flex items-center justify-center text-purple-600 bg-purple-50 hover:bg-purple-100 shadow-sm" title="Toggle cut (subtract)">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z"></path></svg>
+  </button>
+  <button id="btn-quick-delete" class="w-10 h-10 rounded-full flex items-center justify-center text-red-600 bg-red-50 hover:bg-red-100 shadow-sm" title="Delete">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+  </button>
+</div>
+
+<!-- ADD FAB -->
+<button id="fab-add" class="absolute right-4 z-40 w-14 h-14 bg-green-600 rounded-full shadow-[0_4px_12px_rgba(22,163,74,.4)] flex flex-col items-center justify-center text-white border-2 border-white transition-all duration-300 hover:scale-105 active:scale-95" style="bottom:80px;">
+  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path></svg>
+  <span class="text-[8px] font-bold uppercase tracking-wider mt-0.5">Add</span>
+</button>
+
+<!-- AI MODAL (The Builder) -->
+<div id="modal-ai" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex flex-col justify-end modal-closed transition-opacity duration-300">
+  <div class="bg-white rounded-t-3xl p-6 shadow-2xl transform transition-transform duration-300 translate-y-full" id="modal-ai-content">
+    <div class="flex justify-between items-center mb-3">
+      <div class="flex items-center gap-2">
+        <div class="w-6 h-6 bg-gradient-to-tr from-orange-500 to-red-600 rounded flex items-center justify-center text-white"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></div>
+        <h3 class="text-lg font-bold text-slate-800">The Builder</h3>
+      </div>
+      <button class="btn-close-ai text-slate-400 p-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+    </div>
+    <!-- provider picker -->
+    <div class="flex gap-1.5 mb-3" id="modelpick">
+      <button class="mp flex-1 py-2 rounded-lg border text-[10px] font-bold uppercase tracking-wide flex items-center justify-center gap-1.5 border-orange-500 text-orange-600 bg-orange-50" data-prov="claude">Claude <span class="text-[7px] bg-green-500 text-white px-1 rounded">live</span></button>
+      <button class="mp flex-1 py-2 rounded-lg border text-[10px] font-bold uppercase tracking-wide flex items-center justify-center gap-1.5 border-slate-200 text-slate-500" data-prov="openai">OpenAI <span class="text-[7px] bg-slate-300 text-slate-600 px-1 rounded">key</span></button>
+      <button class="mp flex-1 py-2 rounded-lg border text-[10px] font-bold uppercase tracking-wide flex items-center justify-center gap-1.5 border-slate-200 text-slate-500" data-prov="gemini">Gemini <span class="text-[7px] bg-slate-300 text-slate-600 px-1 rounded">key</span></button>
+    </div>
+    <div id="keyfield" class="hidden mb-3"><input id="apikey" type="password" class="w-full bg-slate-50 border border-amber-300 rounded-lg px-3 py-2.5 text-xs mono focus:outline-none focus:ring-2 focus:ring-amber-500/30" placeholder="paste API key — stays in this tab, never sent to the room"></div>
+    <p class="text-[11px] text-slate-500 mb-3 leading-relaxed">Describe a structure, dictate it, or snap a photo. The Builder proposes a draft you commit or discard — your main build stays protected until you say go.</p>
+    <div class="flex flex-col gap-3">
+      <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 shadow-inner focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500/20 transition-all flex flex-col relative">
+        <textarea id="ai-prompt-input" rows="3" class="w-full bg-transparent text-slate-900 text-sm focus:outline-none resize-none pr-10" placeholder="e.g., a phone stand that leans 15 degrees with a cable slot"></textarea>
+        <button id="btn-voice" class="absolute right-3 top-3 w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-600 hover:bg-orange-100 hover:text-orange-600 shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+        </button>
+        <div id="voice-ind" class="hidden absolute right-3 top-3 w-8 h-8 flex items-center justify-center rounded-full bg-red-100 text-red-600 animate-pulse shadow-sm"><div class="w-2 h-2 bg-red-600 rounded-full"></div></div>
+        <div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-200">
+          <button id="btn-ai-camera" class="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 rounded-lg text-[10px] font-bold text-slate-600 shadow-sm">
+            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg> Snap reference
+          </button>
+          <div id="ai-img-wrap" class="hidden relative w-10 h-10 rounded border border-slate-300 overflow-hidden shadow-sm">
+            <img id="ai-img" src="" class="w-full h-full object-cover">
+            <button id="btn-ai-clear-img" class="absolute top-0 right-0 bg-red-500/80 text-white w-4 h-4 flex items-center justify-center text-[10px] font-bold">×</button>
+          </div>
+        </div>
+        <input type="file" id="ai-img-upload" accept="image/*" capture="environment" class="hidden">
+      </div>
+      <button id="btn-submit-ai" class="w-full py-3.5 bg-gradient-to-r from-orange-500 to-red-600 rounded-xl text-sm font-bold text-white shadow-md active:opacity-90 flex justify-center items-center gap-2"><span>Draft Structure</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- CALC OVERLAY -->
+<div id="calc-overlay" class="absolute inset-0 bg-slate-900/90 backdrop-blur-md z-[100] hidden flex-col items-center justify-center overflow-hidden blueprint-grid">
+  <div class="scan-line"></div>
+  <div class="relative flex flex-col items-center">
+    <div class="w-16 h-16 border-4 border-slate-800 border-t-blue-500 rounded-full animate-spin mb-6 shadow-[0_0_15px_rgba(59,130,246,.5)]"></div>
+    <div class="text-blue-400 mono text-[10px] tracking-[.3em] uppercase blink mb-2">Architectural Engine Active</div>
+    <div id="calc-text" class="text-white font-bold tracking-widest uppercase text-sm text-center px-6">Synthesizing structure…</div>
+  </div>
+</div>
+
+<!-- DRAFT PROPOSAL -->
+<div id="proposal-ui" class="absolute bottom-20 left-4 right-4 bg-slate-900/95 backdrop-blur-xl border border-slate-700 rounded-2xl p-4 z-[60] shadow-2xl transform transition-transform duration-300 translate-y-[150%] opacity-0 pointer-events-none flex flex-col gap-3">
+  <div class="flex justify-between items-center border-b border-slate-700/50 pb-2">
+    <div class="flex items-center gap-2"><div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div><h3 class="text-sm font-bold text-white uppercase tracking-wider">Draft proposal</h3></div>
+    <span id="prop-by" class="text-[9px] mono text-slate-400"></span>
+  </div>
+  <div id="proposal-stats" class="text-xs mono flex gap-3"><span class="text-blue-400">+<span id="prop-add">0</span> parts</span><span class="text-slate-400">orbit to inspect the hologram</span></div>
+  <p class="text-[10px] text-slate-500 leading-tight">Your committed build is protected. Commit folds the draft in; discard drops it.</p>
+  <div class="flex gap-2 pt-1"><button id="btn-draft-reject" class="flex-1 py-2.5 bg-transparent border border-slate-600 hover:bg-slate-800 rounded-xl text-xs font-bold text-slate-300">DISCARD</button><button id="btn-draft-commit" class="flex-[2] py-2.5 bg-blue-600 hover:bg-blue-500 rounded-xl text-xs font-bold text-white shadow-[0_4px_15px_rgba(37,99,235,.4)]">COMMIT TO BUILD</button></div>
+</div>
+
+<!-- ROOM MODAL -->
+<div id="modal-room" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex flex-col justify-end modal-closed transition-opacity duration-300">
+  <div class="bg-white rounded-t-3xl p-6 shadow-2xl transform transition-transform duration-300 translate-y-full" id="modal-room-content">
+    <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-slate-800">Shared Bench</h3><button class="btn-close-room text-slate-400 p-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button></div>
+    <p class="text-[11px] text-slate-500 mb-4 leading-relaxed">Build on the same parts list, live, on different devices. The bench syncs the parts — everyone's kernel renders the same solid. <span id="room-broker-warn" class="text-amber-600 font-bold hidden">Note: the public connection broker did not load; multiplayer is unavailable here.</span></p>
+    <div id="room-status-line" class="mono text-xs mb-4 text-slate-600"></div>
+    <div class="flex flex-col gap-3">
+      <button id="btn-host" class="w-full py-3 bg-green-600 rounded-xl text-sm font-bold text-white shadow-md active:opacity-90">Start a room</button>
+      <div class="flex gap-2">
+        <input id="joincode" class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 text-sm mono focus:outline-none focus:border-green-500" placeholder="enter room code">
+        <button id="btn-join" class="px-5 py-3 bg-slate-800 rounded-xl text-sm font-bold text-white active:bg-slate-900">Join</button>
+      </div>
+      <div id="room-code-display" class="hidden bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+        <div class="text-[9px] uppercase tracking-widest text-green-700 font-bold mb-1">Share this code</div>
+        <div id="room-code-text" class="mono text-lg font-bold text-green-800 break-all"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- INFO MODAL -->
+<div id="modal-info" class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex flex-col justify-end modal-closed transition-opacity duration-300">
+  <div class="bg-white rounded-t-3xl p-6 shadow-2xl transform transition-transform duration-300 translate-y-full" id="modal-info-content">
+    <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-slate-800">How this bench works</h3><button class="btn-close-info text-slate-400 p-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button></div>
+    <div class="space-y-3 pb-4 text-sm text-slate-600 leading-relaxed">
+      <p><b class="text-slate-800">Three ways to build, one truth.</b> Drag parts, ask the Builder, or write CSG in the code tab — all feed the same manifold-3d kernel, which guarantees a watertight, printable solid.</p>
+      <p><b class="text-slate-800">Parts are CSG.</b> Each part is a primitive with a transform; the scene compiles to a script the kernel runs. Mark a part as a <span class="text-purple-600 font-bold">cut</span> to subtract it (holes, slots).</p>
+      <p><b class="text-slate-800">The report is real.</b> Watertight is kernel-certified; overhang is exact; min-wall is a three-axis estimate. Export unlocks only when the print checks pass.</p>
+      <p><b class="text-slate-800">Honest about limits.</b> The kernel, the Builder, and multiplayer each need network access; if any is blocked you'll see it say so, never a fake result.</p>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM SHEET -->
+<div id="bottom-sheet" class="absolute w-full bg-white/95 backdrop-blur-xl rounded-t-3xl shadow-[0_-15px_40px_rgba(0,0,0,.15)] z-30 flex flex-col sheet-closed border-t border-slate-200" style="bottom:64px;height:38vh;">
+  <div class="w-full py-4 flex justify-center cursor-ns-resize touch-none active:bg-slate-50/50" id="sheet-handle"><div class="w-16 h-1.5 bg-slate-300 rounded-full pointer-events-none"></div></div>
+  <div class="flex border-b border-slate-200 px-2 uppercase text-[10px] font-bold tracking-widest">
+    <button class="flex-1 py-3 border-b-2 tab-active" data-tab="parts">Parts</button>
+    <button class="flex-1 py-3 border-b-2 tab-inactive" data-tab="details">Details</button>
+    <button class="flex-1 py-3 border-b-2 tab-inactive" data-tab="report">Report</button>
+    <button class="flex-1 py-3 border-b-2 tab-inactive" data-tab="versions">Versions</button>
+    <button class="flex-1 py-3 border-b-2 tab-inactive" data-tab="code">Code</button>
+    <button class="flex-1 py-3 border-b-2 tab-inactive" data-tab="notes">Notes</button>
+  </div>
+  <div class="flex-1 overflow-y-auto bg-transparent relative pb-10">
+
+    <!-- PARTS catalog -->
+    <div id="tab-parts" class="p-4 grid grid-cols-4 gap-3">
+      <button class="catalog-btn flex flex-col items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 shadow-sm active:bg-slate-100" data-type="beam"><div class="w-10 h-10 bg-amber-700/20 border-2 border-amber-700 rounded flex items-center justify-center"><div class="w-2 h-6 bg-amber-700 rounded-sm"></div></div><span class="text-[9px] font-semibold">Beam</span></button>
+      <button class="catalog-btn flex flex-col items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 shadow-sm active:bg-slate-100" data-type="panel"><div class="w-10 h-10 bg-orange-600/20 border-2 border-orange-600 rounded flex items-center justify-center"><div class="w-6 h-6 bg-orange-600 rounded-sm"></div></div><span class="text-[9px] font-semibold">Panel</span></button>
+      <button class="catalog-btn flex flex-col items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 shadow-sm active:bg-slate-100" data-type="block"><div class="w-10 h-10 bg-slate-400/20 border-2 border-slate-400 rounded flex items-center justify-center"><div class="w-5 h-5 bg-slate-400 rounded-sm"></div></div><span class="text-[9px] font-semibold">Block</span></button>
+      <button class="catalog-btn flex flex-col items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 shadow-sm active:bg-slate-100" data-type="cyl"><div class="w-10 h-10 bg-blue-600/20 border-2 border-blue-600 rounded-full flex items-center justify-center"><div class="w-3 h-7 bg-blue-600 rounded-full"></div></div><span class="text-[9px] font-semibold">Cylinder</span></button>
+      <button class="catalog-btn flex flex-col items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 shadow-sm active:bg-slate-100" data-type="sphere"><div class="w-10 h-10 bg-emerald-600/20 border-2 border-emerald-600 rounded-full flex items-center justify-center"><div class="w-5 h-5 bg-emerald-600 rounded-full"></div></div><span class="text-[9px] font-semibold">Sphere</span></button>
+      <button class="catalog-btn flex flex-col items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 shadow-sm active:bg-slate-100" data-type="plate"><div class="w-10 h-10 bg-zinc-800/20 border-2 border-zinc-800 rounded flex items-center justify-center"><div class="w-6 h-2 bg-zinc-800 rounded-sm"></div></div><span class="text-[9px] font-semibold">Plate</span></button>
+    </div>
+
+    <!-- DETAILS -->
+    <div id="tab-details" class="p-4 hidden flex-col h-full">
+      <div id="details-empty" class="flex-1 flex flex-col items-center justify-center text-slate-400"><svg class="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 15l-2 5L9 9l11 4-5 2z"></path></svg><p class="text-xs">Tap a part to edit it.</p></div>
+      <div id="details-active" class="hidden flex-col gap-3 pb-4">
+        <div class="flex items-center gap-3 bg-white/90 p-2.5 rounded-xl border border-slate-200 shadow-sm">
+          <div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center border border-slate-200"><svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10"></path></svg></div>
+          <div class="flex-1"><input type="text" id="prop-name" enterkeyhint="done" class="w-full bg-transparent text-slate-900 font-bold text-sm focus:outline-none focus:border-b-2 focus:border-orange-500 pb-0.5" placeholder="Part name"><div class="text-[9px] text-slate-500 uppercase flex gap-1 mt-0.5"><span id="prop-type">type</span> • <span id="prop-op" class="font-bold">add</span></div></div>
+        </div>
+        <div class="bg-white/90 p-3.5 rounded-xl border border-slate-200 shadow-sm space-y-4" id="dim-controls"></div>
+        <div class="bg-white/90 p-3 rounded-xl border border-slate-200 shadow-sm"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Material</label><select id="prop-material" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm p-2 rounded focus:outline-none focus:border-green-500 font-medium"></select></div>
+      </div>
+    </div>
+
+    <!-- REPORT -->
+    <div id="tab-report" class="p-4 hidden flex-col gap-3">
+      <div id="verdict" class="rounded-xl p-3 border bg-slate-50 border-slate-200">
+        <div class="flex items-center gap-2"><span id="verdict-dot" class="w-2.5 h-2.5 rounded-full bg-slate-300"></span><span id="verdict-text" class="text-sm font-bold text-slate-500">Awaiting build</span></div>
+        <p id="verdict-plain" class="text-xs text-slate-600 mt-2 leading-relaxed"></p>
+      </div>
+      <div class="bg-white/90 rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100">
+        <div class="flex justify-between items-center p-3 cursor-pointer active:bg-slate-50" id="row-overhang"><div><div class="text-xs font-bold text-slate-700">Max overhang <span class="text-[8px] bg-green-100 text-green-700 px-1 rounded uppercase">exact</span></div><div class="text-[9px] text-slate-400 mt-0.5">tap to highlight steep faces</div></div><span class="text-sm font-bold mono" id="m-overhang">—</span></div>
+        <div class="flex justify-between items-center p-3 cursor-pointer active:bg-slate-50" id="row-wall"><div><div class="text-xs font-bold text-slate-700">Min wall <span class="text-[8px] bg-amber-100 text-amber-700 px-1 rounded uppercase">est</span></div><div class="text-[9px] text-slate-400 mt-0.5">three-axis · tap to mark thin spot</div></div><span class="text-sm font-bold mono" id="m-wall">—</span></div>
+        <div class="flex justify-between items-center p-3"><div class="text-xs font-bold text-slate-700">Watertight <span class="text-[8px] bg-green-100 text-green-700 px-1 rounded uppercase">exact</span></div><span class="text-sm font-bold mono" id="m-manifold">—</span></div>
+        <div class="flex justify-between items-center p-3"><div class="text-xs font-bold text-slate-700">Volume / parts</div><span class="text-sm font-bold mono text-slate-500" id="m-vt">—</span></div>
+      </div>
+      <!-- BILL OF MATERIALS (material does real work) -->
+      <div class="bg-white/90 rounded-xl border border-slate-200 shadow-sm p-3">
+        <div class="flex items-center justify-between mb-1"><span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Bill of materials</span><span class="text-[8px] bg-amber-100 text-amber-700 px-1 rounded uppercase">est cost</span></div>
+        <div id="bom-list" class="mb-2"><div class="text-[10px] text-slate-400">Add parts to see the bill of materials.</div></div>
+        <div id="bom-total" class="flex justify-between items-center text-xs pt-2 border-t border-slate-200"></div>
+        <div class="text-[8px] text-slate-400 mt-1.5 leading-tight">Volume is kernel-exact. Mass = volume × reference density; cost = volume × reference $/cm³ — estimates, not quotes. Cuts are tooling, excluded.</div>
+      </div>
+      <button id="btn-export" class="w-full py-3 rounded-xl text-sm font-bold text-white bg-slate-300 cursor-not-allowed transition-colors" disabled>Export STL (passes checks first)</button>
+    </div>
+
+    <!-- VERSIONS (the repo's compare loop) -->
+    <div id="tab-versions" class="p-4 hidden flex-col gap-3 h-full">
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Versions</span>
+        <button id="btn-snapshot" class="text-[11px] font-bold text-white bg-green-600 hover:bg-green-500 px-3 py-1.5 rounded-lg shadow-sm">+ Snapshot</button>
+      </div>
+      <div id="compare-bar" class="hidden bg-slate-900 rounded-xl p-3 text-white">
+        <div class="text-[9px] uppercase tracking-widest text-slate-400 mb-2">A / B compare</div>
+        <div id="compare-body" class="mono text-[11px] space-y-1"></div>
+        <button id="btn-clear-compare" class="mt-2 text-[10px] text-slate-400 underline">clear selection</button>
+      </div>
+      <div id="versions-list" class="flex-1 overflow-y-auto flex flex-col gap-2">
+        <div class="text-xs text-slate-400 text-center mt-6">Snapshot a version to compare iterations — tap one to revert, tap two to A/B them.</div>
+      </div>
+    </div>
+
+    <!-- CODE -->
+    <div id="tab-code" class="p-4 hidden flex-col gap-2 h-full">
+      <div class="flex items-center justify-between"><label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Compiled CSG · editable</label><button id="btn-recompile" class="text-[10px] font-bold text-orange-600 border border-orange-200 bg-orange-50 px-2 py-1 rounded">re-run</button></div>
+      <textarea id="editor" spellcheck="false" class="flex-1 min-h-[160px] w-full bg-slate-900 text-slate-100 text-xs p-3 rounded-xl border border-slate-700 focus:outline-none focus:border-orange-500 resize-none"></textarea>
+      <div id="code-err" class="text-[11px] text-red-600 mono hidden"></div>
+      <p class="text-[9px] text-slate-400 leading-tight">Editing here drives the kernel directly. Note: hand-edits replace the parts list, so drag-handles apply to the last compiled parts.</p>
+    </div>
+
+    <!-- NOTES -->
+    <div id="tab-notes" class="p-4 hidden flex-col h-full">
+      <div id="notes-list" class="flex-1 overflow-y-auto flex flex-col gap-2 mb-2"><div class="text-xs text-slate-400 text-center mt-6">Drop a note for the room — a proposal, a "what if". Shared with everyone on the bench.</div></div>
+      <div class="flex gap-2"><input id="note-input" class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-green-500" placeholder="what if the lip were taller?"><button id="note-add" class="px-4 bg-slate-800 text-white rounded-xl text-xs font-bold uppercase">Post</button></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div id="app-footer" class="absolute bottom-0 w-full bg-white border-t border-slate-200 px-3 py-2 flex gap-2 z-40 shadow-[0_-4px_10px_rgba(0,0,0,.05)] h-[64px] items-center">
+  <button id="btn-open-import" class="flex-1 py-2 border border-slate-300 rounded-lg text-[11px] font-bold text-slate-700 active:bg-slate-100">IMPORT</button>
+  <button id="btn-open-ai" class="flex-[1.5] py-2 bg-gradient-to-r from-orange-500 to-red-600 rounded-lg text-[11px] font-bold text-white shadow-md active:opacity-90 flex justify-center items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>THE BUILDER</button>
+  <button id="btn-open-export" class="flex-1 py-2 bg-slate-800 rounded-lg text-[11px] font-bold text-white shadow-md active:bg-slate-900">EXPORT</button>
+</div>
+
+<div id="notification-area" class="absolute top-32 left-1/2 -translate-x-1/2 flex flex-col gap-2 z-50 pointer-events-none w-11/12 max-w-sm"></div>
+
+<!-- center crosshair -->
+<div class="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
+  <div class="relative w-10 h-10 opacity-30 mix-blend-multiply">
+    <div class="absolute top-1/2 left-0 w-full h-px bg-slate-800 -translate-y-1/2"></div>
+    <div class="absolute left-1/2 top-0 h-full w-px bg-slate-800 -translate-x-1/2"></div>
+    <div class="absolute top-1/2 left-1/2 w-1.5 h-1.5 bg-orange-500 rounded-full -translate-x-1/2 -translate-y-1/2 border border-white opacity-100"></div>
+  </div>
+</div>
+
+<input type="file" id="file-upload" class="hidden" accept=".json">
+<div id="viewport"></div>
+
+<script type="module">
+/* ============================================================
+   SOLIDBENCH v7 — Gunnar's shell over a CSG-parts core.
+   THE SPINE (verified in compile_test.js): a "part" = a typed CSG
+   primitive + transform. You drag/snap/scale it like Gunnar, but it
+   compiles to a CSG script -> manifold-3d kernel -> real watertight
+   solid + printability report. Three input paths (drag, AI draft,
+   code) all write the SAME parts list. Multiplayer syncs the parts
+   list (small, structured), never the mesh.
+   HONESTY: kernel, AI inference, and PeerJS broker each boot on open;
+   each shows an explicit failure state if blocked. Never a fake result.
+   ============================================================ */
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
+import Module from 'manifold-3d';
+
+const $=id=>document.getElementById(id);
+const Q=1000, q=v=>Math.round(v*Q)/Q;
+let Manifold=null, kernelReady=false;
+
+/* ---- haptics + synth (Gunnar's feel) ---- */
+let audioCtx=null;
+const Haptics={ vib(p){ if(navigator.vibrate) navigator.vibrate(p); }, tap(){this.vib(5);}, thud(){this.vib([15]);}, spawn(){this.vib([10,30,15]);}, del(){this.vib([20,20,10]);}, tick(){this.vib(8);} };
+const Synth={ init(){ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); },
+  tone(f,t='sine',a=0.01,r=0.4,v=0.08){ if(!audioCtx)return; const o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.type=t;o.frequency.setValueAtTime(f,audioCtx.currentTime); g.gain.setValueAtTime(0,audioCtx.currentTime); g.gain.linearRampToValueAtTime(v,audioCtx.currentTime+a); g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+a+r); o.connect(g);g.connect(audioCtx.destination); o.start();o.stop(audioCtx.currentTime+a+r+0.1); },
+  spawn(){this.tone(440,'sine',0.05,0.4,0.05);}, select(){this.tone(880,'sine',0.005,0.1,0.04);}, deselect(){this.tone(220,'sine',0.01,0.15,0.03);}, del(){this.tone(110,'triangle',0.01,0.4,0.07);}, ratchet(){this.tone(120,'triangle',0.005,0.05,0.08);}, undo(){this.tone(330,'triangle',0.05,0.3,0.07);}, ai(){this.tone(660,'sine',0.05,0.2,0.05);this.tone(880,'sine',0.1,0.4,0.05);} };
+window.addEventListener('pointerdown',()=>Synth.init(),{once:true});
+
+function notify(msg){ const area=$('notification-area'); const el=document.createElement('div'); el.className='bg-slate-800 text-white text-[11px] px-4 py-2.5 rounded-full shadow-lg transition-all -translate-y-2 opacity-0 text-center font-medium mx-auto table'; el.textContent=msg; area.appendChild(el); requestAnimationFrame(()=>{el.classList.remove('-translate-y-2','opacity-0');}); setTimeout(()=>{el.classList.add('-translate-y-2','opacity-0'); setTimeout(()=>el.remove(),300);},2500); }
+function status(t){ $('global-status').textContent=t; }
+
+/* ---- materials (display + naming only; kernel cares about geometry) ---- */
+/* density g/cm³ and cost $/cm³ are REFERENCE ESTIMATES (labeled in UI), not quotes.
+   Volume is kernel-exact; mass = volume×density, cost = volume×costPerCm3. */
+const Materials={
+  mat_pine:{name:'Pine',hex:0xd4a373,density:0.55,cost:0.010},
+  mat_ply:{name:'Plywood',hex:0xfaedcd,density:0.68,cost:0.015},
+  mat_concrete:{name:'Concrete',hex:0x9ca3af,density:2.40,cost:0.005},
+  mat_steel:{name:'Steel',hex:0x475569,density:7.85,cost:0.200},
+  mat_resin:{name:'Resin',hex:0x93c5fd,density:1.15,cost:0.120},
+  mat_pla:{name:'PLA',hex:0x86efac,density:1.24,cost:0.050}
+};
+const PART_DEFS={
+  beam:{name:'Beam',prim:'box',d:{l:96,w:3.5,h:1.5},mat:'mat_pine'},
+  panel:{name:'Panel',prim:'box',d:{l:96,w:48,h:0.5},mat:'mat_ply'},
+  block:{name:'Block',prim:'box',d:{l:16,w:8,h:8},mat:'mat_concrete'},
+  plate:{name:'Plate',prim:'box',d:{l:6,w:6,h:0.25},mat:'mat_steel'},
+  cyl:{name:'Cylinder',prim:'cyl',d:{r:8,h:24},mat:'mat_pla'},
+  sphere:{name:'Sphere',prim:'sphere',d:{r:10},mat:'mat_resin'}
+};
+
+/* ============================================================
+   PARTS MODEL — the shared, draggable, compilable source of truth.
+   ============================================================ */
+let parts=[];                       // [{uid,type,prim,l,w,h,r,x,y,z,rx,ry,rz,op,name,mat}]
+let selectedUid=null;
+function uid(){ return (crypto.randomUUID?crypto.randomUUID():String(Math.random())).slice(0,8); }
+
+function makePart(type, over={}){
+  const def=PART_DEFS[type]||PART_DEFS.block;
+  const p={ uid:uid(), type, prim:def.prim, op:'add', name:def.name, mat:def.mat,
+    x:0,y:0,z:0, rx:0,ry:0,rz:0, ...JSON.parse(JSON.stringify(def.d)) };
+  Object.assign(p, over);
+  // sit on the plate by default (z up). center z = half height/up-extent.
+  if(over.z===undefined){ p.z = (p.prim==='sphere') ? (p.r) : (p.prim==='cyl'? p.h/2 : p.h/2); }
+  return p;
+}
+
+/* THE COMPILER (verified). parts list -> CSG script string. */
+function compilePartsToScript(list){
+  if(!list.length) return "return box(1,1,1);";
+  const lines=[], adds=[], cuts=[];
+  list.forEach((p,i)=>{
+    const n="p"+i;
+    let prim;
+    if(p.prim==='cyl') prim=`cyl(${q(p.r)}, ${q(p.h)}, 48)`;
+    else if(p.prim==='sphere') prim=`sphere(${q(p.r)}, 48)`;
+    else prim=`box(${q(p.l)}, ${q(p.w)}, ${q(p.h)})`;
+    let e=prim;
+    if(p.rx||p.ry||p.rz) e=`rot(${q(p.rx)}, ${q(p.ry)}, ${q(p.rz)}, ${e})`;
+    e=`move(${q(p.x)}, ${q(p.y)}, ${q(p.z)}, ${e})`;
+    lines.push(`let ${n} = ${e};`);
+    (p.op==='cut'?cuts:adds).push(n);
+  });
+  const addExpr = adds.length>1?`union(${adds.join(', ')})`:(adds[0]||"box(1,1,1)");
+  lines.push(`return ${cuts.length?`diff(${addExpr}, ${cuts.join(', ')})`:addExpr};`);
+  return lines.join("\n");
+}
+
+/* ---- kernel DSL + evaluate (from verified v1–v6) ---- */
+function dsl(){
+  const M=Manifold;
+  const box=(w,d,h)=>M.cube([q(w),q(d),q(h)],true);
+  const cyl=(r,h,seg)=>M.cylinder(q(h),q(r),q(r),seg||48,true);
+  const sphere=(r,seg)=>M.sphere(q(r),seg||48);
+  const union=(...a)=>{const f=a.flat();return f.reduce((x,s)=>x?x.add(s):s);};
+  const diff=(...a)=>{const f=a.flat();return f.slice(1).reduce((x,s)=>x.subtract(s),f[0]);};
+  const intersect=(...a)=>{const f=a.flat();return f.reduce((x,s)=>x?x.intersect(s):s);};
+  const hull=(...a)=>{const f=a.flat(); if(f.length===1) return f[0].hull?f[0].hull():M.hull(f); if(typeof M.hull==='function'){try{return M.hull(f);}catch(_){}} return f.slice(1).reduce((x,s)=>x.hull(s),f[0]);};
+  const move=(x,y,z,s)=>s.translate([q(x),q(y),q(z)]);
+  const rot=(x,y,z,s)=>s.rotate([x,y,z]);
+  const scale=(x,y,z,s)=>s.scale([x,y,z]);
+  return {box,cyl,sphere,union,diff,intersect,hull,move,rot,scale};
+}
+function evaluateScript(src){
+  const {box,cyl,sphere,union,diff,intersect,hull,move,rot,scale}=dsl();
+  const f=new Function('box','cyl','sphere','union','diff','intersect','hull','move','rot','scale','PI','sin','cos','tan','sqrt','abs','round','min','max','floor','"use strict";\n'+src);
+  const out=f(box,cyl,sphere,union,diff,intersect,hull,move,rot,scale,Math.PI,Math.sin,Math.cos,Math.tan,Math.sqrt,Math.abs,Math.round,Math.min,Math.max,Math.floor);
+  if(!out||typeof out.getMesh!=='function') throw new Error('Script must return a solid.');
+  if(out.isEmpty&&out.isEmpty()) throw new Error('Result is empty — booleans cancelled out.');
+  return out;
+}
+function meshToThree(mesh){
+  const stride=mesh.numProp,vp=mesh.vertProperties,tv=mesh.triVerts;
+  const pos=new Float32Array(tv.length*3);
+  for(let i=0;i<tv.length;i++){const vi=tv[i]*stride;pos[i*3]=vp[vi];pos[i*3+1]=vp[vi+1];pos[i*3+2]=vp[vi+2];}
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); g.computeVertexNormals(); return g;
+}
+
+/* ---- validate / report (exact watertight+overhang, est min-wall) ---- */
+function validate(solid,geom){
+  const pos=geom.attributes.position.array, tri=pos.length/9;
+  let genus=0,vol=0;
+  try{genus=solid.genus?solid.genus():0;}catch(_){}
+  try{vol=solid.volume?solid.volume():0;}catch(_){}
+  let maxOver=0; const flags=new Uint8Array(tri);
+  for(let t=0;t<tri;t++){const i=t*9;
+    const ux=pos[i+3]-pos[i],uy=pos[i+4]-pos[i+1],uz=pos[i+5]-pos[i+2];
+    const vx=pos[i+6]-pos[i],vy=pos[i+7]-pos[i+1],vz=pos[i+8]-pos[i+2];
+    let nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx; const nl=Math.hypot(nx,ny,nz)||1; nz/=nl;
+    if(nz<-1e-5){const a=Math.acos(Math.min(1,-nz))*180/Math.PI; if(a>maxOver)maxOver=a; if(a>45)flags[t]=1;}
+  }
+  const thin=locateThin(pos,tri); const minWall=thin?thin.gap:null;
+  const overOK=maxOver<=45.5, wallOK=(minWall===null)||(minWall>=0.4);
+  return {tri,genus,vol,maxOver,flags,minWall,thin,overOK,wallOK,manifold:true,pass:overOK&&wallOK};
+}
+function rayTriAxis(a,b,pos,o,axis){
+  const perm=p=>axis===2?p:(axis===0?[p[1],p[2],p[0]]:[p[0],p[2],p[1]]);
+  const A=perm([pos[o],pos[o+1],pos[o+2]]),B=perm([pos[o+3],pos[o+4],pos[o+5]]),C=perm([pos[o+6],pos[o+7],pos[o+8]]);
+  const ax=A[0],ay=A[1],az=A[2]; const e1x=B[0]-ax,e1y=B[1]-ay,e1z=B[2]-az,e2x=C[0]-ax,e2y=C[1]-ay,e2z=C[2]-az;
+  const Hx=-e2y,Hy=e2x; const det=e1x*Hx+e1y*Hy; if(Math.abs(det)<1e-9)return null;
+  const f=1/det,sx=a-ax,sy=b-ay,sz=-az; const u=f*(sx*Hx+sy*Hy); if(u<0||u>1)return null;
+  const Qx=sy*e1z-sz*e1y,Qy=sz*e1x-sx*e1z,Qz=sx*e1y-sy*e1x; const v=f*Qz; if(v<0||u+v>1)return null;
+  return f*(e2x*Qx+e2y*Qy+e2z*Qz);
+}
+function locateThin(pos,tri){
+  let mn=[1e9,1e9,1e9],mx=[-1e9,-1e9,-1e9];
+  for(let i=0;i<pos.length;i+=3)for(let d=0;d<3;d++){mn[d]=Math.min(mn[d],pos[i+d]);mx[d]=Math.max(mx[d],pos[i+d]);}
+  const N=9; let best=null;
+  for(let axis=0;axis<3;axis++){const la=axis===0?1:0,lb=axis===2?1:2;
+    for(let i=1;i<N;i++)for(let j=1;j<N;j++){
+      const a=mn[la]+(mx[la]-mn[la])*i/N,b=mn[lb]+(mx[lb]-mn[lb])*j/N; const hits=[];
+      for(let t=0;t<tri;t++){const h=rayTriAxis(a,b,pos,t*9,axis); if(h!==null)hits.push(h);}
+      hits.sort((p,r)=>p-r);
+      for(let k=0;k+1<hits.length;k+=2){const gap=hits[k+1]-hits[k];
+        if(gap>1e-3&&(best===null||gap<best.gap)){const mid=(hits[k]+hits[k+1])/2; let p3; if(axis===2)p3=[a,b,mid];else if(axis===0)p3=[mid,a,b];else p3=[a,mid,b]; best={gap:Math.round(gap*100)/100,x:p3[0],y:p3[1],z:p3[2]};}}
+    }}
+  return best;
+}
+
+/* ============================================================
+   THREE scene (Gunnar's look) + per-part meshes for manipulation
+   ============================================================ */
+const container=$('viewport');
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0xf1f5f9); scene.fog=new THREE.Fog(0xf1f5f9,400,2000);
+const camera=new THREE.PerspectiveCamera(45,innerWidth/innerHeight,0.1,5000); camera.position.set(90,70,120); camera.up.set(0,0,1);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:"high-performance"}); renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2)); renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.localClippingEnabled=true; container.appendChild(renderer.domElement);
+
+// grids on XY plane (z up)
+const gMaj=new THREE.GridHelper(360,30,0x64748b,0x94a3b8); gMaj.rotation.x=Math.PI/2; gMaj.position.z=-0.01; scene.add(gMaj);
+const gMin=new THREE.GridHelper(360,360,0xe2e8f0,0xf1f5f9); gMin.rotation.x=Math.PI/2; gMin.position.z=-0.015; scene.add(gMin);
+scene.add(new THREE.HemisphereLight(0xffffff,0x94a3b8,0.7));
+const dir=new THREE.DirectionalLight(0xffffff,0.85); dir.position.set(80,-60,140); dir.castShadow=true; dir.shadow.mapSize.set(2048,2048); dir.shadow.camera.near=0.5; dir.shadow.camera.far=600; dir.shadow.camera.left=-200;dir.shadow.camera.right=200;dir.shadow.camera.top=200;dir.shadow.camera.bottom=-200; scene.add(dir);
+
+const orbit=new OrbitControls(camera,renderer.domElement); orbit.enableDamping=true; orbit.dampingFactor=0.05; orbit.maxPolarAngle=Math.PI-0.05;
+const tcontrols=new TransformControls(camera,renderer.domElement); tcontrols.setSize(1.0); scene.add(tcontrols);
+let snapOn=true, snapSize=1.0; tcontrols.setTranslationSnap(snapSize); tcontrols.setRotationSnap(Math.PI/12);
+let transformMode=null;
+
+const partMeshes=new Map();    // uid -> Three.Mesh (one per part, for picking/dragging)
+let resultMesh=null;           // the compiled, validated solid (the "truth" preview)
+let currentReport=null, lastGeom=null;
+let viewMode='solid';          // solid | overhang | section
+let clipPlane=new THREE.Plane(new THREE.Vector3(0,0,-1),9999);
+let modelZ={min:0,max:1};
+
+/* draw a translucent box/cyl/sphere mesh for a part (manipulation proxy) */
+function partProxyGeom(p){
+  if(p.prim==='cyl') return new THREE.CylinderGeometry(p.r,p.r,p.h,32).rotateX(Math.PI/2);
+  if(p.prim==='sphere') return new THREE.SphereGeometry(p.r,24,16);
+  return new THREE.BoxGeometry(p.l,p.w,p.h);
+}
+function syncPartMesh(p){
+  let m=partMeshes.get(p.uid);
+  const geo=partProxyGeom(p);
+  if(!m){
+    const mat=new THREE.MeshBasicMaterial({color:Materials[p.mat].hex,wireframe:true,transparent:true,opacity:0.35,depthWrite:false});
+    m=new THREE.Mesh(geo,mat); m.userData.uid=p.uid; m.renderOrder=2; scene.add(m); partMeshes.set(p.uid,m);
+  } else { m.geometry.dispose(); m.geometry=geo; m.material.color.setHex(Materials[p.mat].hex); }
+  const sel=(p.uid===selectedUid);
+  // proxies are thin frames so the compiled SOLID stays the visible hero.
+  // selected part brightens; cut parts read in purple; hidden parts vanish.
+  m.visible = !p.hidden;
+  m.material.color.setHex(p.op==='cut' ? 0xa855f7 : (sel?0xff8c1a:Materials[p.mat].hex));
+  m.material.opacity = sel?0.9:(p.op==='cut'?0.5:0.3);
+  m.position.set(p.x,p.y,p.z);
+  m.rotation.set(p.rx*Math.PI/180,p.ry*Math.PI/180,p.rz*Math.PI/180);
+}
+function removePartMesh(uid){ const m=partMeshes.get(uid); if(m){scene.remove(m);m.geometry.dispose();m.material.dispose();partMeshes.delete(uid);} }
+function syncAllPartMeshes(){
+  const have=new Set(parts.map(p=>p.uid));
+  [...partMeshes.keys()].forEach(k=>{ if(!have.has(k)) removePartMesh(k); });
+  parts.forEach(syncPartMesh);
+}
+
+/* ---- recompile: parts -> script -> kernel -> result mesh + report ---- */
+let recompileTimer=null;
+function scheduleRecompile(){ clearTimeout(recompileTimer); recompileTimer=setTimeout(recompile,120); }
+function recompile(fromCode){
+  if(!kernelReady) return;
+  const src = fromCode!==undefined ? fromCode : compilePartsToScript(parts);
+  if(fromCode===undefined) $('editor').value=src;
+  $('code-err').classList.add('hidden');
+  let solid,geom,report;
+  try{ solid=evaluateScript(src); }
+  catch(e){ $('code-err').textContent='evaluate error: '+e.message; $('code-err').classList.remove('hidden'); return; }
+  try{ geom=meshToThree(solid.getMesh()); report=validate(solid,geom); }
+  catch(e){ $('code-err').textContent='kernel error: '+e.message; $('code-err').classList.remove('hidden'); return; }
+  currentReport=report; lastGeom=geom;
+  showResult(geom,report);
+  paintReport(report);
+  computeBOM();
+  try{ solid.delete&&solid.delete(); }catch(_){}
+}
+
+/* ---- BOM: per-part volume from the KERNEL (exact), grouped by material ----
+   Each additive part is compiled and measured alone via the kernel; cuts are
+   tooling, not stock, so they're excluded from material mass/cost. */
+let bomData=null;
+function partVolumeMM3(p){
+  try{
+    const src=compilePartsToScript([{...p,op:'add',x:0,y:0,z:0,rx:0,ry:0,rz:0}]);
+    const solid=evaluateScript(src); const v=solid.volume?solid.volume():0;
+    try{solid.delete&&solid.delete();}catch(_){}
+    return v;
+  }catch(_){ return 0; }
+}
+function computeBOM(){
+  if(!kernelReady){ bomData=null; return; }
+  const byMat={}; let totG=0,totC=0,totV=0;
+  parts.filter(p=>p.op!=='cut').forEach(p=>{
+    const vmm=partVolumeMM3(p); const cm3=vmm/1000; const m=Materials[p.mat]||Materials.mat_pla;
+    const g=cm3*m.density, c=cm3*m.cost; totG+=g; totC+=c; totV+=cm3;
+    if(!byMat[p.mat]) byMat[p.mat]={name:m.name,cm3:0,g:0,c:0,n:0};
+    byMat[p.mat].cm3+=cm3; byMat[p.mat].g+=g; byMat[p.mat].c+=c; byMat[p.mat].n++;
+  });
+  bomData={byMat,totG,totC,totV};
+  renderBOM();
+}
+function renderBOM(){
+  const box=$('bom-list'); if(!box) return;
+  if(!bomData||!Object.keys(bomData.byMat).length){ box.innerHTML='<div class="text-[10px] text-slate-400">Add parts to see the bill of materials.</div>'; $('bom-total').textContent=''; return; }
+  box.innerHTML='';
+  Object.entries(bomData.byMat).forEach(([id,d])=>{
+    const row=document.createElement('div'); row.className='flex justify-between items-center py-1.5 text-[11px] border-b border-slate-100 last:border-0';
+    row.innerHTML='<span class="font-bold text-slate-700">'+d.name+' <span class="text-slate-400 font-normal">×'+d.n+'</span></span>'+
+      '<span class="mono text-slate-600">'+d.cm3.toFixed(1)+' cm³ · '+d.g.toFixed(1)+' g · $'+d.c.toFixed(2)+'</span>';
+    box.appendChild(row);
+  });
+  $('bom-total').innerHTML='<span class="font-bold text-slate-800">Total</span><span class="mono"><span class="text-orange-600 font-bold">'+bomData.totG.toFixed(1)+' g</span> · <span class="text-green-600 font-bold">$'+bomData.totC.toFixed(2)+'</span></span>';
+}
+function showResult(geom,report){
+  if(resultMesh){scene.remove(resultMesh);resultMesh.geometry.dispose();resultMesh.material.dispose();}
+  const pos=geom.attributes.position.array,tri=pos.length/9;
+  const colors=new Float32Array(pos.length);
+  const isolate=viewMode==='overhang';
+  const base=isolate?[0.16,0.18,0.20]:[0.83,0.85,0.88], hot=[1,0.69,0.18];
+  for(let t=0;t<tri;t++){const c=report.flags[t]?hot:base; for(let k=0;k<3;k++){const idx=t*9+k*3;colors[idx]=c[0];colors[idx+1]=c[1];colors[idx+2]=c[2];}}
+  geom.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
+  const useClip=viewMode==='section';
+  // the compiled solid is ALWAYS the visible hero — opaque, lit, shadowed.
+  const mat=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.55,metalness:0.05,flatShading:true,side:THREE.DoubleSide,clippingPlanes:useClip?[clipPlane]:[]});
+  resultMesh=new THREE.Mesh(geom,mat); resultMesh.castShadow=true; resultMesh.receiveShadow=true; resultMesh.renderOrder=1; scene.add(resultMesh);
+  geom.computeBoundingBox(); const bb=geom.boundingBox; modelZ={min:bb.min.z,max:bb.max.z};
+}
+
+function paintReport(r){
+  const dot=$('verdict-dot'),txt=$('verdict-text'),v=$('verdict');
+  v.className='rounded-xl p-3 border '+(r.pass?'bg-green-50 border-green-200':'bg-red-50 border-red-200');
+  dot.className='w-2.5 h-2.5 rounded-full '+(r.pass?'bg-green-500':'bg-red-500');
+  txt.className='text-sm font-bold '+(r.pass?'text-green-700':'text-red-700');
+  txt.textContent=r.pass?'PRINT-READY':'REVIEW NEEDED';
+  $('verdict-plain').textContent=topoPlain(r);
+  $('m-overhang').textContent=r.maxOver.toFixed(1)+'°'; $('m-overhang').className='text-sm font-bold mono '+(r.overOK?'text-green-600':'text-red-600');
+  $('m-wall').textContent=r.minWall===null?'n/a':r.minWall.toFixed(2)+' mm'; $('m-wall').className='text-sm font-bold mono '+(r.minWall===null?'text-slate-400':(r.wallOK?'text-green-600':'text-red-600'));
+  $('m-manifold').textContent=r.manifold?'sealed':'open'; $('m-manifold').className='text-sm font-bold mono '+(r.manifold?'text-green-600':'text-red-600');
+  $('m-vt').textContent=fmtVol(r.vol)+' · '+parts.length+' parts';
+  const rp=$('report-pill');
+  rp.textContent=r.pass?'ready':'review'; rp.className='text-[10px] font-bold mono px-2 py-0.5 rounded-full '+(r.pass?'bg-green-100 text-green-700':'bg-red-100 text-red-700');
+  const ex=$('btn-export');
+  if(r.pass){ ex.disabled=false; ex.className='w-full py-3 rounded-xl text-sm font-bold text-white bg-green-600 hover:bg-green-500 transition-colors'; ex.textContent='Export STL'; }
+  else { ex.disabled=true; ex.className='w-full py-3 rounded-xl text-sm font-bold text-white bg-slate-300 cursor-not-allowed'; ex.textContent='Export STL (passes checks first)'; }
+}
+function topoPlain(r){ let s; if(r.genus<=0)s='A single sealed solid, no holes through it.'; else if(r.genus===1)s='A sealed solid with one hole through it.'; else s='A sealed solid with '+r.genus+' holes through it.'; if(r.pass)return s+' Nothing here stops it printing.'; const p=[]; if(!r.overOK)p.push('a face too steep to print without support'); if(!r.wallOK)p.push('a wall thinner than a nozzle'); return s+' But it has '+p.join(' and ')+'.'; }
+function fmtVol(v){ return v>=1000?(v/1000).toFixed(1)+' cm³':Math.round(v)+' mm³'; }
+
+/* ---- selection + transform writes back to part ---- */
+const raycaster=new THREE.Raycaster(), mouse=new THREE.Vector2(); let downPos=new THREE.Vector2();
+renderer.domElement.addEventListener('pointerdown',e=>downPos.set(e.clientX,e.clientY));
+renderer.domElement.addEventListener('pointerup',e=>{
+  if(Math.abs(e.clientX-downPos.x)>5||Math.abs(e.clientY-downPos.y)>5) return;
+  if(tcontrols.dragging) return;
+  mouse.x=(e.clientX/innerWidth)*2-1; mouse.y=-(e.clientY/innerHeight)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  const hit=raycaster.intersectObjects([...partMeshes.values()],false)[0];
+  if(hit){ selectPart(hit.object.userData.uid); }
+  else { deselect(); }
+});
+function selectPart(uid){
+  selectedUid=uid; const m=partMeshes.get(uid); if(!m) return;
+  syncAllPartMeshes();
+  if(transformMode) tcontrols.attach(m);
+  showDetails(); openSheet('details');
+  $('quick-actions').classList.remove('-translate-y-8','opacity-0','pointer-events-none');
+  const cutBtn=$('btn-quick-cut'); const p=parts.find(x=>x.uid===uid);
+  cutBtn.classList.toggle('bg-purple-200', p&&p.op==='cut');
+  Synth.select(); Haptics.tap();
+}
+function deselect(){
+  if(selectedUid){ Synth.deselect(); Haptics.thud(); }
+  selectedUid=null; tcontrols.detach(); syncAllPartMeshes();
+  $('details-active').classList.add('hidden'); $('details-empty').classList.remove('hidden');
+  $('quick-actions').classList.add('-translate-y-8','opacity-0','pointer-events-none');
+}
+tcontrols.addEventListener('dragging-changed',e=>{ orbit.enabled=!e.value; if(!e.value && tcontrols.object){ writeBackTransform(); } });
+let dragTick=new THREE.Vector3();
+tcontrols.addEventListener('change',()=>{
+  const o=tcontrols.object; if(!o||!tcontrols.dragging) return;
+  if(o.position.distanceTo(dragTick)>0.3){ Synth.ratchet(); Haptics.tick(); dragTick.copy(o.position); }
+});
+function writeBackTransform(){
+  const o=tcontrols.object; if(!o) return; const p=parts.find(x=>x.uid===o.userData.uid); if(!p) return;
+  p.x=q(o.position.x); p.y=q(o.position.y); p.z=q(o.position.z);
+  p.rx=Math.round(o.rotation.x*180/Math.PI); p.ry=Math.round(o.rotation.y*180/Math.PI); p.rz=Math.round(o.rotation.z*180/Math.PI);
+  if(transformMode==='scale'){ // bake scale into dims
+    if(p.prim==='box'){ p.l=q(p.l*o.scale.x); p.w=q(p.w*o.scale.y); p.h=q(p.h*o.scale.z); }
+    else if(p.prim==='cyl'){ p.r=q(p.r*o.scale.x); p.h=q(p.h*o.scale.z); }
+    else if(p.prim==='sphere'){ p.r=q(p.r*o.scale.x); }
+    o.scale.set(1,1,1);
+  }
+  pushHistory(); showDetails(); scheduleRecompile(); broadcastParts();
+}
+
+/* ---- add / duplicate / delete / cut ---- */
+function addPart(type){
+  pushHistory();
+  let over={};
+  if(selectedUid){ const s=parts.find(x=>x.uid===selectedUid); if(s){ over={x:s.x,y:s.y}; } }
+  const p=makePart(type,over); parts.push(p); syncPartMesh(p);
+  selectPart(p.uid); scheduleRecompile(); broadcastParts();
+  Synth.spawn(); Haptics.spawn(); notify('Added '+p.name);
+}
+function duplicateSel(){ const s=parts.find(x=>x.uid===selectedUid); if(!s) return; pushHistory(); const c={...s,uid:uid(),name:s.name+' copy',x:q(s.x+(snapOn?snapSize*3:3))}; parts.push(c); syncPartMesh(c); selectPart(c.uid); scheduleRecompile(); broadcastParts(); Synth.spawn(); Haptics.spawn(); notify('Duplicated'); }
+function deleteSel(){ if(!selectedUid) return; pushHistory(); parts=parts.filter(x=>x.uid!==selectedUid); removePartMesh(selectedUid); deselect(); scheduleRecompile(); broadcastParts(); Synth.del(); Haptics.del(); notify('Removed'); }
+function toggleCut(){ const s=parts.find(x=>x.uid===selectedUid); if(!s) return; pushHistory(); s.op=s.op==='cut'?'add':'cut'; syncPartMesh(s); showDetails(); $('btn-quick-cut').classList.toggle('bg-purple-200',s.op==='cut'); scheduleRecompile(); broadcastParts(); notify(s.op==='cut'?'Now subtracts (cut)':'Now adds'); }
+
+/* ---- details panel (dims + material + op) ---- */
+function showDetails(){
+  const p=parts.find(x=>x.uid===selectedUid);
+  if(!p){ $('details-active').classList.add('hidden'); $('details-empty').classList.remove('hidden'); return; }
+  $('details-empty').classList.add('hidden'); $('details-active').classList.remove('hidden'); $('details-active').classList.add('flex');
+  $('prop-name').value=p.name; $('prop-type').textContent=p.type; $('prop-op').textContent=p.op; $('prop-op').className='font-bold '+(p.op==='cut'?'text-purple-600':'text-green-600');
+  // build dim controls per prim
+  const dims = p.prim==='cyl' ? [['r','Radius',0.5,120],['h','Height',0.5,240]] : p.prim==='sphere' ? [['r','Radius',0.5,120]] : [['l','Length',0.5,240],['w','Width',0.5,240],['h','Height',0.1,240]];
+  const wrap=$('dim-controls'); wrap.innerHTML='';
+  dims.forEach(([axis,label,step,max])=>{
+    const row=document.createElement('div'); row.className='flex flex-col gap-1.5';
+    row.innerHTML=`<div class="flex justify-between items-center"><label class="text-[11px] font-bold text-slate-700 uppercase tracking-wide">${label}</label>
+      <div class="flex items-center gap-1.5">
+        <button class="dnudge w-7 h-7 rounded-lg bg-slate-100 active:bg-slate-200 border border-slate-300 text-slate-600 font-bold" data-axis="${axis}" data-amt="${-step}">−</button>
+        <div class="bg-white rounded-lg px-2 py-1 border border-slate-300 shadow-inner flex items-center gap-1.5"><input type="number" class="dnum w-12 bg-transparent text-slate-900 text-sm font-bold mono focus:outline-none text-right" data-axis="${axis}" step="${step}" inputmode="decimal" enterkeyhint="done"><span class="text-[9px] font-bold text-slate-400 uppercase">in</span></div>
+        <button class="dnudge w-7 h-7 rounded-lg bg-slate-100 active:bg-slate-200 border border-slate-300 text-slate-600 font-bold" data-axis="${axis}" data-amt="${step}">+</button>
+      </div></div>
+      <input type="range" class="dslider" data-axis="${axis}" min="${step}" max="${max}" step="${step}">`;
+    wrap.appendChild(row);
+    row.querySelector('.dnum').value=(+p[axis]).toFixed(1);
+    row.querySelector('.dslider').value=p[axis];
+  });
+  wrap.querySelectorAll('.dnum').forEach(inp=>{ inp.addEventListener('focus',()=>pushHistory()); inp.addEventListener('input',e=>setDim(e.target.dataset.axis,e.target.value)); inp.addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur();}); });
+  wrap.querySelectorAll('.dslider').forEach(sl=>{ sl.addEventListener('pointerdown',()=>pushHistory()); sl.addEventListener('input',e=>setDim(e.target.dataset.axis,e.target.value,true)); });
+  wrap.querySelectorAll('.dnudge').forEach(b=>b.addEventListener('click',e=>{ pushHistory(); const ax=e.currentTarget.dataset.axis,amt=+e.currentTarget.dataset.amt; const nv=Math.max(0.1,(+p[ax])+amt); setDim(ax,nv); Synth.ratchet(); Haptics.tap(); }));
+  // material select
+  const sel=$('prop-material'); sel.innerHTML=''; Object.entries(Materials).forEach(([id,m])=>{const o=document.createElement('option');o.value=id;o.textContent=m.name;sel.appendChild(o);}); sel.value=p.mat;
+}
+function setDim(axis,val,fromSlider){
+  const p=parts.find(x=>x.uid===selectedUid); if(!p) return; const v=parseFloat(val); if(isNaN(v)||v<=0) return;
+  p[axis]=v;
+  const wrap=$('dim-controls');
+  const num=wrap.querySelector(`.dnum[data-axis="${axis}"]`), sl=wrap.querySelector(`.dslider[data-axis="${axis}"]`);
+  if(fromSlider){ if(num) num.value=v.toFixed(1); } else { if(sl) sl.value=v; }
+  syncPartMesh(p); scheduleRecompile(); broadcastParts();
+}
+$('prop-name').addEventListener('input',e=>{ const p=parts.find(x=>x.uid===selectedUid); if(p){p.name=e.target.value; broadcastParts();} });
+$('prop-name').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur();});
+$('prop-material').addEventListener('change',e=>{ const p=parts.find(x=>x.uid===selectedUid); if(p){pushHistory(); p.mat=e.target.value; syncPartMesh(p); computeBOM(); Synth.spawn();} });
+
+/* ============================================================
+   HISTORY (undo, bounded) — snapshots of the parts list
+   ============================================================ */
+const History={ stack:[], max:25,
+  save(){ this.stack.push(JSON.stringify(parts)); if(this.stack.length>this.max)this.stack.shift(); this.ui(); },
+  undo(){ if(!this.stack.length)return; parts=JSON.parse(this.stack.pop()); selectedUid=null; tcontrols.detach(); syncAllPartMeshes(); deselect(); scheduleRecompile(); broadcastParts(); this.ui(); Synth.undo(); Haptics.spawn(); notify('Undone'); },
+  ui(){ const b=$('btn-undo'); if(this.stack.length) b.classList.remove('opacity-0','pointer-events-none','-translate-x-4'); else b.classList.add('opacity-0','pointer-events-none','-translate-x-4'); }
+};
+function pushHistory(){ History.save(); }
+$('btn-undo').addEventListener('click',()=>History.undo());
+
+/* ============================================================
+   VERSIONS — the repo's compare loop, with the live kernel.
+   Snapshot = thumbnail (canvas) + parts list + report. Tap one to
+   revert; tap two to A/B compare them.
+   ============================================================ */
+let versions=[];          // {id, ts, thumb, parts, report}
+let compareSel=[];        // up to 2 version ids selected for A/B
+function snapshot(){
+  if(!currentReport){ notify('Build something first'); return; }
+  const id='v'+String(versions.length+1).padStart(3,'0');
+  let thumb='';
+  try{ thumb=renderer.domElement.toDataURL('image/png'); }catch(_){}
+  versions.push({ id, ts:Date.now(), thumb, parts:JSON.parse(JSON.stringify(parts)),
+    report:{pass:currentReport.pass,tri:currentReport.tri,vol:currentReport.vol,maxOver:currentReport.maxOver,minWall:currentReport.minWall} });
+  renderVersions(); Synth.spawn(); Haptics.tap(); notify('Snapshot '+id+' saved');
+}
+function renderVersions(){
+  const box=$('versions-list');
+  if(!versions.length){ box.innerHTML='<div class="text-xs text-slate-400 text-center mt-6">Snapshot a version to compare iterations — tap one to revert, tap two to A/B them.</div>'; return; }
+  box.innerHTML='';
+  versions.slice().reverse().forEach(v=>{
+    const sel=compareSel.includes(v.id);
+    const row=document.createElement('div');
+    row.className='flex items-center gap-3 p-2 rounded-xl border cursor-pointer transition-colors '+(sel?'border-blue-400 bg-blue-50':'border-slate-200 bg-white active:bg-slate-50');
+    const stat=v.report.pass?'<span class="text-green-600">ready</span>':'<span class="text-red-600">review</span>';
+    row.innerHTML=(v.thumb?'<img src="'+v.thumb+'" class="w-12 h-12 rounded-lg object-cover border border-slate-200 bg-slate-100">':'<div class="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200"></div>')+
+      '<div class="flex-1 min-w-0"><div class="text-xs font-bold text-slate-800">'+v.id+' '+(sel?'<span class="text-[9px] text-blue-600">(A/B)</span>':'')+'</div>'+
+      '<div class="text-[9px] mono text-slate-500">'+v.parts.length+' parts · '+v.report.tri+' tri · '+stat+'</div></div>'+
+      '<div class="flex flex-col gap-1"><button class="v-revert text-[9px] font-bold text-orange-600 border border-orange-200 bg-orange-50 px-2 py-1 rounded" data-id="'+v.id+'">revert</button>'+
+      '<button class="v-compare text-[9px] font-bold '+(sel?'text-blue-600 border-blue-300 bg-blue-100':'text-slate-500 border-slate-200')+' border px-2 py-1 rounded" data-id="'+v.id+'">'+(sel?'selected':'compare')+'</button></div>';
+    box.appendChild(row);
+  });
+  box.querySelectorAll('.v-revert').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); revertTo(e.target.dataset.id); }));
+  box.querySelectorAll('.v-compare').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); toggleCompare(e.target.dataset.id); }));
+}
+function revertTo(id){
+  const v=versions.find(x=>x.id===id); if(!v) return; pushHistory();
+  parts=JSON.parse(JSON.stringify(v.parts)); selectedUid=null; tcontrols.detach();
+  syncAllPartMeshes(); scheduleRecompile(); broadcastParts(); notify('Reverted to '+id);
+}
+function toggleCompare(id){
+  const i=compareSel.indexOf(id);
+  if(i>=0) compareSel.splice(i,1);
+  else { compareSel.push(id); if(compareSel.length>2) compareSel.shift(); }
+  renderVersions(); renderCompare();
+}
+function renderCompare(){
+  const bar=$('compare-bar');
+  if(compareSel.length<2){ bar.classList.add('hidden'); return; }
+  const a=versions.find(x=>x.id===compareSel[0]), b=versions.find(x=>x.id===compareSel[1]);
+  if(!a||!b){ bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+  const dP=b.parts.length-a.parts.length, dT=b.report.tri-a.report.tri, dV=((b.report.vol-a.report.vol)/1000);
+  const sign=n=>(n>0?'+':'')+n;
+  $('compare-body').innerHTML=
+    '<div class="flex justify-between"><span class="text-slate-400">'+a.id+' → '+b.id+'</span><span></span></div>'+
+    '<div class="flex justify-between"><span>parts</span><span class="'+(dP===0?'text-slate-500':'text-blue-400')+'">'+sign(dP)+'</span></div>'+
+    '<div class="flex justify-between"><span>triangles</span><span class="'+(dT===0?'text-slate-500':'text-blue-400')+'">'+sign(dT)+'</span></div>'+
+    '<div class="flex justify-between"><span>volume</span><span class="'+(Math.abs(dV)<0.01?'text-slate-500':'text-blue-400')+'">'+sign(+dV.toFixed(2))+' cm³</span></div>'+
+    '<div class="flex justify-between"><span>printable</span><span>'+(a.report.pass?'ready':'review')+' → '+(b.report.pass?'<span class="text-green-400">ready</span>':'<span class="text-red-400">review</span>')+'</span></div>';
+}
+$('btn-snapshot')?.addEventListener('click',snapshot);
+$('btn-clear-compare')?.addEventListener('click',()=>{ compareSel=[]; renderVersions(); renderCompare(); });
+
+/* per-part hide toggle (inspect inside assemblies) */
+function toggleHidePart(){ const p=parts.find(x=>x.uid===selectedUid); if(!p) return; p.hidden=!p.hidden; syncPartMesh(p); notify(p.hidden?'Part hidden':'Part shown'); }
+
+/* ============================================================
+   THE BUILDER — honest multi-provider router -> DRAFT proposal
+   ============================================================ */
+const GEN_DEADLINE=30000;
+const PROVIDERS={
+  claude:{label:'Claude',live:true,endpoint:'https://api.anthropic.com/v1/messages',
+    build:(sys,desc,img)=>({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content: img?[{type:'image',source:{type:'base64',media_type:img.mime,data:img.data}},{type:'text',text:sys+'\n\n'+desc}]:(sys+'\n\nDESCRIPTION:\n'+desc)}]}),
+    headers:()=>({'Content-Type':'application/json'}),
+    extract:d=>{let t='';if(d&&Array.isArray(d.content))for(const b of d.content)if(b.type==='text')t+=b.text;return t;}},
+  openai:{label:'OpenAI',live:false,endpoint:'https://api.openai.com/v1/chat/completions',
+    build:(sys,desc)=>({model:'gpt-5.5',messages:[{role:'system',content:sys},{role:'user',content:desc}]}),
+    headers:k=>({'Content-Type':'application/json','Authorization':'Bearer '+k}),
+    extract:d=>{try{return d.choices[0].message.content;}catch(_){return '';}}},
+  gemini:{label:'Gemini',live:false,endpoint:'https://generativelanguage.googleapis.com/v1beta/models/gemini-3:generateContent',
+    build:(sys,desc)=>({contents:[{parts:[{text:sys+'\n\n'+desc}]}]}),
+    headers:k=>({'Content-Type':'application/json','x-goog-api-key':k}),
+    extract:d=>{try{return d.candidates[0].content.parts.map(p=>p.text).join('');}catch(_){return '';}}}
+};
+let activeProv='claude'; const apiKeys={};
+function selectProvider(p){ activeProv=p; document.querySelectorAll('#modelpick .mp').forEach(b=>{const on=b.dataset.prov===p; b.className='mp flex-1 py-2 rounded-lg border text-[10px] font-bold uppercase tracking-wide flex items-center justify-center gap-1.5 '+(on?'border-orange-500 text-orange-600 bg-orange-50':'border-slate-200 text-slate-500');}); const needs=!PROVIDERS[p].live; $('keyfield').classList.toggle('hidden',!needs); if(needs){$('apikey').value=apiKeys[p]||'';} }
+
+const GEN_SYS=`You design 3D models as a JSON array of PARTS for a constructive-solid-geometry kernel (units mm, +Z is up, all parts centered on their own origin then moved).
+Each part: {"type":"beam|panel|block|plate|cyl|sphere","op":"add|cut","l":num,"w":num,"h":num,"r":num,"x":num,"y":num,"z":num,"rx":deg,"ry":deg,"rz":deg,"mat":"mat_pine|mat_ply|mat_pla|mat_resin|mat_steel|mat_concrete"}.
+RULES: box-like parts (beam/panel/block/plate) use l,w,h. cyl uses r,h. sphere uses r. To sit flush on the plate, set z = h/2 (boxes/cyl) or z = r (sphere). Use op:"cut" for holes/slots (they subtract). Keep walls >= 1mm. Favor overhangs <= 45 degrees.
+Respond ONLY with the raw JSON array. No markdown, no prose.`;
+
+function parsePartsJSON(text){
+  let t=String(text||'').trim();
+  const m=t.match(/```(?:json)?\s*([\s\S]*?)```/i); if(m) t=m[1].trim();
+  const a=t.indexOf('['), b=t.lastIndexOf(']'); if(a>=0&&b>a) t=t.slice(a,b+1);
+  const arr=JSON.parse(t);
+  if(!Array.isArray(arr)) throw new Error('not an array');
+  return arr.map(c=>makePart(c.type||'block', {op:c.op==='cut'?'cut':'add', name:(c.type||'part'),
+    ...(c.l!==undefined?{l:+c.l}:{}),...(c.w!==undefined?{w:+c.w}:{}),...(c.h!==undefined?{h:+c.h}:{}),
+    ...(c.r!==undefined?{r:+c.r}:{}),
+    x:+(c.x||0),y:+(c.y||0),z:c.z!==undefined?+c.z:undefined,
+    rx:+(c.rx||0),ry:+(c.ry||0),rz:+(c.rz||0), mat:c.mat||PART_DEFS[c.type||'block']?.mat||'mat_pla'}));
+}
+
+const Draft={ active:false, parts:[], holos:[],
+  stage(newParts, author){
+    this.clear();
+    if(!newParts.length){ notify('The Builder returned no parts.'); return; }
+    this.active=true; this.parts=newParts;
+    newParts.forEach(p=>{ const geo=partProxyGeom(p); const mat=new THREE.MeshStandardMaterial({color:0x3b82f6,transparent:true,opacity:0.6,emissive:0x1d4ed8,emissiveIntensity:0.5}); const h=new THREE.Mesh(geo,mat); h.position.set(p.x,p.y,p.z); h.rotation.set(p.rx*Math.PI/180,p.ry*Math.PI/180,p.rz*Math.PI/180); scene.add(h); this.holos.push(h); });
+    $('prop-add').textContent=newParts.length; $('prop-by').textContent=author?('from '+author):'';
+    $('proposal-ui').classList.remove('translate-y-[150%]','opacity-0','pointer-events-none');
+    $('app-footer').classList.add('hidden'); $('tool-rail').classList.add('hidden');
+    status('Draft review'); Synth.ai();
+  },
+  commit(){ if(!this.active)return; pushHistory(); this.parts.forEach(p=>{ parts.push(p); syncPartMesh(p); }); this.clear(); scheduleRecompile(); broadcastParts(); Synth.spawn(); Haptics.spawn(); notify('Draft committed'); },
+  discard(){ if(!this.active)return; this.clear(); Synth.deselect(); Haptics.thud(); notify('Draft discarded'); },
+  clear(){ this.holos.forEach(h=>{scene.remove(h);h.geometry.dispose();h.material.dispose();}); this.holos=[]; this.parts=[]; this.active=false; $('proposal-ui').classList.add('translate-y-[150%]','opacity-0','pointer-events-none'); $('app-footer').classList.remove('hidden'); $('tool-rail').classList.remove('hidden'); status('Ready'); }
+};
+$('btn-draft-commit').addEventListener('click',()=>{ Draft.commit(); broadcastDraftResolve('commit'); });
+$('btn-draft-reject').addEventListener('click',()=>{ Draft.discard(); broadcastDraftResolve('discard'); });
+
+let aiImg=null;
+async function runBuilder(){
+  if(!kernelReady) return;
+  const prov=PROVIDERS[activeProv], key=apiKeys[activeProv]||'';
+  if(!prov.live && !key){ notify(prov.label+' needs a key first.'); return; }
+  let desc=$('ai-prompt-input').value.trim();
+  if(!desc && !aiImg){ notify('Describe something or attach a photo.'); return; }
+  if(!desc && aiImg) desc='Replicate the structure in this reference image as printable parts.';
+  closeModal('modal-ai');
+  const ov=$('calc-overlay'); ov.classList.remove('hidden'); ov.classList.add('flex'); $('calc-text').textContent='Asking '+prov.label+'…';
+  let timedOut=false; const timer=setTimeout(()=>{timedOut=true; ov.classList.remove('flex');ov.classList.add('hidden'); notify(prov.label+' did not answer in time.');},GEN_DEADLINE);
+  try{
+    const resp=await fetch(prov.endpoint,{method:'POST',headers:prov.headers(key),body:JSON.stringify(prov.build(GEN_SYS,desc, prov.live?aiImg:null))});
+    if(!resp.ok) throw new Error('HTTP '+resp.status+(resp.status===401?' (key rejected)':''));
+    const data=await resp.json();
+    if(timedOut) return; clearTimeout(timer);
+    ov.classList.remove('flex'); ov.classList.add('hidden');
+    let newParts; try{ newParts=parsePartsJSON(prov.extract(data)); }catch(e){ notify('Could not parse parts: '+e.message); return; }
+    Draft.stage(newParts, null);
+    broadcastDraft(newParts);
+    $('ai-prompt-input').value=''; clearAiImg();
+  }catch(e){ if(timedOut)return; clearTimeout(timer); ov.classList.remove('flex'); ov.classList.add('hidden'); const cors=/Failed to fetch|NetworkError/i.test(e.message)&&!prov.live; notify(prov.label+' failed: '+e.message+(cors?' (CORS / browser-blocked)':'')); }
+}
+
+/* voice + image */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition; let recog=null;
+if(SR){ recog=new SR(); recog.continuous=false; recog.interimResults=false; recog.lang='en-US';
+  recog.onstart=()=>{$('btn-voice').classList.add('hidden');$('voice-ind').classList.remove('hidden');};
+  recog.onresult=e=>{$('ai-prompt-input').value=e.results[0][0].transcript; setTimeout(runBuilder,400);};
+  recog.onerror=()=>stopVoice(); recog.onend=()=>stopVoice();
+}
+function stopVoice(){ $('btn-voice')?.classList.remove('hidden'); $('voice-ind')?.classList.add('hidden'); }
+$('btn-voice').addEventListener('click',()=>{ if(recog){try{recog.start();}catch(_){}}else notify('Voice not supported here.'); });
+$('btn-ai-camera').addEventListener('click',()=>$('ai-img-upload').click());
+$('ai-img-upload').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=ev=>{ const u=ev.target.result; $('ai-img').src=u; $('ai-img-wrap').classList.remove('hidden'); aiImg={mime:u.split(',')[0].match(/:(.*?);/)[1],data:u.split(',')[1]}; }; r.readAsDataURL(f); });
+function clearAiImg(){ aiImg=null; $('ai-img').src=''; $('ai-img-wrap').classList.add('hidden'); $('ai-img-upload').value=''; }
+$('btn-ai-clear-img').addEventListener('click',clearAiImg);
+
+/* ============================================================
+   MULTIPLAYER — PeerJS star, sync the PARTS LIST (verified merge)
+   ============================================================ */
+const NET={ peer:null, isHost:false, conns:[], selfId:null, seq:0, lastAuthor:null, me:{name:null,color:null}, roster:new Map() };
+const COLORS=['#16a34a','#3b82f6','#f97316','#eab308','#a855f7','#ec4899'];
+const rname=()=>['ash','bo','cy','del','eli','fox','gus','ivy','jo','kit'][Math.floor(Math.random()*10)]+Math.floor(Math.random()*90+10);
+function brokerMissing(){ return typeof Peer!=='function'; }
+function roomUI(cls,label){ const dot=$('room-dot'),pill=$('room-pill'); const map={solo:'bg-slate-300',flight:'bg-amber-400 animate-pulse',live:'bg-green-500',sev:'bg-red-500'}; dot.className='w-2 h-2 rounded-full '+(map[cls]||'bg-slate-300'); pill.textContent=label; }
+function renderPeers(){ const box=$('room-peers'); box.innerHTML=''; let n=0; NET.roster.forEach(p=>{ if(n++>3)return; const d=document.createElement('span'); d.className='w-4 h-4 rounded-full border border-white text-[7px] font-bold flex items-center justify-center text-white'; d.style.background=p.color; d.textContent=(p.name||'?').slice(0,1).toUpperCase(); box.appendChild(d); }); }
+function rJoin(id,name,color){ NET.roster.set(id,{id,name,color}); renderPeers(); }
+function rLeave(id){ NET.roster.delete(id); renderPeers(); }
+
+function hostRoom(){
+  if(brokerMissing()){ roomUI('sev','no broker'); $('room-broker-warn').classList.remove('hidden'); return; }
+  teardownNet(); NET.me.name=rname(); NET.me.color=COLORS[0]; roomUI('flight','starting');
+  $('room-status-line').textContent='starting room…';
+  try{ NET.peer=new Peer(); }catch(e){ roomUI('sev','failed'); return; }
+  NET.isHost=true;
+  NET.peer.on('open',id=>{ NET.selfId=id; rJoin(id,NET.me.name+' (you)',NET.me.color); roomUI('live','hosting'); $('room-code-display').classList.remove('hidden'); $('room-code-text').textContent=id; $('room-status-line').textContent='live — share the code'; });
+  NET.peer.on('connection',c=>wireHost(c));
+  NET.peer.on('error',e=>netErr(e)); NET.peer.on('disconnected',()=>roomUI('sev','dropped'));
+}
+function wireHost(conn){
+  conn.on('open',()=>{ NET.conns.push(conn); const color=COLORS[NET.conns.length%COLORS.length]; conn.send({type:'welcome',color}); conn.send({type:'parts',parts,author:NET.me.name,seq:NET.seq}); conn.send({type:'roster',peers:[...NET.roster.values()]}); });
+  conn.on('data',m=>hostData(conn,m)); conn.on('close',()=>{ NET.conns=NET.conns.filter(c=>c!==conn); if(conn._pid){rLeave(conn._pid); relay({type:'leave',id:conn._pid},null);} }); conn.on('error',e=>netErr(e));
+}
+function hostData(conn,m){
+  if(!m||typeof m!=='object')return;
+  if(m.type==='hello'){ conn._pid=m.id; rJoin(m.id,m.name,m.color); relay({type:'join',id:m.id,name:m.name,color:m.color},conn); relay({type:'roster',peers:[...NET.roster.values()]},null); return; }
+  if(m.type==='parts'){ if(applyRemoteParts(m)) relay(m,conn); return; }
+  if(m.type==='note'){ addNote(m.text,m.name,m.color,true); relay(m,conn); return; }
+  if(m.type==='draft'){ Draft.stage((m.parts||[]).map(rehydrate), m.author); relay(m,conn); return; }
+  if(m.type==='draftresolve'){ if(m.how==='commit')Draft.commit();else Draft.discard(); relay(m,conn); return; }
+}
+function relay(m,except){ NET.conns.forEach(c=>{ if(c!==except){try{c.send(m);}catch(_){}} }); }
+
+function joinRoom(){
+  const code=$('joincode').value.trim(); if(!code)return;
+  if(brokerMissing()){ roomUI('sev','no broker'); $('room-broker-warn').classList.remove('hidden'); return; }
+  teardownNet(); NET.me.name=rname(); roomUI('flight','connecting'); $('room-status-line').textContent='connecting…';
+  try{ NET.peer=new Peer(); }catch(e){ roomUI('sev','failed'); return; }
+  NET.isHost=false;
+  NET.peer.on('open',id=>{ NET.selfId=id; const conn=NET.peer.connect(code,{reliable:true}); NET.conns=[conn]; wireClient(conn,code); });
+  NET.peer.on('error',e=>netErr(e)); NET.peer.on('disconnected',()=>roomUI('sev','dropped'));
+}
+function wireClient(conn,code){
+  let opened=false; const giveUp=setTimeout(()=>{ if(!opened){roomUI('sev','not found'); $('room-status-line').textContent='no answer — check the code or host is offline';} },12000);
+  conn.on('open',()=>{ opened=true; clearTimeout(giveUp); roomUI('live','in room'); $('room-status-line').textContent='live — building together'; conn.send({type:'hello',id:NET.selfId,name:NET.me.name,color:NET.me.color||COLORS[1]}); });
+  conn.on('data',m=>clientData(m)); conn.on('close',()=>roomUI('sev','host gone')); conn.on('error',e=>netErr(e));
+}
+function clientData(m){
+  if(!m||typeof m!=='object')return;
+  switch(m.type){
+    case 'welcome': NET.me.color=m.color; rJoin(NET.selfId,NET.me.name+' (you)',m.color); break;
+    case 'parts': applyRemoteParts(m); break;
+    case 'roster': NET.roster.clear(); (m.peers||[]).forEach(p=>NET.roster.set(p.id,p.id===NET.selfId?{...p,name:p.name+' (you)'}:p)); renderPeers(); break;
+    case 'join': rJoin(m.id,m.name,m.color); break;
+    case 'leave': rLeave(m.id); break;
+    case 'note': addNote(m.text,m.name,m.color,true); break;
+    case 'draft': Draft.stage((m.parts||[]).map(rehydrate), m.author); break;
+    case 'draftresolve': if(m.how==='commit')Draft.commit();else Draft.discard(); break;
+  }
+}
+function rehydrate(p){ return {...makePart(p.type||'block'), ...p}; }
+function applyRemoteParts(m){
+  const newer=(m.seq>NET.seq)||(m.seq===NET.seq&&(m.author||'')>(NET.lastAuthor||''));
+  if(!newer) return false;
+  NET.seq=m.seq; NET.lastAuthor=m.author;
+  parts=(m.parts||[]).map(rehydrate); selectedUid=null; tcontrols.detach();
+  syncAllPartMeshes(); scheduleRecompile();
+  const ed=renderer.domElement; status('updated by '+(m.author||'peer'));
+  return true;
+}
+function broadcastParts(){
+  if(!NET.peer) return; NET.seq+=1; NET.lastAuthor=NET.me.name;
+  const m={type:'parts',parts,author:NET.me.name,seq:NET.seq};
+  if(NET.isHost) relay(m,null); else { const c=NET.conns[0]; if(c){try{c.send(m);}catch(_){}} }
+}
+function broadcastDraft(newParts){ if(!NET.peer)return; const m={type:'draft',parts:newParts,author:NET.me.name}; if(NET.isHost)relay(m,null); else{const c=NET.conns[0];if(c){try{c.send(m);}catch(_){}}} }
+function broadcastDraftResolve(how){ if(!NET.peer)return; const m={type:'draftresolve',how}; if(NET.isHost)relay(m,null); else{const c=NET.conns[0];if(c){try{c.send(m);}catch(_){}}} }
+function netErr(e){ const t=e&&e.type?e.type:'error'; let r; if(t==='peer-unavailable')r='room not found'; else if(/network|server-error|socket/.test(t))r='broker unreachable'; else if(t==='browser-incompatible')r='no WebRTC'; else r=t; roomUI('sev',r); $('room-status-line').textContent=r+' — you can still build solo'; }
+function teardownNet(){ try{NET.conns.forEach(c=>c.close&&c.close());}catch(_){} try{NET.peer&&NET.peer.destroy();}catch(_){} NET.peer=null;NET.isHost=false;NET.conns=[];NET.roster.clear();NET.seq=0;NET.lastAuthor=null;renderPeers(); }
+window.addEventListener('beforeunload',teardownNet);
+
+/* ---- notes (shared) ---- */
+let notes=[];
+function addNote(text,who,color,remote){ notes.push({text,who,color}); if(notes.length>80)notes.shift(); renderNotes(); if(!remote)sendNote(text); }
+function renderNotes(){ const box=$('notes-list'); if(!notes.length){box.innerHTML='<div class="text-xs text-slate-400 text-center mt-6">Drop a note for the room — a proposal, a "what if".</div>';return;} box.innerHTML=''; notes.slice(-40).forEach(n=>{ const el=document.createElement('div'); el.className='flex gap-2 items-start bg-white/80 rounded-lg p-2 border border-slate-100'; el.innerHTML='<span class="w-2 h-2 rounded-full mt-1.5 flex-none" style="background:'+(n.color||'#94a3b8')+'"></span><div class="flex-1 min-w-0"><div class="text-[9px] text-slate-400 mono uppercase">'+esc(n.who||'anon')+'</div><div class="text-sm text-slate-800 break-words">'+esc(n.text)+'</div></div>'; box.appendChild(el); }); box.scrollTop=box.scrollHeight; }
+function postNote(){ const t=$('note-input').value.trim(); if(!t)return; $('note-input').value=''; addNote(t,NET.me.name||'you',NET.me.color||'#16a34a',false); }
+function sendNote(text){ if(!NET.peer)return; const m={type:'note',name:NET.me.name,color:NET.me.color,text}; if(NET.isHost)relay(m,null); else{const c=NET.conns[0];if(c){try{c.send(m);}catch(_){}}} }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+$('note-add').addEventListener('click',postNote);
+$('note-input').addEventListener('keydown',e=>{if(e.key==='Enter')postNote();});
+
+/* ============================================================
+   BOTTOM SHEET (Gunnar peek/half/full) + tabs + FAB
+   ============================================================ */
+const sheet=$('bottom-sheet'); let sheetOpen=false; let sd={active:false,startY:0,startH:0};
+$('sheet-handle').addEventListener('pointerdown',e=>{ sd.active=true;sd.startY=e.clientY;sd.startH=sheet.offsetHeight;sheet.classList.add('notransition');e.preventDefault(); });
+window.addEventListener('pointermove',e=>{ if(!sd.active)return; let h=sd.startH+(sd.startY-e.clientY); sheet.style.height=Math.max(64,Math.min(h,innerHeight*0.8))+'px'; });
+window.addEventListener('pointerup',e=>{ if(!sd.active)return; sd.active=false; sheet.classList.remove('notransition'); const h=sheet.offsetHeight,vh=innerHeight; if(Math.abs(sd.startY-e.clientY)<5){ if(h<vh*0.2)sheet.style.height='38vh'; else if(h<vh*0.45)sheet.style.height='72vh'; else sheet.style.height='64px'; return; } if(h<80){ sheet.classList.add('sheet-closed'); sheetOpen=false; if(!selectedUid)$('fab-add').classList.remove('hidden'); } });
+function openSheet(tab){ sheetOpen=true; sheet.classList.remove('sheet-closed'); if(sheet.offsetHeight<80)sheet.style.height='38vh'; $('fab-add').classList.add('hidden'); if(tab)switchTab(tab); }
+function closeSheet(){ sheetOpen=false; sheet.classList.add('sheet-closed'); if(!selectedUid)$('fab-add').classList.remove('hidden'); }
+$('sheet-handle').addEventListener('click',()=>{ if(sheet.offsetHeight<80||sheet.classList.contains('sheet-closed'))openSheet(); });
+$('fab-add').addEventListener('click',()=>{ deselect(); openSheet('parts'); });
+
+const tabs=document.querySelectorAll('[data-tab]');
+const tabEls={ parts:$('tab-parts'),details:$('tab-details'),report:$('tab-report'),versions:$('tab-versions'),code:$('tab-code'),notes:$('tab-notes') };
+function switchTab(id){
+  tabs.forEach(t=>{ const on=t.dataset.tab===id; t.className='flex-1 py-3 border-b-2 '+(on?'tab-active':'tab-inactive'); });
+  Object.entries(tabEls).forEach(([k,el])=>{ if(k===id){el.classList.remove('hidden');el.classList.add('flex');}else{el.classList.add('hidden');el.classList.remove('flex');} });
+  if(id==='details') showDetails();
+  if(id==='versions'){ renderVersions(); renderCompare(); }
+  if(id==='report'){ renderBOM(); }
+}
+tabs.forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
+
+/* catalog */
+document.querySelectorAll('.catalog-btn').forEach(b=>b.addEventListener('click',()=>{ addPart(b.dataset.type); }));
+
+/* tool rail */
+document.querySelectorAll('.tool-btn').forEach(b=>b.addEventListener('click',e=>{
+  document.querySelectorAll('.tool-btn').forEach(x=>{x.classList.remove('bg-slate-100','text-slate-700');x.classList.add('text-slate-400');});
+  const t=e.currentTarget; t.classList.remove('text-slate-400'); t.classList.add('bg-slate-100','text-slate-700');
+  const mode=t.dataset.mode;
+  if(mode==='orbit'){ transformMode=null; tcontrols.detach(); }
+  else { transformMode=mode; tcontrols.setMode(mode); if(selectedUid){const m=partMeshes.get(selectedUid); if(m)tcontrols.attach(m);} }
+}));
+$('btn-toggle-snap').addEventListener('click',()=>{ snapOn=!snapOn; const b=$('btn-toggle-snap'); if(snapOn){ tcontrols.setTranslationSnap(snapSize); tcontrols.setRotationSnap(Math.PI/12); b.className='w-9 h-9 rounded-xl flex items-center justify-center text-orange-500 bg-orange-50'; notify('Grid snap: ON (1 unit)'); } else { tcontrols.setTranslationSnap(null); tcontrols.setRotationSnap(null); b.className='w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700'; notify('Grid snap: OFF'); } });
+$('btn-view-modes').addEventListener('click',()=>{ viewMode = viewMode==='solid'?'overhang':viewMode==='overhang'?'section':'solid'; notify('View: '+viewMode); if(lastGeom&&currentReport){ showResult(lastGeom,currentReport);} if(viewMode==='section'){ clipPlane.set(new THREE.Vector3(0,0,-1),(modelZ.min+modelZ.max)/2); } });
+
+/* quick actions */
+$('btn-quick-deselect').addEventListener('click',deselect);
+$('btn-quick-duplicate').addEventListener('click',duplicateSel);
+$('btn-quick-delete').addEventListener('click',deleteSel);
+$('btn-quick-cut').addEventListener('click',toggleCut);
+$('btn-quick-hide').addEventListener('click',toggleHidePart);
+
+/* report row taps */
+$('row-overhang').addEventListener('click',()=>{ viewMode='overhang'; if(lastGeom&&currentReport)showResult(lastGeom,currentReport); notify('Steep faces highlighted'); });
+$('row-wall').addEventListener('click',()=>{ if(currentReport&&currentReport.thin){ const t=currentReport.thin; orbit.target.set(t.x,t.y,t.z); notify('Thinnest: '+t.gap.toFixed(2)+' mm'); } });
+
+/* code tab */
+$('btn-recompile').addEventListener('click',()=>{ recompile($('editor').value); notify('Re-ran code'); });
+
+/* export STL */
+$('btn-export').addEventListener('click',()=>{
+  if(!lastGeom||!currentReport||!currentReport.pass) return;
+  const pos=lastGeom.attributes.position.array,tri=pos.length/9;
+  const buf=new ArrayBuffer(84+tri*50),dv=new DataView(buf);let o=84;dv.setUint32(80,tri,true);
+  for(let t=0;t<tri;t++){const i=t*9; const ax=pos[i],ay=pos[i+1],az=pos[i+2],bx=pos[i+3],by=pos[i+4],bz=pos[i+5],cx=pos[i+6],cy=pos[i+7],cz=pos[i+8]; let nx=(by-ay)*(cz-az)-(bz-az)*(cy-ay),ny=(bz-az)*(cx-ax)-(bx-ax)*(cz-az),nz=(bx-ax)*(cy-ay)-(by-ay)*(cx-ax);const nl=Math.hypot(nx,ny,nz)||1;nx/=nl;ny/=nl;nz/=nl; dv.setFloat32(o,nx,true);dv.setFloat32(o+4,ny,true);dv.setFloat32(o+8,nz,true);o+=12; for(const c of[[ax,ay,az],[bx,by,bz],[cx,cy,cz]]){dv.setFloat32(o,c[0],true);dv.setFloat32(o+4,c[1],true);dv.setFloat32(o+8,c[2],true);o+=12;} dv.setUint16(o,0,true);o+=2; }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([buf],{type:'application/octet-stream'})); a.download='solidbench_'+Date.now()+'.stl'; a.click(); URL.revokeObjectURL(a.href); notify('STL exported');
+});
+
+/* import/export project JSON */
+$('btn-open-import').addEventListener('click',()=>$('file-upload').click());
+$('file-upload').addEventListener('change',e=>{ const f=e.target.files[0]; if(!f)return; const r=new FileReader(); r.onload=ev=>{ try{ const data=JSON.parse(ev.target.result); if(Array.isArray(data.parts)){ pushHistory(); parts=data.parts.map(rehydrate); selectedUid=null; syncAllPartMeshes(); scheduleRecompile(); broadcastParts(); notify('Project imported'); } }catch(_){ notify('Could not read project file'); } }; r.readAsText(f); });
+$('btn-open-export').addEventListener('click',()=>{ const data={version:'sb7',parts}; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'})); a.download='solidbench_project_'+Date.now()+'.json'; a.click(); URL.revokeObjectURL(a.href); notify('Project exported'); });
+
+/* modals */
+function openModal(id){ const m=$(id),c=$(id+'-content'); m.classList.replace('modal-closed','modal-open'); setTimeout(()=>c.classList.remove('translate-y-full'),10); }
+function closeModal(id){ const m=$(id),c=$(id+'-content'); c.classList.add('translate-y-full'); setTimeout(()=>m.classList.replace('modal-open','modal-closed'),300); }
+$('btn-open-ai').addEventListener('click',()=>openModal('modal-ai'));
+document.querySelectorAll('.btn-close-ai').forEach(b=>b.addEventListener('click',()=>closeModal('modal-ai')));
+$('modal-ai').addEventListener('pointerdown',e=>{if(e.target===$('modal-ai'))closeModal('modal-ai');});
+$('btn-room').addEventListener('click',()=>openModal('modal-room'));
+document.querySelectorAll('.btn-close-room').forEach(b=>b.addEventListener('click',()=>closeModal('modal-room')));
+$('modal-room').addEventListener('pointerdown',e=>{if(e.target===$('modal-room'))closeModal('modal-room');});
+$('btn-open-info').addEventListener('click',()=>openModal('modal-info'));
+document.querySelectorAll('.btn-close-info').forEach(b=>b.addEventListener('click',()=>closeModal('modal-info')));
+$('modal-info').addEventListener('pointerdown',e=>{if(e.target===$('modal-info'))closeModal('modal-info');});
+$('btn-submit-ai').addEventListener('click',runBuilder);
+$('ai-prompt-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();runBuilder();}});
+document.querySelectorAll('#modelpick .mp').forEach(b=>b.addEventListener('click',()=>selectProvider(b.dataset.prov)));
+$('apikey').addEventListener('input',e=>{apiKeys[activeProv]=e.target.value.trim();});
+$('btn-host').addEventListener('click',hostRoom);
+$('btn-join').addEventListener('click',joinRoom);
+$('joincode').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom();});
+
+/* resize + loop */
+addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+function loop(){ requestAnimationFrame(loop); orbit.update(); renderer.render(scene,camera); }
+loop();
+
+/* ---- boot ---- */
+if(brokerMissing()){ $('room-broker-warn').classList.remove('hidden'); }
+(async function boot(){
+  try{
+    const w=await Module(); w.setup(); Manifold=w.Manifold; kernelReady=true;
+    status('Ready — tap Add or The Builder');
+    // seed with a small starter so the bench isn't empty
+    parts=[ makePart('panel',{l:40,w:24,h:3,z:1.5,name:'base'}),
+            makePart('cyl',{r:3.2,h:14,x:-12,y:0,op:'cut',name:'hole'}),
+            makePart('cyl',{r:3.2,h:14,x:12,y:0,op:'cut',name:'hole'}) ];
+    syncAllPartMeshes(); recompile();
+    notify('Bench ready');
+  }catch(e){
+    status('Kernel unavailable');
+    $('calc-overlay').classList.remove('hidden'); $('calc-overlay').classList.add('flex');
+    $('calc-text').innerHTML='Kernel failed to load.<br><span class="text-[10px] text-slate-400">manifold-3d needs network access to its CDN. If blocked, the geometry engine cannot start.</span>';
+  }
+})();
+</script>
+
+</body>
+</html>

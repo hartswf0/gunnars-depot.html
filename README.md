@@ -32,6 +32,22 @@ Open `index.html` on GitHub Pages, then launch:
 - **City Builder**: family-friendly city sim where roads, homes, shops, factories, power, water, parks, map layers, and Gemini planning drive population, budget, and happiness.
 - **Gunnar Trailer Configurer**: simple trailer iteration tool.
 - **Thor's Forge**: STL-oriented editor and primitive builder.
+- **SOLIDBENCH**: OpenSCAD-authoritative printable-solid workbench with streamed
+  AI iteration, rendered critique, mesh inspection, and BYOAI providers. Launch
+  the static surface at `SOLIDBENCH/`; run `SOLIDBENCH/solidbench_server.py` for
+  complete VOLUND execution.
+
+## SOLIDBENCH
+
+SOLIDBENCH is the active printable-solid development path in this repository.
+Its static interface works on GitHub Pages. Full OpenSCAD generation requires
+the local Python server because GitHub Pages cannot execute OpenSCAD or protect
+provider keys.
+
+- [Overview](SOLIDBENCH/README.md)
+- [Quickstart](SOLIDBENCH/QUICKSTART.md)
+- [Expert onboarding](SOLIDBENCH/EXPERT_ONBOARDING.md)
+- [Help](SOLIDBENCH/HELP.md)
 
 ## Asset Strategy
 
