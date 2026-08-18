@@ -14,7 +14,7 @@ Open `operative-builder.html` from GitHub Pages or any local static server
 Everything else runs offline: `three` (r185, MIT) is vendored under
 `vendor/three/`, and the reference studies are read from this repository.
 
-Run the receipts with `node tests/run.mjs` (101 assertions, no dependencies).
+Run the receipts with `node tests/run.mjs` (110 assertions, no dependencies).
 
 **`ingold-trailer.html` is the building this was for.** The environment above is the
 means; the trailer is the result. 226 members on the reference sheets' 8'-6" x
@@ -234,6 +234,45 @@ polish; each one is a place where running the thing contradicted the plan.
 | Any movement cancels the long press | cancelling it only once the drag threshold was crossed meant a slow small movement fired the long press *mid-drag* and stole the gesture — which is exactly what happened, repeatedly, before it was instrumented |
 | pointerdown prefers the already-selected member | tap-cycling ran on press as well as on tap, so pressing to drag stepped to a different member and the drag grabbed the wrong thing — or nothing |
 | A deduped final state is relabelled "current" | when a member had not moved since its last journalled state, the last dot on its ribbon read "before header" instead of "now" |
+
+## Two journals, at two scales
+
+The trailer keeps a journal of the 51 moves that built it. The session that built
+the trailer kept one too — Claude Code writes every tool call and result to
+`~/.claude/projects/<project>/<session>.jsonl` — but it lives outside the
+repository and dies with the container.
+
+`tools/session-record.mjs` lifts it in. `data/session-record.json` holds **180
+loops**: what was said before each one, what actually ran, what actually came
+back, and the screenshots, in order, with the instructions kept as chapters.
+`making-of.html` replays it.
+
+```
+act     71    patching the code
+verify  50    checking whether the last patch worked
+orient  20    reading the repository or the state
+probe   17    the smallest experiment that could reveal something
+observe 12    looking at a rendered screenshot
+record   3    commits pushed
+```
+
+Why this is not optional: the correspondence claim — *an instruction acted, the
+world answered, the answer changed what happened next* — was only verifiable at
+one scale. The building can prove its own becoming; the program could not. The
+correspondence records in this document were **prose I wrote afterwards**, which
+is exactly what "do not let prose substitute for executable verification" warns
+against. Now each of them can be traced to the loop that produced it: the command
+that ran, the output that came back, the screenshot at that moment.
+
+The record is regenerated, not maintained by hand:
+
+```
+node tools/session-record.mjs ~/.claude/projects/<project>/<session>.jsonl \
+     data/session-record.json assets/making
+```
+
+It is stale by one commit the moment it is written — the commit that adds it cannot
+be inside it. That is a property of the thing, not a defect to paper over.
 
 ## What the trailer decided for itself
 

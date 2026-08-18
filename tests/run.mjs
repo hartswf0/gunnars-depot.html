@@ -296,6 +296,38 @@ check('the making is recoverable', T.history.filter(h => h.snapshot).length >= 4
 check('the wheel wells carry the wall above them',
   T.all({ kind: 'stud' }).some(e => e.meta.overWell));
 
+// ------------------------------------------- 15. the record of the making
+group('the session record is evidence, not narration');
+const recPath = path.join(ROOT, 'data/session-record.json');
+if (!fs.existsSync(recPath)) {
+  check('data/session-record.json exists', false, 'run tools/session-record.mjs');
+} else {
+  const SR = JSON.parse(fs.readFileSync(recPath, 'utf8'));
+  check('it holds the whole session', SR.loops.length > 150, `${SR.loops.length} loops`);
+  check('the counts match the loops themselves',
+    Object.entries(SR.counts).filter(([k]) => k !== 'loops')
+      .every(([k, n]) => SR.loops.filter(l => l.kind === k).length === n)
+    && SR.counts.loops === SR.loops.length, JSON.stringify(SR.counts));
+  check('every loop is stamped and attributed', SR.loops.every(l => l.t && l.tool && l.kind));
+  check('nearly every loop carries what actually ran',
+    SR.loops.filter(l => l.cmd).length / SR.loops.length > 0.9,
+    `${SR.loops.filter(l => l.cmd).length}/${SR.loops.length}`);
+  check('and what actually came back',
+    SR.loops.filter(l => l.saw).length / SR.loops.length > 0.9,
+    `${SR.loops.filter(l => l.saw).length}/${SR.loops.length}`);
+  const shots = SR.loops.filter(l => l.shot);
+  check('every referenced screenshot is in the repository', shots.length > 0 &&
+    shots.every(l => fs.existsSync(path.join(ROOT, l.shot))),
+    `${shots.length} screenshots`);
+  check('the instructions are kept as chapters', SR.chapters.length >= 3 &&
+    SR.chapters.every(c => c.at >= 0 && c.at <= SR.loops.length));
+  check('verification is a real share of the work', (SR.counts.verify || 0) / SR.loops.length > 0.15,
+    `${SR.counts.verify} of ${SR.loops.length} loops were checking the last move`);
+  // the two journals answer the same question at different scales
+  check('the building journal is shorter than the session that made it',
+    T.history.length < SR.loops.length, `building ${T.history.length} vs session ${SR.loops.length}`);
+}
+
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
