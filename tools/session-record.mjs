@@ -75,7 +75,7 @@ for (const line of raw) {
         say: clip(pendingSay, 900) || null,
         did: (c.input && (c.input.description || c.input.file_path)) || c.name,
         cmd: clip((c.input && c.input.command) || (c.input && c.input.file_path) || '', 900),
-        saw: null, ok: null, shot: null
+        saw: null, ok: null, shot: null, key: false
       };
       // a loop that looked at a screenshot points at the screenshot, if we kept it
       if (rec.kind === 'observe' && c.input && c.input.file_path) {
@@ -95,11 +95,17 @@ for (const line of raw) {
       else if (Array.isArray(c.content)) text = c.content.map(x => (x && x.type === 'text') ? x.text : '[' + (x && x.type) + ']').join('\n');
       rec.saw = clip(text, 1400);
       rec.ok = !c.is_error;
+      // consequential: a loop that found something, looked at something, or landed
+      // something. Derived from what came back, not chosen by hand.
+      const found = /FAIL|Error|error:|Traceback|MISSING|exceeds|cannot|refused|not connected|no load path|occupy the same|answers:|conditions: [1-9]/i.test(rec.saw);
+      const landed = /0 failed|conditions: 0|nothing outstanding|-> claude\/|passed,/i.test(rec.saw);
+      rec.key = rec.kind === 'observe' || rec.kind === 'record' || rec.ok === false || found || landed;
     }
   }
 }
 
 const withShots = loops.filter(l => l.shot).length;
+const keyed = loops.filter(l => l.key).length;
 const tally = {};
 for (const l of loops) tally[l.kind] = (tally[l.kind] || 0) + 1;
 
@@ -107,11 +113,11 @@ const record = {
   session: path.basename(src, '.jsonl'),
   span: { from: loops[0] && loops[0].t, to: loops[loops.length - 1] && loops[loops.length - 1].t },
   counts: { loops: loops.length, ...tally },
-  chapters, loops
+  chapters, loops, keyCount: keyed
 };
 fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, JSON.stringify(record));
 const kb = (fs.statSync(out).size / 1024).toFixed(0);
 console.log(loops.length + ' loops, ' + chapters.length + ' instructions -> ' + out + ' (' + kb + ' KB)');
-console.log('by kind:', JSON.stringify(tally), '| screenshots linked:', withShots);
+console.log('by kind:', JSON.stringify(tally), '| screenshots:', withShots, '| consequential:', keyed);
 console.log('span:', record.span.from, '->', record.span.to);

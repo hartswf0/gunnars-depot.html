@@ -210,8 +210,6 @@ export function services(w, log = []) {
     size: [8, 8, 8], layer: 'interior', material: 'steel', hostedBy: 'bed.base' }, '12 V on-demand pump'));
   log.push(step(w, 'fixture', { id: 'heater', kind: 'heater', system: 'water', at: [94.5, 118, 50],
     size: [6, 12, 20], layer: 'interior', material: 'steel' }, 'tankless, hung on the galley wall, per the diagram'));
-  log.push(step(w, 'source', { id: 'battery', system: 'power', at: [24, 228, D + 8],
-    size: [16, 14, 14], layer: 'interior', hostedBy: 'bed.base' }, 'off-grid: battery and inverter under the bed'));
   log.push(step(w, 'source', { id: 'grey.out', system: 'waste', at: [50, 22, MAIN_LO] },
     'grey leaves the building — the sheet lists no grey tank'));
   // a shower is two connections, not one: a valve that takes water and a pan that gives it back
@@ -258,11 +256,11 @@ export function services(w, log = []) {
   // --- power: battery -> the loads -----------------------------------------
   const DC = [86, bay(120), COLD - 1.5];
   log.push(step(w, 'route', { system: 'power', run: 'dc.galley', dia: 0.5,
-    path: [[24, Y_BATT, D + 8], [24, Y_BATT, COLD - 1.5], [24, bay(200), COLD - 1.5], DC, [86, Y_FRIDGE, D + 8]] }, 'DC to the fridge'));
+    path: [[40, 226, D + 8], [40, bay(226), D + 8], [40, bay(226), COLD - 1.5], [40, bay(200), COLD - 1.5], DC, [86, Y_FRIDGE, D + 8]] }, 'DC to the fridge — dropping in a bay first, not slicing across the joists'));
   log.push(step(w, 'route', { system: 'power', run: 'dc.cooktop', dia: 0.5,
     path: [DC, [86, Y_FRIDGE, D + 21]] }, 'ignition for the burners'));
   log.push(step(w, 'route', { system: 'power', run: 'dc.pump', dia: 0.5,
-    path: [[24, Y_BATT, D + 8], [70, Y_PUMP, D + 5]] }, 'DC to the pump'));
+    path: [[40, 226, D + 8], [70, Y_PUMP, D + 5]] }, 'DC to the pump'));
   return log;
 }
 
@@ -302,6 +300,126 @@ export function repair(w, log = [], maxPasses = 12) {
   return log;
 }
 
+/**
+ * Stage 4b — traps and vents.
+ *
+ * A drain that reaches the exit is not plumbed. Without a trap the line vents
+ * into the room; without a vent the trap seal siphons out and it stops draining.
+ * IPC 909.1 caps how far a trap arm may run before it is vented.
+ */
+export function venting(w, log = []) {
+  for (const f of ['sink', 'lav', 'shower.pan'])
+    log.push(step(w, 'trap', { fixture: f, size: f === 'lav' ? 1.25 : 1.5 }, 'a fixture without a trap is open to the drain'));
+  for (const [t, host] of [['trap.sink', 'cab.galley'], ['trap.lav', 'lav.cab']]) {
+    const el = w.get(t); if (el) el.meta.hostedBy = host;   // a trap under a sink is inside the cabinet
+  }
+  log.push(step(w, 'vent', { near: 'trap.sink', id: 'vent.stack', at: [w.walls.E.at, 104], size: 2 },
+    'the stack goes up the wall cavity, clear of the galley window header'));
+  return log;
+}
+
+/**
+ * Stage 4c — propane.
+ *
+ * Off-grid, cooking and hot water are not electric: a 2 kW tankless on a 12 V bank
+ * is not a thing you can do. The bottle lives on the tongue, outside the envelope.
+ */
+export function propane(w, log = []) {
+  const D = w.datum.deckTop;
+  log.push(step(w, 'source', { id: 'lpg.bottle', system: 'propane', at: [50.5, -14, D - 2],
+    size: [24, 14, 24], layer: 'services' }, '20 lb bottle on the tongue, outside the shell'));
+  log.push(step(w, 'fixture', { id: 'lpg.reg', kind: 'regulator', system: 'propane', at: [50.5, -4, D + 6],
+    size: [5, 5, 5], layer: 'services', material: 'steel' }, 'two-stage regulator at the bottle'));
+  log.push(step(w, 'route', { system: 'propane', run: 'lpg.main', dia: 0.5,
+    path: [[50.5, -14, D - 2], [50.5, -4, D + 6], [50.5, 8, D - 4], [86, 8, D - 4], [86, 100, D - 4]] },
+    'copper along the frame, outside the floor cavity'));
+  log.push(step(w, 'route', { system: 'propane', run: 'lpg.cooktop', dia: 0.375,
+    path: [[86, 100, D - 4], [86, 104, D + 21]] }, 'up to the burners'));
+  log.push(step(w, 'route', { system: 'propane', run: 'lpg.heater', dia: 0.375,
+    path: [[86, 100, D - 4], [94.5, 112, D - 4], [94.5, 112, 42]] }, 'and to the water heater'));
+  // A horizontal concentric vent through the side wall protrudes past the skin and
+  // put the trailer at 104.3 in overall — wider than the road allows. It goes up.
+  const roofTop = w.walls.E.wallTop + 12;
+  log.push(step(w, 'fixture', { id: 'flue.heater', kind: 'flue', system: 'flue',
+    at: [94.5, 121, 63], size: [4, 4, 4], layer: 'services', material: 'steel', hostedBy: 'chase.flue' },
+    'flue take-off above the heater — exhaust is not gas supply, so it is its own system'));
+  const chaseTop = w.walls.E.wallTop;
+  log.push(step(w, 'place', { id: 'chase.flue', kind: 'chase', layer: 'interior',
+    at: [94.5, 121, (60 + chaseTop) / 2], size: [6, 8, chaseTop - 60], material: 'plywood' },
+    'boxed chase against the wall: a 4 in flue removes 114% of a 3.5 in top plate, so it cannot go up inside one'));
+  Object.assign(w.get('chase.flue').meta, { hollow: true });
+  log.push(step(w, 'source', { id: 'flue.out', system: 'flue', at: [94.5, 121, roofTop + 2], size: [5, 5, 4], layer: 'services' },
+    'the terminal above the roof'));
+  log.push(step(w, 'route', { system: 'flue', run: 'flue.stack', dia: 4,
+    path: [[94.5, 121, 63], [94.5, 121, roofTop]] },
+    'up the chase and out of the roof, in the rafter bay — a side vent put the trailer at 104.3 in, wider than the road allows'));
+  return log;
+}
+
+/**
+ * Stage 4d — the electrical system, off-grid.
+ *
+ * Not three cables to three appliances. Array, controller, bank, inverter, two
+ * distribution points, and the loads that actually run a day.
+ */
+export function electrical(w, log = []) {
+  const D = w.datum.deckTop;
+  const ROOF = w.walls.W.wallTop + 7;
+  const put = (id, kind, at, size, meta, why) =>
+    log.push(step(w, 'fixture', { id, kind, at, size, layer: meta.layer || 'services',
+      system: 'power', material: meta.material || 'steel', hostedBy: meta.host }, why));
+
+  // generation and storage
+  for (const [i, x] of [26, 76].entries()) {
+    log.push(step(w, 'place', { id: `pv.${i + 1}`, kind: 'panel', layer: 'services',
+      at: [x, 70, ROOF + 1.5], size: [40, 64, 1.5], material: 'polycarbonate' },
+      '200 W on the roof'));
+    w.get(`pv.${i + 1}`).meta.pvWatts = 200;
+    w.get(`pv.${i + 1}`).system = 'power';
+  }
+  put('mppt', 'controller', [50.5, 234, 78], [8, 3, 10], {}, 'MPPT charge controller on the end wall');
+  for (const [i, x] of [22, 40].entries()) {
+    log.push(step(w, 'source', { id: `battery.${i + 1}`, system: 'power', at: [x, 226, D + 8],
+      size: [13, 7, 9], layer: 'interior', hostedBy: 'bed.base' }, '100 Ah LiFePO4'));
+    w.get(`battery.${i + 1}`).meta.ah = 100;
+    w.get(`battery.${i + 1}`).meta.volts = 12;
+  }
+  put('inverter', 'inverter', [62, 226, D + 8], [12, 7, 8], { layer: 'interior', host: 'bed.base' }, '2 kW pure sine');
+  put('dc.panel', 'panel', [50.5, 234, 62], [9, 3, 7], {}, '12 V fuse block');
+  put('ac.panel', 'panel', [62, 234, 62], [9, 3, 7], {}, '120 V breakers');
+
+  // loads
+  const lightY = [24, 56, 88, 130, 168, 210];
+  lightY.forEach((y, i) => {
+    put(`light.${i + 1}`, 'light', [50.5, y, w.walls.W.topPlateBot - 1], [5, 5, 1.5], { material: 'paint' }, i ? '' : 'six DC pucks down the centre');
+    Object.assign(w.get(`light.${i + 1}`).meta, { watts: 3, hoursPerDay: 4 });
+  });
+  [[10, 96], [92, 140], [10, 200], [92, 60]].forEach(([x, y], i) => {
+    put(`outlet.${i + 1}`, 'outlet', [x < 50 ? 4.5 : 96.5, y, D + 20], [1.5, 4, 4], { material: 'paint' }, i ? '' : 'four AC outlets');
+    Object.assign(w.get(`outlet.${i + 1}`).meta, { watts: 15, hoursPerDay: 4 });
+  });
+  put('fan.bath', 'fan', [80, 10, w.walls.W.topPlateBot - 4], [10, 10, 4], { material: 'steel' }, 'extract over the shower');
+  Object.assign(w.get('fan.bath').meta, { watts: 15, hoursPerDay: 3 });
+  Object.assign(w.get('fridge').meta, { watts: 45, hoursPerDay: 8 });
+  Object.assign(w.get('pump').meta, { watts: 60, hoursPerDay: 0.5 });
+
+  // wiring — deliberately gauged the way it would be guessed, so the drop can answer
+  const R = (run, path, dia, amps, awg, why, volts) =>
+    log.push(step(w, 'route', { system: 'power', run, path, dia, amps, awg, volts: volts || 12 }, why));
+  R('pv.string', [[26, 70, ROOF + 1], [76, 70, ROOF + 1], [76, 230, ROOF + 1], [50.5, 234, 78]], 0.5, 17, '10', 'string across both panels, then down to the controller');
+  R('mppt.bank', [[50.5, 234, 78], [40, 226, D + 8]], 0.6, 30, '8', 'controller to the bank');
+  R('bank.inverter', [[40, 226, D + 8], [62, 226, D + 8]], 1.0, 167, '8', 'bank to the inverter');
+  R('bank.dc', [[40, 226, D + 8], [50.5, 234, 62]], 0.6, 40, '8', 'bank to the fuse block');
+  R('inv.ac', [[62, 226, D + 8], [62, 234, 62]], 0.5, 17, '12', 'inverter to the breakers', 120);
+  R('dc.lights', [[50.5, 234, 62], [50.5, 210, 100], [50.5, 24, 100]], 0.3, 1.5, '18', 'one run down the centre for the pucks');
+  R('dc.fridge', [[50.5, 234, 62], [86, 120, 100], [86, 104, D + 8]], 0.3, 3.8, '14', 'fridge circuit');
+  R('dc.pumpfeed', [[50.5, 234, 62], [70, 196, D + 5]], 0.3, 5, '14', 'pump circuit');
+  R('dc.fan', [[50.5, 234, 62], [80, 20, 100], [80, 10, 98]], 0.3, 1.3, '18', 'bath extract');
+  R('ac.outlets', [[62, 234, 62], [4.5, 220, D + 20], [4.5, 96, D + 20]], 0.3, 3, '14', 'outlet ring west, at socket height', 120);
+  R('ac.outlets.e', [[62, 234, 62], [96.5, 220, D + 20], [96.5, 60, D + 20]], 0.3, 3, '14', 'and east', 120);
+  return log;
+}
+
 /** The whole making, in order, on one world. */
 export function build() {
   const w = shell();
@@ -309,6 +427,9 @@ export function build() {
   openings(w, log);
   interior(w, log);
   services(w, log);
+  venting(w, log);
+  propane(w, log);
+  electrical(w, log);
   repair(w, log);
   return { world: w, log };
 }

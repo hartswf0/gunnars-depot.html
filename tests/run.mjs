@@ -260,7 +260,13 @@ const tb = { lo: [Infinity, Infinity, Infinity], hi: [-Infinity, -Infinity, -Inf
 for (const e of T.solids()) { const l = e.lo, h = e.hi; for (let i = 0; i < 3; i++) { tb.lo[i] = Math.min(tb.lo[i], l[i]); tb.hi[i] = Math.max(tb.hi[i], h[i]); } }
 const dim = tb.hi.map((v, i) => +(v - tb.lo[i]).toFixed(1));
 check('8\'-6" overall width, wheels included', dim[0] === 102, `${dim[0]} in`);
-check("20'-0\" of framing", Math.abs(dim[1] - 241) < 0.6, `${dim[1]} in`);
+// the body is 20 ft; the propane bottle hangs on the tongue, outside it, which is
+// why this measures the shell rather than the overall envelope
+const body = { lo: Infinity, hi: -Infinity };
+for (const e of T.all({ kind: ['sheathing', 'deck', 'plate', 'stud'] })) { body.lo = Math.min(body.lo, e.lo[1]); body.hi = Math.max(body.hi, e.hi[1]); }
+check("20'-0\" of framing", Math.abs((body.hi - body.lo) - 241) < 1.0, `${(body.hi - body.lo).toFixed(1)} in of body`);
+check('the propane bottle is outside the body, on the tongue', T.get('lpg.bottle').hi[1] < body.lo + 1,
+  `bottle ends at y ${T.get('lpg.bottle').hi[1].toFixed(1)}, body starts at ${body.lo.toFixed(1)}`);
 check('inside the towing envelope', !T.conditions.some(c => c.code === 'ENVELOPE'));
 
 const has = (k) => T.all().some(e => e.meta.role === k || e.kind === k);
@@ -293,6 +299,41 @@ check('the 65 gal tank actually holds 65 gal', (() => {
   return gal >= 65;
 })(), (() => { const t = T.get('tank.fresh'); return ((t.box.s[0] * t.box.s[1] * t.box.s[2]) / 231).toFixed(1) + ' gal'; })());
 check('the making is recoverable', T.history.filter(h => h.snapshot).length >= 45, `${T.history.length} journalled moves`);
+
+// --- the MEP has to be a system, not a gesture
+group('fully wired, plumbed, vented and gassed');
+const kinds = (k) => T.all().filter(e => e.kind === k || e.meta.role === k);
+for (const [what, n] of [['light', 6], ['outlet', 4], ['trap', 3], ['vent', 2]])
+  check(`${n} ${what}s`, kinds(what).length >= n, `${kinds(what).length}`);
+for (const id of ['pv.1', 'pv.2', 'mppt', 'battery.1', 'battery.2', 'inverter', 'dc.panel', 'ac.panel',
+                  'lpg.bottle', 'lpg.reg', 'flue.heater', 'fan.bath', 'tank.fresh', 'pump', 'heater'])
+  check(`it has ${id}`, !!T.get(id));
+const { systemReach: SR2, sizeConductor, AMPACITY, voltageDrop: VD } = await import('../operative/checks.js');
+for (const sys of ['water', 'waste', 'power', 'propane']) {
+  const reach = SR2(T, sys);
+  const dev = T.all().filter(e => e.system === sys && e.kind !== 'run');
+  check(`every ${sys} device reaches its source`, dev.length > 0 && dev.every(d => reach.connected.has(d.id)),
+    dev.filter(d => !reach.connected.has(d.id)).map(d => d.id).join(', ') || `${dev.length} devices`);
+}
+for (const [runId, rec] of Object.entries(T.runs)) {
+  if (rec.system !== 'power' || !rec.amps) continue;
+  check(`${runId} can carry its ${rec.amps} A`, AMPACITY[String(rec.awg)] >= rec.amps,
+    `${rec.awg} AWG rated ${AMPACITY[String(rec.awg)]} A`);
+}
+const dayWh = T.all().filter(e => e.meta.watts && e.meta.hoursPerDay).reduce((a, e) => a + e.meta.watts * e.meta.hoursPerDay, 0);
+const bankWh = T.all().filter(e => e.meta.ah).reduce((a, e) => a + e.meta.ah * (e.meta.volts || 12), 0);
+const pvW = T.all().filter(e => e.meta.pvWatts).reduce((a, e) => a + e.meta.pvWatts, 0);
+check('the bank carries a day of loads', bankWh * 0.8 >= dayWh, `${(bankWh * 0.8).toFixed(0)} Wh usable vs ${dayWh.toFixed(0)} Wh/day`);
+check('the array replaces a day of loads', pvW * 4 * 0.75 >= dayWh, `${(pvW * 4 * 0.75).toFixed(0)} Wh/day vs ${dayWh.toFixed(0)}`);
+check('every trap has a vent inside its arm limit', !checkAll(T).some(c => c.code === 'UNVENTED_TRAP'));
+
+group('measured against the sheet, not asserted');
+const { compareToSheet } = await import('../operative/spec.js');
+const SPEC = compareToSheet(T);
+for (const r of SPEC.rows) check(`${r.of}: ${r.want} specified, ${r.got} built`, r.meets, r.note);
+for (const y of SPEC.systems) check(`${y.system}: every device on the graph`, y.connected === y.devices, `${y.connected}/${y.devices}`);
+check('the bank covers the day', SPEC.power.usableWh >= SPEC.power.dailyWh);
+check('the report is regenerable', fs.existsSync(path.join(ROOT, 'data/spec-report.json')));
 check('the wheel wells carry the wall above them',
   T.all({ kind: 'stud' }).some(e => e.meta.overWell));
 

@@ -14,7 +14,23 @@ Open `operative-builder.html` from GitHub Pages or any local static server
 Everything else runs offline: `three` (r185, MIT) is vendored under
 `vendor/three/`, and the reference studies are read from this repository.
 
-Run the receipts with `node tests/run.mjs` (110 assertions, no dependencies).
+Run the receipts with `node tests/run.mjs` (161 assertions, no dependencies).
+
+The trailer is a working MEP model, not decorated geometry: **289 members**, five
+connected systems, and every device on its system's graph.
+
+| system | devices | parts |
+|---|---|---|
+| water | 6/6 connected | 30 |
+| waste | 7/7 connected | 20 |
+| power | 21/21 connected | 46 |
+| propane | 2/2 connected | 9 |
+| flue | 2/2 connected | 3 |
+
+400 W of array, a 2400 Wh bank (1920 usable), 13 loads drawing 747 Wh/day. Three
+P-traps, two vents through the roof, a bottle on the tongue and a flue in a boxed
+chase. Conductors are sized against **both** ampacity (NEC 310.16) and 3% voltage
+drop; traps against trap-arm limits (IPC 909.1).
 
 **`ingold-trailer.html` is the building this was for.** The environment above is the
 means; the trailer is the result. 226 members on the reference sheets' 8'-6" x
@@ -234,6 +250,22 @@ polish; each one is a place where running the thing contradicted the plan.
 | Any movement cancels the long press | cancelling it only once the drag threshold was crossed meant a slow small movement fired the long press *mid-drag* and stole the gesture — which is exactly what happened, repeatedly, before it was instrumented |
 | pointerdown prefers the already-selected member | tap-cycling ran on press as well as on tap, so pressing to drag stepped to a different member and the drag grabbed the wrong thing — or nothing |
 | A deduped final state is relabelled "current" | when a member had not moved since its last journalled state, the last dot on its ribbon read "before header" instead of "now" |
+
+## What the MEP decided for itself
+
+| the encounter | what it decided |
+|---|---|
+| `UNDERSIZED_CONDUCTOR — bank.inverter carries 167 A on 8 AWG, rated 50 A` | The first version of the check only asked about voltage drop, and "repaired" a 167 A inverter feed to **6 AWG** — which passes a drop test over 1.8 ft and would melt. A conductor has to carry the current *and* deliver the voltage. Now 2/0. |
+| `4.00 in bore removes 114% of top1.E` | A 4 in flue **cannot** pass through a 3½ in top plate. It left the wall for a boxed chase in the rafter bay. |
+| `ENVELOPE — overall width 104.3 in` | A horizontal concentric vent through the side wall protrudes past the skin and busts the towing width. The flue went up through the roof. |
+| `UNVENTED_TRAP — 83 in from the nearest vent` | A 1½ in trap arm may run 72 in. The shower got its own vent — and the check now proposes *where*, because proposed without a location the stack rose straight through the shower pan and the floor. |
+| four lights reported unpowered | Connectivity measured end to end, so six pucks tapped off one cable read as five orphans. A device on the middle of a run is on the run. |
+| traps 5.5 in off their own drains | A trap belongs **in** the line, at the take-off, not merely under the bowl. |
+
+A sleeved-penetration object was written to let a vent cross a roof, and **backed
+out**: every sleeve then collided with the roof, the skin and the other sleeves —
+nine conflicts to resolve two. A pipe crossing a member is a bore, which this world
+already models. Vents and flues became runs.
 
 ## Two journals, at two scales
 

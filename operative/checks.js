@@ -32,6 +32,42 @@ export const BORE = {
 
 export const ENVELOPE = { maxHeight: 162, maxWidth: 102, note: 'road-legal towing envelope' };
 
+// --- plumbing. Basis: IPC 909.1 — maximum developed length of a trap arm, by size.
+export const VENT = { 1.25: 60, 1.5: 72, 2: 96, 3: 144 };
+
+// --- electrical. Copper resistivity 10.4 ohm-cmil/ft; circular mils and ampacity
+// by size, smallest first. Ampacity is NEC 310.16, 75 C copper.
+//
+// The first version of this table stopped at 1/0 and the checks only asked about
+// voltage drop. A 167 A inverter feed was then "repaired" to 6 AWG — which passes
+// the drop test over 1.8 ft and would melt, because 6 AWG carries about 65 A. A
+// conductor has to be able to carry the current *and* deliver the voltage.
+export const CONDUCTORS = [
+  { awg: '18', cmil: 1620, amps: 10 }, { awg: '16', cmil: 2580, amps: 13 },
+  { awg: '14', cmil: 4110, amps: 20 }, { awg: '12', cmil: 6530, amps: 25 },
+  { awg: '10', cmil: 10380, amps: 35 }, { awg: '8', cmil: 16510, amps: 50 },
+  { awg: '6', cmil: 26240, amps: 65 }, { awg: '4', cmil: 41740, amps: 85 },
+  { awg: '2', cmil: 66360, amps: 115 }, { awg: '1/0', cmil: 105600, amps: 150 },
+  { awg: '2/0', cmil: 133100, amps: 175 }, { awg: '4/0', cmil: 211600, amps: 230 }
+];
+export const CMIL = Object.fromEntries(CONDUCTORS.map(c => [c.awg, c.cmil]));
+export const AMPACITY = Object.fromEntries(CONDUCTORS.map(c => [c.awg, c.amps]));
+export const DROP_LIMIT = 0.03;          // 3% to the load is the usual off-grid target
+
+/** Two-way voltage drop on a run, in volts. */
+export function voltageDrop({ lengthFt, amps, awg, volts }) {
+  const cmil = CMIL[String(awg)];
+  if (!cmil || !amps || !lengthFt) return 0;
+  return (2 * lengthFt * amps * 10.4) / cmil;
+}
+
+/** The smallest conductor that both carries the current and holds the drop. */
+export function sizeConductor({ lengthFt, amps, volts }) {
+  return CONDUCTORS.find(c =>
+    c.amps >= amps &&
+    voltageDrop({ lengthFt, amps, awg: c.awg, volts }) / volts <= DROP_LIMIT) || null;
+}
+
 const cond = (code, severity, message, elements, measure, repair) =>
   ({ code, severity, message, elements, measure: measure || {}, repair: repair || null });
 
@@ -60,7 +96,11 @@ export function checkAll(world) {
   for (let i = 0; i < solids.length; i++) {
     for (let j = i + 1; j < solids.length; j++) {
       const a = solids[i], b = solids[j];
-      if (a.meta.allowOverlap === b.id || b.meta.allowOverlap === a.id) continue;
+      const allows = (x, y) => {
+        const v = x.meta.allowOverlap;
+        return Array.isArray(v) ? v.includes(y.id) : v === y.id;
+      };
+      if (allows(a, b) || allows(b, a)) continue;
       const sep = separation(polys.get(a.id), polys.get(b.id), 0.06);
       if (!sep) continue;
       // A cabinet is a carcass with a void in it. A sink dropped into that void is
@@ -240,6 +280,80 @@ export function checkAll(world) {
   if (hiX - loX > ENVELOPE.maxWidth) out.push(cond('ENVELOPE', SEVERITY.serious,
     `overall width ${(hiX - loX).toFixed(1)} in exceeds the ${ENVELOPE.maxWidth} in towing envelope`, [], { width: +(hiX - loX).toFixed(1), limit: ENVELOPE.maxWidth }, null));
 
+  // 7b. every drain fixture needs a trap, and every trap needs a vent it can reach
+  for (const f of world.all({ kind: 'fixture' }).filter(e => e.system === 'waste')) {
+    const trap = world.all({ kind: 'trap' }).find(t => t.meta.serves === f.id);
+    if (!trap) {
+      out.push(cond('NO_TRAP', SEVERITY.serious,
+        `${f.id} drains straight to the line with no trap — sewer gas has a clear path into the room`,
+        [f.id], { basis: 'IPC 1002.1' }, { op: 'trap', args: { fixture: f.id } }));
+      continue;
+    }
+    const vents = world.all({ kind: 'vent' });
+    const limit = VENT[trap.meta.size] || 72;
+    let best = Infinity, nearest = null;
+    for (const v of vents) {
+      const d = Math.hypot(...v.box.p.map((c, i) => c - trap.box.p[i]));
+      if (d < best) { best = d; nearest = v.id; }
+    }
+    if (best > limit) {
+      // where it should go, not just that it is missing: the nearest wall cavity
+      // inside the trap-arm limit. Proposed without one, the stack rose straight
+      // out of the trap and through the shower pan and the floor.
+      let spot = null, spotD = Infinity;
+      for (const wl of Object.values(world.walls || {})) {
+        const at = wl.axis === 'y' ? [wl.at, trap.box.p[1]] : [trap.box.p[0], wl.at];
+        const d = Math.hypot(at[0] - trap.box.p[0], at[1] - trap.box.p[1]);
+        if (d < spotD && d <= limit) { spotD = d; spot = at; }
+      }
+      out.push(cond('UNVENTED_TRAP', SEVERITY.serious,
+        `${trap.id} is ${best === Infinity ? 'unvented' : best.toFixed(0) + ' in'} from the nearest vent; a ${trap.meta.size} in trap arm may run ${limit} in`,
+        [trap.id, f.id], { developedLength: best === Infinity ? null : +best.toFixed(1), limit, size: trap.meta.size, nearest,
+                           proposedAt: spot, armLength: spot ? +spotD.toFixed(1) : null, basis: 'IPC 909.1' },
+        spot ? { op: 'vent', args: { near: trap.id, at: spot, size: trap.meta.size } } : null));
+    }
+  }
+
+  // 7c. a circuit has to deliver its load at the far end, not just reach it
+  for (const [runId, rec] of Object.entries(world.runs || {})) {
+    if (rec.system !== 'power' || !rec.amps) continue;
+    const segs = world.all({ kind: 'run' }).filter(r => r.meta.run === runId);
+    if (!segs.length) continue;
+    const lengthIn = segs.reduce((a, r) => a + Math.hypot(...r.meta.to.map((v, i) => v - r.meta.from[i])), 0);
+    const ft = lengthIn / 12;
+    const drop = voltageDrop({ lengthFt: ft, amps: rec.amps, awg: rec.awg, volts: rec.volts });
+    const pct = drop / (rec.volts || 12);
+    const carries = AMPACITY[String(rec.awg)] || 0;
+    const want = sizeConductor({ lengthFt: ft, amps: rec.amps, volts: rec.volts });
+    if (carries < rec.amps) {
+      out.push(cond('UNDERSIZED_CONDUCTOR', SEVERITY.blocking,
+        `${runId} carries ${rec.amps} A on ${rec.awg} AWG, which is rated ${carries} A`,
+        [segs[0].id], { amps: rec.amps, awg: rec.awg, ampacity: carries, suggest: want && want.awg, basis: 'NEC 310.16' },
+        want ? { op: 'regauge', args: { run: runId, awg: want.awg } } : null));
+    } else if (pct > DROP_LIMIT) {
+      out.push(cond('VOLTAGE_DROP', SEVERITY.serious,
+        `${runId}: ${rec.amps} A over ${ft.toFixed(1)} ft of ${rec.awg} AWG drops ${drop.toFixed(2)} V (${(pct * 100).toFixed(1)}% of ${rec.volts} V); 3% is the limit`,
+        [segs[0].id], { drop: +drop.toFixed(2), percent: +(pct * 100).toFixed(1), awg: rec.awg, amps: rec.amps, lengthFt: +ft.toFixed(1), suggest: want && want.awg },
+        want ? { op: 'regauge', args: { run: runId, awg: want.awg } } : null));
+    }
+  }
+
+  // 7d. off-grid: the bank and the array have to carry the day's load
+  const loads = world.all().filter(e => e.meta.watts && e.meta.hoursPerDay);
+  if (loads.length) {
+    const wh = loads.reduce((a, e) => a + e.meta.watts * e.meta.hoursPerDay, 0);
+    const bank = world.all().filter(e => e.meta.ah).reduce((a, e) => a + e.meta.ah * (e.meta.volts || 12), 0);
+    const usable = bank * 0.8;                                  // LiFePO4 to 80% depth
+    const pv = world.all().filter(e => e.meta.pvWatts).reduce((a, e) => a + e.meta.pvWatts, 0) * 4 * 0.75;
+    if (wh > usable || wh > pv) {
+      out.push(cond('POWER_BUDGET', SEVERITY.open,
+        `the day needs ${wh.toFixed(0)} Wh; the bank gives ${usable.toFixed(0)} Wh usable and the array makes about ${pv.toFixed(0)} Wh` ,
+        [], { dailyWh: +wh.toFixed(0), usableWh: +usable.toFixed(0), pvWhPerDay: +pv.toFixed(0),
+              shortfall: +(wh - Math.min(usable, pv)).toFixed(0),
+              loads: loads.map(e => `${e.id} ${e.meta.watts}W x ${e.meta.hoursPerDay}h`) }, null));
+    }
+  }
+
   // 8. the drawing gets a say
   if (world.reference) out.push(...referenceConditions(world));
 
@@ -249,7 +363,10 @@ export function checkAll(world) {
 
 /** Connectivity of one building service, from its sources outward. */
 export function systemReach(world, system) {
-  const nodes = world.all().filter(e => e.system === system && (e.kind === 'run' || e.kind === 'fixture' || e.kind === 'source'));
+  // Anything carrying the system's label is on its graph. Restricting this to
+  // run/fixture/source left traps, vents and the PV panels outside it — parts of
+  // the system that the system could not see.
+  const nodes = world.all().filter(e => e.system === system);
   const ends = (e) => e.kind === 'run' ? [e.meta.from, e.meta.to] : [e.box.p];
   // A pipe that arrives inside a fixture's body is connected to it. Measuring
   // centre to centre called a riser landing in the middle of a vanity "not
@@ -267,6 +384,18 @@ export function systemReach(world, system) {
     return Math.sqrt(d2);
   };
   const near = (a, b, t) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) <= t;
+  // Distance from a point to a run's line, not just to its ends. A lighting circuit
+  // is one cable with six pucks tapped off it; measured end to end, four of them
+  // reported themselves unpowered.
+  const toSegment = (p, r) => {
+    const a = r.meta.from, b = r.meta.to;
+    const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    const L2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+    if (!L2) return Math.hypot(p[0] - a[0], p[1] - a[1], p[2] - a[2]);
+    let t = ((p[0] - a[0]) * d[0] + (p[1] - a[1]) * d[1] + (p[2] - a[2]) * d[2]) / L2;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p[0] - a[0] - d[0] * t, p[1] - a[1] - d[1] * t, p[2] - a[2] - d[2] * t);
+  };
   const TOL_RUN = 1.5, TOL_FIX = 4.0;
   const connected = new Set();
   const queue = [];
@@ -278,7 +407,9 @@ export function systemReach(world, system) {
       const t = (cur.kind === 'fixture' || n.kind === 'fixture' || cur.kind === 'source' || n.kind === 'source') ? TOL_FIX : TOL_RUN;
       const hit = ends(cur).some(p => ends(n).some(q => near(p, q, t)))
         || (n.kind !== 'run' && ends(cur).some(p => gap(p, n) <= 1.0))
-        || (cur.kind !== 'run' && ends(n).some(q => gap(q, cur) <= 1.0));
+        || (cur.kind !== 'run' && ends(n).some(q => gap(q, cur) <= 1.0))
+        || (cur.kind === 'run' && n.kind !== 'run' && toSegment(n.box.p, cur) <= TOL_FIX)
+        || (n.kind === 'run' && cur.kind !== 'run' && toSegment(cur.box.p, n) <= TOL_FIX);
       if (hit) { connected.add(n.id); queue.push(n); }
     }
   }

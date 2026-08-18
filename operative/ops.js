@@ -259,12 +259,12 @@ export const OPS = {
    * Route a service along a path. Every member the path crosses is bored, and
    * the bore is recorded on that member — which is where the world starts to push back.
    */
-  route(world, { system, run, path, dia = 0.75 }) {
+  route(world, { system, run, path, dia = 0.75, amps, awg, volts, load }) {
     if (!path || path.length < 2) return { ok: false, note: 'a run needs at least two points' };
     const runId = run || `${system}.${world.all({ kind: 'run' }).length + 1}`;
     OPS.unroute(world, { run: runId });
     world.runs = world.runs || {};
-    world.runs[runId] = { system, path: path.map(p => p.slice()), dia };
+    world.runs[runId] = { system, path: path.map(p => p.slice()), dia, amps, awg, volts: volts || 12, load };
     const changed = [];
     for (let i = 0; i < path.length - 1; i++) {
       const a = path[i], b = path[i + 1];
@@ -568,6 +568,83 @@ export const OPS = {
     return { changed, note: Math.abs(m) < 1e-6
       ? `roof reseated flat on both plates`
       : `roof reseated on the plates: falls ${Math.abs(fall).toFixed(1)} in from ${fall > 0 ? 'W to E' : 'E to W'} over ${Math.abs(run).toFixed(0)} in; end walls follow it` };
+  },
+
+  // A sleeved-penetration object used to live here. It was written because a vent
+  // and a flue overlapped the roof and the plates they pass through, and it made
+  // that worse: every sleeve then collided with the roof, the skin and the other
+  // sleeves — nine conflicts to resolve two. Backed out. A pipe crossing a member
+  // is a *bore*, which this world already models well, so vents and flues are runs
+  // like every other pipe and are judged by the same boring rules.
+
+  /** A P-trap under a fixture: the water seal that keeps the drain from venting into the room. */
+  trap(world, { fixture, size = 1.5 }) {
+    const f = world.get(fixture);
+    if (!f) return { ok: false, note: `no fixture "${fixture}"` };
+    const id = `trap.${fixture}`;
+    if (world.get(id)) return { ok: false, note: `${id} already exists` };
+    // A trap belongs in the line, at the point the fixture's drain leaves it — not
+    // merely underneath the bowl. Placed under the fixture it sat 5.5 in off the
+    // drain that was supposed to run through it, and the waste graph said so.
+    let at = [f.box.p[0], f.box.p[1], f.box.p[2] - f.box.s[2] / 2 - size * 2];
+    let best = Infinity;
+    for (const r of world.all({ kind: 'run' })) {
+      if (r.system !== 'waste') continue;
+      for (const p of [r.meta.from, r.meta.to]) {
+        const d = Math.hypot(p[0] - f.box.p[0], p[1] - f.box.p[1], p[2] - f.box.p[2]);
+        if (d < best) { best = d; at = [p[0], p[1], p[2]]; }
+      }
+    }
+    // in the line horizontally, but hung below what it serves; a floor fixture traps
+    // under the deck, a basin traps inside its own cabinet
+    const dBot = world.datum.deckTop - 0.75;
+    let top = f.lo[2] - 0.25;
+    if (top > dBot && top - size * 3 < world.datum.deckTop) top = dBot;
+    at[2] = top - size * 1.5;
+    world.add(new Element({ id, kind: 'trap', layer: 'services', system: 'waste', material: 'polycarbonate',
+      box: box(at, [size * 2.5, size * 3, size * 3]),
+      meta: { role: 'P-trap', serves: fixture, size, onDrain: best < 24 } }));
+    return { changed: [id], note: `${size} in P-trap under ${fixture}` };
+  },
+
+  /** A vent, taken up through the roof so the trap seal is not siphoned. */
+  /**
+   * A vent: a connection point on the drain and a stack running up out of the roof.
+   * The stack is a run, so it bores what it crosses and the bore rules judge it.
+   */
+  vent(world, { near, id, at, size = 1.5 }) {
+    const anchor = world.get(near);
+    if (!anchor) return { ok: false, note: `no element "${near}"` };
+    const vid = id || `vent.${near.replace(/^trap\./, '')}`;
+    if (world.get(vid)) return { ok: false, note: `${vid} already exists` };
+    const x = at ? at[0] : anchor.box.p[0];
+    const y = at ? at[1] : anchor.box.p[1];
+    // The take-off is above the trap arm — and, when it has been offset into a wall
+    // cavity, above the sole plate too: placed at trap height it sat inside the deck
+    // and the plate it was meant to rise beside.
+    const above = anchor.box.p[2] + anchor.box.s[2] / 2 + size / 2 + 0.25;
+    const bot = at ? Math.max(above, world.datum.soleTop + size + 0.5) : above;
+    const top = world.walls.W.wallTop + 14;
+    world.add(new Element({ id: vid, kind: 'vent', layer: 'services', system: 'waste', material: 'polycarbonate',
+      box: box([x, y, bot], [size, size, size]),
+      meta: { role: 'vent connection', serves: near, size } }));
+    // the trap arm runs from the trap across to the cavity, then the stack goes up
+    const path = at
+      ? [[anchor.box.p[0], anchor.box.p[1], anchor.box.p[2]], [x, y, anchor.box.p[2]], [x, y, bot], [x, y, top]]
+      : [[x, y, bot], [x, y, top]];
+    const out = OPS.route(world, { system: 'waste', run: `stack.${vid}`, dia: size, path });
+    return { changed: [vid, ...(out.changed || [])], note: `${size} in vent at ${near}, stack up through the roof` };
+  },
+
+  /** Put a heavier conductor on a circuit that could not deliver its load. */
+  regauge(world, { run, awg }) {
+    const rec = (world.runs || {})[run];
+    if (!rec) return { ok: false, note: `no run "${run}"` };
+    const was = rec.awg;
+    rec.awg = awg;
+    const changed = [];
+    for (const r of world.all({ kind: 'run' })) if (r.meta.run === run) { r.meta.awg = awg; changed.push(r.id); }
+    return { changed, note: `${run}: ${was} AWG -> ${awg} AWG` };
   },
 
   /** A measurement worth keeping in the journal, which changes no geometry. */

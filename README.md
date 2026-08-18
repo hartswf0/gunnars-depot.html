@@ -10,7 +10,7 @@ The GitHub Pages entry point is `index.html`. The Three.js building environment 
 
 - `index.html` - mobile-friendly launcher for GitHub Pages.
 - `ingold-trailer.html` - the 8'-6" x 20'-0" trailer from the reference sheets, built by the operative loop and replayed move by move.
-- `making-of.html` - the session that produced it, replayed from `data/session-record.json`: every command, answer and screenshot in order.
+- `making-of.html` - a plain transcript of how it was made: what was asked for against what got built, then the consequential loops with their commands, answers and screenshots.
 - `tools/session-record.mjs` - regenerates that record from a Claude Code session transcript.
 - `operative-builder.html` - Three.js building environment where instructions become framing operations and the framing answers back. See [OPERATIVE_BUILDER.md](OPERATIVE_BUILDER.md).
 - `operative/` - the world model, deterministic checks, operations, reference comparison, and view behind it.
