@@ -167,3 +167,11 @@ function invert3(m) {
           [C / det, (b * g - a * h) / det, (a * e - b * d) / det]];
 }
 const mul3 = (m, v) => [dot(m[0], v), dot(m[1], v), dot(m[2], v)];
+
+
+/** Is B wholly inside A? Used for hollow hosts — a cabinet is a carcass, not a solid. */
+export function containsFully(A, B, slack = 0.35) {
+  const a = aabb(A), b = aabb(B);
+  for (let i = 0; i < 3; i++) if (b.lo[i] < a.lo[i] - slack || b.hi[i] > a.hi[i] + slack) return false;
+  return true;
+}

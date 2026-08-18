@@ -14,7 +14,14 @@ Open `operative-builder.html` from GitHub Pages or any local static server
 Everything else runs offline: `three` (r185, MIT) is vendored under
 `vendor/three/`, and the reference studies are read from this repository.
 
-Run the receipts with `node tests/run.mjs` (76 assertions, no dependencies).
+Run the receipts with `node tests/run.mjs` (101 assertions, no dependencies).
+
+**`ingold-trailer.html` is the building this was for.** The environment above is the
+means; the trailer is the result. 226 members on the reference sheets' 8'-6" x
+20'-0" envelope: bath, galley, dinette, bed, five headed openings, and water,
+waste and off-grid power as connected systems. It settles with nothing
+outstanding, and the page replays its own construction — 51 moves, with what the
+building answered at each one.
 
 ---
 
@@ -227,6 +234,48 @@ polish; each one is a place where running the thing contradicted the plan.
 | Any movement cancels the long press | cancelling it only once the drag threshold was crossed meant a slow small movement fired the long press *mid-drag* and stole the gesture — which is exactly what happened, repeatedly, before it was instrumented |
 | pointerdown prefers the already-selected member | tap-cycling ran on press as well as on tap, so pressing to drag stepped to a different member and the drag grabbed the wrong thing — or nothing |
 | A deduped final state is relabelled "current" | when a member had not moved since its last journalled state, the last dot on its ribbon read "before header" instead of "now" |
+
+## What the trailer decided for itself
+
+The sheets give six numbers. Building them produced conditions none of the numbers
+mentioned, and each one changed the design:
+
+| the encounter | what it decided |
+|---|---|
+| `ENVELOPE — overall width 120.0 in exceeds 102` | **8'-6" is the towing width, not the shell width.** Built as a 102 in shell with outboard axles it measures 120 in overall. The framing is 101 and the sheathing makes it exactly 102. |
+| 24 conflicts between axle, rail, joist, deck, plate and stud | **the wheels must come inside the width, and the floor must be cut around them.** Lifting the floor over a 26 in tyre instead puts the deck at 32.5 in and busts the 10'-6" height by 5 in. The geometry chose the wheel well; the drawing never mentioned one. |
+| the well is 12 in deep but the wall stands on the first 3.5 in | **the wheel well is a shelf, not a seat** — 8.5 in of ledge at 15 in high. The dinette benches are built inboard of it and land on it, instead of being it. |
+| rear axle at 55% of the length for tongue weight | **the axle decided the size of the bed.** The back of the well lands at y=183, leaving 52 in to the end wall. A full mattress wants 54. |
+| `EDGE_CLEARANCE` on every joist the drain crossed | **the waste system rewrote the floor structure.** A 1.5 in bore needs 2 in of edge each side; in a 5.5 in joist that leaves exactly one legal height, and a drain has to fall. 2x6 gives 0.00 in of freedom, 2x8 gives 1.75, and the run needs 1.25. The floor became 2x8 and the deck rose 1.75 in. |
+| 35 placements broke when the deck rose | **anything that sits on the floor is described relative to the floor.** The interior had been written against a remembered height. |
+| `UNSUPPORTED — shower.valve` | **a valve in a stud bay has nothing to screw to.** It needed blocking, spanning stud to stud, in the plane of the studs — not inboard of them, where it touched only along an edge. |
+| 65 GAL on the sheet | **the requirement sized the tank.** 15,015 cu in through 15 in of bed platform is 44 x 24. |
+| the sheet lists no grey capacity | **grey water leaves the building**, which is why the drain main has to thread the joists at all. |
+
+The finished trailer is 102 x 241 x 112.5 in. The sheet says 10'-6" and the build
+comes in 13.5 in under it: **height was never the binding constraint — width was.**
+That is recorded rather than corrected, because nothing in the building is asking
+for the extra height.
+
+## Two bugs the trailer found in the environment
+
+Building something real exercised the checks harder than the 6x12 shed ever did:
+
+- **Edge distance was measured across the wrong axis.** It took whichever dimension
+  of a member happened to be smallest, which for a joist is its 1.5 in thickness —
+  the *length* of the bore, not its edge. Every diagonal pipe crossing read as a
+  violation. It is now measured across the member's depth, the dimension the span
+  table is about.
+- **Connectivity was measured centre to centre.** A riser landing inside a vanity
+  was reported as "not connected" because the basin's centre was 5 in away. A pipe
+  that arrives inside a fixture's body is connected to it.
+
+Two limits in `reroute` are known and unfixed: a run with only two points has no
+interior vertex to shift, so it cannot be repaired by shifting; and branches that
+tee off a trunk are independent runs, so moving the trunk silently orphans the
+branch. Both were worked around by deriving the pipe layout from the bore rule and
+the joist bays instead of repairing it afterwards — the constraint generating the
+design rather than being patched into it.
 
 ## A run that shows the whole chain
 

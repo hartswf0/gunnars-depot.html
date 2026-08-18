@@ -4,7 +4,7 @@
 // operation met a condition it could not absorb. Every check returns measurable
 // evidence, so the difference can be described in operational language and used
 // to choose the next move.
-import { separation, overlapVolume, aabb } from './poly.js';
+import { separation, overlapVolume, aabb, containsFully } from './poly.js';
 import { referenceConditions } from './reference.js';
 
 export const SEVERITY = { blocking: 3, serious: 2, open: 1, note: 0 };
@@ -63,6 +63,18 @@ export function checkAll(world) {
       if (a.meta.allowOverlap === b.id || b.meta.allowOverlap === a.id) continue;
       const sep = separation(polys.get(a.id), polys.get(b.id), 0.06);
       if (!sep) continue;
+      // A cabinet is a carcass with a void in it. A sink dropped into that void is
+      // housed, not in collision — but a sink that only half fits is a real problem,
+      // so partial entry is reported rather than waved through.
+      const host = a.meta.hollow ? a : (b.meta.hollow ? b : null);
+      const guest = host === a ? b : (host === b ? a : null);
+      if (host && guest && guest.meta.hostedBy === host.id) {
+        if (containsFully(polys.get(host.id), polys.get(guest.id))) continue;
+        out.push(cond('PROTRUDES', SEVERITY.serious,
+          `${guest.id} does not fit inside ${host.id} — part of it is outside the carcass`,
+          [guest.id, host.id], { depth: +sep.depth.toFixed(2) }, null));
+        continue;
+      }
       const vol = overlapVolume(polys.get(a.id), polys.get(b.id));
       if (vol < 0.5) continue;
       out.push(cond('OVERLAP', SEVERITY.blocking,
@@ -239,6 +251,21 @@ export function checkAll(world) {
 export function systemReach(world, system) {
   const nodes = world.all().filter(e => e.system === system && (e.kind === 'run' || e.kind === 'fixture' || e.kind === 'source'));
   const ends = (e) => e.kind === 'run' ? [e.meta.from, e.meta.to] : [e.box.p];
+  // A pipe that arrives inside a fixture's body is connected to it. Measuring
+  // centre to centre called a riser landing in the middle of a vanity "not
+  // connected" because the basin's centre was 5 in away.
+  const boxOf = (e) => e.kind === 'run' ? null
+    : { lo: e.box.p.map((v, i) => v - e.box.s[i] / 2), hi: e.box.p.map((v, i) => v + e.box.s[i] / 2) };
+  const gap = (p, e) => {
+    const b = boxOf(e);
+    if (!b) return Infinity;
+    let d2 = 0;
+    for (let i = 0; i < 3; i++) {
+      const over = Math.max(b.lo[i] - p[i], 0, p[i] - b.hi[i]);
+      d2 += over * over;
+    }
+    return Math.sqrt(d2);
+  };
   const near = (a, b, t) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) <= t;
   const TOL_RUN = 1.5, TOL_FIX = 4.0;
   const connected = new Set();
@@ -249,7 +276,9 @@ export function systemReach(world, system) {
     for (const n of nodes) {
       if (connected.has(n.id)) continue;
       const t = (cur.kind === 'fixture' || n.kind === 'fixture' || cur.kind === 'source' || n.kind === 'source') ? TOL_FIX : TOL_RUN;
-      const hit = ends(cur).some(p => ends(n).some(q => near(p, q, t)));
+      const hit = ends(cur).some(p => ends(n).some(q => near(p, q, t)))
+        || (n.kind !== 'run' && ends(cur).some(p => gap(p, n) <= 1.0))
+        || (cur.kind !== 'run' && ends(n).some(q => gap(q, cur) <= 1.0));
       if (hit) { connected.add(n.id); queue.push(n); }
     }
   }
@@ -258,6 +287,7 @@ export function systemReach(world, system) {
     for (const n of nodes) {
       if (!connected.has(n.id)) continue;
       for (const p of ends(f)) for (const q of ends(n)) best = Math.min(best, Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]));
+      if (n.kind === 'run') for (const q of ends(n)) best = Math.min(best, gap(q, f));
     }
     return best === Infinity ? -1 : best;
   };

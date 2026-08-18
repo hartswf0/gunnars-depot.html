@@ -7,7 +7,7 @@
 //   layers  foundation | frame | walls | roof | interior | services
 //   unit    inch
 import { box, lo, hi } from './geom.js';
-import { poly, aabb, bearsOn, fastenedTo } from './poly.js';
+import { poly, aabb, bearsOn, fastenedTo, containsFully } from './poly.js';
 
 export const LAYERS = ['foundation', 'frame', 'walls', 'roof', 'interior', 'services'];
 
@@ -103,6 +103,12 @@ export class World {
         if (a === b) continue;
         if (!near(boxes.get(a.id), boxes.get(b.id))) continue;
         const A = polys.get(a.id), B = polys.get(b.id);
+        // something housed inside a hollow carcass is carried by it
+        if (a.meta.hostedBy === b.id && b.meta.hollow && containsFully(B, A)) {
+          under.get(a.id).push({ id: b.id, area: 12, via: 'housed' });
+          over.get(b.id).push({ id: a.id, area: 12, via: 'housed' });
+          continue;
+        }
         const bear = bearsOn(A, B);
         if (bear > 0.5) {
           under.get(a.id).push({ id: b.id, area: bear, via: 'bear' });
@@ -128,7 +134,7 @@ export class World {
     for (const e of this.solids()) if (e.lo[2] <= 0.6) { bearing.add(e.id); seen.add(e.id); qb.push(e.id); qa.push(e.id); }
     while (qb.length) {
       const id = qb.pop();
-      for (const up of over.get(id) || []) if (up.via === 'bear' && !bearing.has(up.id)) { bearing.add(up.id); qb.push(up.id); }
+      for (const up of over.get(id) || []) if ((up.via === 'bear' || up.via === 'housed') && !bearing.has(up.id)) { bearing.add(up.id); qb.push(up.id); }
     }
     while (qa.length) {
       const id = qa.pop();

@@ -114,6 +114,25 @@ function wallBox(w, u0, u1, z0, z1, thickness) {
   return box(p, s);
 }
 const uOf = (el, w) => el.box.p[along(w)];
+
+/**
+ * The top of whatever the wall bears on at station `u`. Over a wheel well that is
+ * the well's own sole plate, 15 in above the floor — the floor is not there. The
+ * header op used to assume one datum for the whole wall and drove four jack studs
+ * straight through the west wheel well.
+ */
+function wallBaseAt(world, wallId, u) {
+  const w = world.walls[wallId];
+  const ax = along(w);
+  let top = world.datum.soleTop;
+  for (const p of world.all({ kind: 'plate' })) {
+    if (p.meta.wall !== wallId || p.meta.role === 'lower top plate' || p.meta.role === 'upper top plate') continue;
+    const lo = p.box.p[ax] - p.box.s[ax] / 2, hi = p.box.p[ax] + p.box.s[ax] / 2;
+    if (u < lo || u > hi) continue;
+    top = Math.max(top, p.box.p[2] + p.box.s[2] / 2);
+  }
+  return top;
+}
 const memberDepth = (el) => (el.section && SECTIONS[el.section]) ? SECTIONS[el.section][1]
   : Math.min(...el.box.s);
 
@@ -188,15 +207,16 @@ export const OPS = {
     changed.push(hid);
 
     for (const [i, u] of [op.meta.from - 0.75, op.meta.to + 0.75].entries()) {
+      const base = wallBaseAt(world, op.meta.wall, u);
       const jid = `jack.${opening}.${i}`;
       world.add(new Element({ id: jid, kind: 'jack', layer: 'frame', material: 'treated_wood', section: '2x4',
-        box: wallBox(w, u - 0.75, u + 0.75, d.soleTop, zBot),
+        box: wallBox(w, u - 0.75, u + 0.75, base, zBot),
         meta: { opening, wall: op.meta.wall, role: 'jack stud', bearing: true } }));
       const kid = `king.${opening}.${i}`;
       const ku = i === 0 ? op.meta.from - 2.25 : op.meta.to + 2.25;
       if (!world.all({ kind: 'stud' }).some(s => s.meta.wall === op.meta.wall && Math.abs(uOf(s, w) - ku) < 1.4)) {
         world.add(new Element({ id: kid, kind: 'king', layer: 'frame', material: 'treated_wood', section: '2x4',
-          box: wallBox(w, ku - 0.75, ku + 0.75, d.soleTop, plateBot),
+          box: wallBox(w, ku - 0.75, ku + 0.75, wallBaseAt(world, op.meta.wall, ku), plateBot),
           meta: { opening, wall: op.meta.wall, role: 'king stud', bearing: true } }));
         changed.push(kid);
       }
@@ -216,17 +236,23 @@ export const OPS = {
   },
 
   /** Place a service source (shore power inlet, water inlet). */
-  source(world, { id, system, at }) {
-    world.add(new Element({ id, kind: 'source', layer: 'services', system, material: 'steel',
-      box: box(at, [3, 3, 3]), meta: { role: `${system} source` } }));
+  source(world, { id, system, at, size, layer = 'services', hostedBy }) {
+    world.add(new Element({ id, kind: 'source', layer, system, material: 'steel',
+      box: box(at, size || [3, 3, 3]), meta: { role: `${system} source`, hostedBy: hostedBy || null } }));
     return { changed: [id], note: `${system} source ${id} placed` };
   },
 
   /** Place a fixture that will need to be fed. */
-  fixture(world, { id, system, at, kind = 'outlet' }) {
-    world.add(new Element({ id, kind: 'fixture', layer: 'services', system, material: 'paint',
-      box: box(at, kind === 'sink' ? [20, 16, 8] : [3, 2, 4]), meta: { role: kind } }));
-    return { changed: [id], note: `${kind} ${id} placed; it is not fed yet` };
+  /**
+   * A fixture is a thing that needs feeding. Floor-standing ones (a toilet, a
+   * tank) also have to be carried, so they take `layer: 'interior'` and are held
+   * to the load-path check like any other object.
+   */
+  fixture(world, { id, system, at, kind = 'outlet', size, layer = 'services', material = 'paint', hollow, hostedBy }) {
+    const s = size || (kind === 'sink' ? [20, 16, 8] : [3, 2, 4]);
+    world.add(new Element({ id, kind: 'fixture', layer, system, material,
+      box: box(at, s), meta: { role: kind, hollow: !!hollow, hostedBy: hostedBy || null } }));
+    return { changed: [id], note: `${kind} ${id} placed${system ? `; no ${system} to it yet` : ''}` };
   },
 
   /**
@@ -263,14 +289,21 @@ export const OPS = {
         let boreAxis = 0, bestDot = -1;
         for (let k = 0; k < 3; k++) if (Math.abs(nd[k]) > bestDot) { bestDot = Math.abs(nd[k]); boreAxis = k; }
         const depth = memberDepth(m);
-        let edge = Infinity, edgeAxis = null;
+        // Edge distance is measured across the member's *depth* — the dimension the
+        // span table is about. Taking whichever axis happened to be smallest measured
+        // a joist across its 1.5 in thickness, which is the length of the bore, not
+        // its edge, and reported every diagonal crossing as a violation.
+        let depthAxis = -1, closest = Infinity;
         for (let k = 0; k < 3; k++) {
           if (k === boreAxis) continue;
-          const size = bb.hi[k] - bb.lo[k];
-          if (size > depth + 4) continue;               // that axis is the member's length, not its section
-          const e = Math.min(entry[k] - bb.lo[k], bb.hi[k] - entry[k]) - dia / 2;
-          if (e < edge) { edge = e; edgeAxis = 'xyz'[k]; }
+          const d = Math.abs((bb.hi[k] - bb.lo[k]) - depth);
+          if (d < closest) { closest = d; depthAxis = k; }
         }
+        let edge, edgeAxis = null;
+        if (depthAxis >= 0) {
+          edge = Math.min(entry[depthAxis] - bb.lo[depthAxis], bb.hi[depthAxis] - entry[depthAxis]) - dia / 2;
+          edgeAxis = 'xyz'[depthAxis];
+        } else edge = Infinity;
         // The per-run filter used to live here, which meant segment 2 deleted the
         // bore segment 1 had just recorded in the same member. unroute() clears the
         // run once, up front; from here it is push-only.
@@ -536,6 +569,9 @@ export const OPS = {
       ? `roof reseated flat on both plates`
       : `roof reseated on the plates: falls ${Math.abs(fall).toFixed(1)} in from ${fall > 0 ? 'W to E' : 'E to W'} over ${Math.abs(run).toFixed(0)} in; end walls follow it` };
   },
+
+  /** A measurement worth keeping in the journal, which changes no geometry. */
+  note(world, { text }) { return { changed: [], note: text }; },
 
   place(world, { id, kind, layer, at, size, material, section, shear }) {
     if (world.get(id)) return { ok: false, note: `${id} already exists` };

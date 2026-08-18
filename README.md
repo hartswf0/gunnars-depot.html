@@ -9,10 +9,11 @@ The GitHub Pages entry point is `index.html`. The Three.js building environment 
 ## What Is Included
 
 - `index.html` - mobile-friendly launcher for GitHub Pages.
+- `ingold-trailer.html` - the 8'-6" x 20'-0" trailer from the reference sheets, built by the operative loop and replayed move by move.
 - `operative-builder.html` - Three.js building environment where instructions become framing operations and the framing answers back. See [OPERATIVE_BUILDER.md](OPERATIVE_BUILDER.md).
 - `operative/` - the world model, deterministic checks, operations, reference comparison, and view behind it.
 - `vendor/three/` - vendored three.js (r185, MIT) so the app runs with no CDN.
-- `tests/run.mjs` - `node tests/run.mjs` runs 76 assertions against the world model.
+- `tests/run.mjs` - `node tests/run.mjs` runs 101 assertions against the world model and the built trailer.
 - `gunnar-thunder-builder.html` - mobile-first parts/layers builder for importing one DAE/STL as the base and building with editable widgets.
 - `builders-game.html` - mobile Builder's Language trailer game where commands become parts on a build grid.
 - `city-builder-game.html` - mobile city-builder sim with map layers, reversible planning, Gemini advisor/drafts, roads, zones, utilities, cash, and happiness.

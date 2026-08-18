@@ -249,6 +249,53 @@ const old = probeMove(gw, 'stud.W.65', mkbox(hist[0].box.p, gw.get('stud.W.65').
 check('an old state that no longer fits is refused, with the reason',
   !old.ok && old.clashes.some(c => c.id === 'shelf.1'), JSON.stringify(old.clashes));
 
+// ------------------------------------------- 14. the trailer itself
+group('the Ingold trailer: the sheet built, not just an envelope');
+const ing = await import('../operative/ingold.js');
+const built = ing.build();
+const T = built.world;
+check('it settles with nothing outstanding', T.conditions.length === 0,
+  T.conditions.map(c => c.code + ' ' + c.message).slice(0, 3).join(' / '));
+const tb = { lo: [Infinity, Infinity, Infinity], hi: [-Infinity, -Infinity, -Infinity] };
+for (const e of T.solids()) { const l = e.lo, h = e.hi; for (let i = 0; i < 3; i++) { tb.lo[i] = Math.min(tb.lo[i], l[i]); tb.hi[i] = Math.max(tb.hi[i], h[i]); } }
+const dim = tb.hi.map((v, i) => +(v - tb.lo[i]).toFixed(1));
+check('8\'-6" overall width, wheels included', dim[0] === 102, `${dim[0]} in`);
+check("20'-0\" of framing", Math.abs(dim[1] - 241) < 0.6, `${dim[1]} in`);
+check('inside the towing envelope', !T.conditions.some(c => c.code === 'ENVELOPE'));
+
+const has = (k) => T.all().some(e => e.meta.role === k || e.kind === k);
+for (const thing of ['toilet', 'shower', 'sink', 'range', 'fridge', 'bed', 'bench', 'table', 'cabinet'])
+  check(`it has a ${thing}`, has(thing));
+check('it has five openings', T.all({ kind: 'opening' }).length === 5);
+check('every opening is headed', T.all({ kind: 'header' }).length === 5);
+
+// the discovery that forced the floor
+check('the floor is 2x8, not 2x6', T.all({ kind: 'joist' })[0].section === '2x8');
+const drainBores = T.all({ kind: 'joist' }).flatMap(j => (j.meta.penetrations || []).filter(p => p.run === 'drain.main'));
+check('the main drain really does pass through the joists', drainBores.length >= 3, `${drainBores.length} bores`);
+check('and every one of them keeps its 2 in of edge',
+  drainBores.every(p => p.edge >= 2 - 1e-6), JSON.stringify(drainBores.map(p => p.edge)));
+const zs = drainBores.map(p => p.at[2]);
+check('the drain actually falls along its run', Math.max(...zs) - Math.min(...zs) > 0.4,
+  `${(Math.max(...zs) - Math.min(...zs)).toFixed(2)} in of fall across the bores`);
+
+// the services are connected, not decorative
+const { systemReach } = await import('../operative/checks.js');
+for (const sys of ['water', 'power', 'waste']) {
+  const reach = systemReach(T, sys);
+  const fixtures = T.all({ kind: 'fixture' }).filter(f => f.system === sys);
+  check(`every ${sys} fixture reaches a source`, fixtures.length > 0 && fixtures.every(f => reach.connected.has(f.id)),
+    fixtures.filter(f => !reach.connected.has(f.id)).map(f => f.id).join(', ') || `${fixtures.length} fixtures`);
+}
+check('the 65 gal tank actually holds 65 gal', (() => {
+  const t = T.get('tank.fresh');
+  const gal = (t.box.s[0] * t.box.s[1] * t.box.s[2]) / 231;
+  return gal >= 65;
+})(), (() => { const t = T.get('tank.fresh'); return ((t.box.s[0] * t.box.s[1] * t.box.s[2]) / 231).toFixed(1) + ' gal'; })());
+check('the making is recoverable', T.history.filter(h => h.snapshot).length >= 45, `${T.history.length} journalled moves`);
+check('the wheel wells carry the wall above them',
+  T.all({ kind: 'stud' }).some(e => e.meta.overWell));
+
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -14,7 +14,12 @@ export const MATERIAL_COLORS = {
   plywood: 0xc9a06a, siding: 0x6b7280, polycarbonate: 0x9ec9ee, corrugated_metal: 0xa3a3a3,
   standing_seam: 0x7a7f87, stone: 0xb8aea1, tile: 0xe5e7eb, paint: 0xf4efe7, fabric: 0xd4bfa5
 };
-const SYSTEM_COLOR = { power: 0xf59e0b, water: 0x38bdf8 };
+const SYSTEM_COLOR = { power: 0xf59e0b, water: 0x38bdf8, waste: 0x8b5cf6 };
+// for the film: which stage of the making a member belongs to
+export const LAYER_COLOR = {
+  foundation: 0x64748b, frame: 0xc08457, walls: 0x8a94a3,
+  roof: 0x9aa3ad, interior: 0x4ade80, services: 0x38bdf8
+};
 export const SEVERITY_COLOR = { 3: 0xef4444, 2: 0xf97316, 1: 0xfacc15 };
 
 export class View {
@@ -57,6 +62,7 @@ export class View {
     this.refGroup = new THREE.Group(); this.scene.add(this.refGroup);
 
     this.xray = true;             // skins translucent, so the frame can be read
+    this.tintByLayer = false;     // for the making, colour tells you which stage a member belongs to
     this.ghostGroup = new THREE.Group(); this.scene.add(this.ghostGroup);
     this.linkGroup = new THREE.Group(); this.scene.add(this.linkGroup);
     this.pending = null;          // { id, box, shear, ok } — a disturbance not yet committed
@@ -127,7 +133,9 @@ export class View {
       const held = this.pending && this.pending.id === el.id;
       mesh.matrix.copy(held ? this.matrixFor({ box: this.pending.box, shear: this.pending.shear }) : this.matrixFor(el));
       mesh.userData.layer = el.layer;
-      const base = isService ? (SYSTEM_COLOR[el.system] || 0x94a3b8) : (MATERIAL_COLORS[el.material] || 0x9aa3ad);
+      const base = isService ? (SYSTEM_COLOR[el.system] || 0x94a3b8)
+        : this.tintByLayer ? (LAYER_COLOR[el.layer] || 0x9aa3ad)
+        : (MATERIAL_COLORS[el.material] || 0x9aa3ad);
       mesh.material.color.setHex(base);
       mesh.visible = !this.hidden.has(el.layer);
       const skin = el.kind === 'sheathing' || el.kind === 'panel' || el.kind === 'deck';
@@ -243,7 +251,7 @@ export class View {
     const fov = this.camera.fov * Math.PI / 180;
     const aspect = Math.max(0.4, this.camera.aspect);
     this.framedSize = size;
-    const dist = (size / 2) / Math.tan(fov / 2) / Math.min(1, aspect) * 1.02;
+    const dist = (size / 2) / Math.tan(fov / 2) / Math.min(1, aspect) * 0.92;
     // the command dock owns the lower third of a phone screen; sit the building above it
     this.controls.target.set(c[0], c[1], c[2] - size * 0.16);
     const dir = new THREE.Vector3(0.62, -0.72, 0.42).normalize();
