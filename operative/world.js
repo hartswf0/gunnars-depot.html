@@ -87,11 +87,21 @@ export class World {
   supportGraph() {
     const solids = this.solids();
     const polys = new Map(solids.map(e => [e.id, e.poly()]));
+    // Broad phase. Measured before this existed: 24 ms for 6480 ordered pairs, which
+    // put a live drag over its frame budget on its own. Almost every pair is nowhere
+    // near its partner; bounds are cheap and reject them without generating vertices.
+    const boxes = new Map(solids.map(e => [e.id, aabb(polys.get(e.id))]));
+    const REACH = 0.7;
+    const near = (A, B) => {
+      for (let i = 0; i < 3; i++) if (A.lo[i] > B.hi[i] + REACH || B.lo[i] > A.hi[i] + REACH) return false;
+      return true;
+    };
     const under = new Map(solids.map(e => [e.id, []]));
     const over = new Map(solids.map(e => [e.id, []]));
     for (const a of solids) {
       for (const b of solids) {
         if (a === b) continue;
+        if (!near(boxes.get(a.id), boxes.get(b.id))) continue;
         const A = polys.get(a.id), B = polys.get(b.id);
         const bear = bearsOn(A, B);
         if (bear > 0.5) {

@@ -14,7 +14,7 @@ Open `operative-builder.html` from GitHub Pages or any local static server
 Everything else runs offline: `three` (r185, MIT) is vendored under
 `vendor/three/`, and the reference studies are read from this repository.
 
-Run the receipts with `node tests/run.mjs` (59 assertions, no dependencies).
+Run the receipts with `node tests/run.mjs` (76 assertions, no dependencies).
 
 ---
 
@@ -32,6 +32,7 @@ operative/
   world.js       elements, support graph, journal, per-member trace, state hash
   kit.js         the seed build, generated from the measured datum
   checks.js      the deterministic conditions — where the world pushes back
+  probe.js       what-would-happen-if: local consequence, member voices, ghosts
   ops.js         the operative vocabulary; every move reversible and journalled
   reference.js   STL silhouette extraction and comparison against the concepts
   language.js    sentences become operations
@@ -109,12 +110,73 @@ its proposal — half the correction up on the high wall, half down on the low o
 then reseat the roof — closes the measured gap. The reference never blocks: it is
 a reference, not a code rule.
 
-## Two gestures
+## Disturbing it by hand
 
-- **touch anything** → what it is, what bears on it, what it carries, what it is
-  fastened to, what has been bored through it, and how it became that way
-- **change anything** → the members that had to answer pulse in the world, and the
-  conditions that opened and closed are named
+The building is edited by disturbing it, not by filling in coordinates.
+
+| gesture | what happens |
+|---|---|
+| **tap** | the world dims to that member and it says what it is. Tapping the same spot again steps *behind* it, so interior framing and services are reachable without hiding a layer |
+| **drag** the selected member | it follows your finger while its neighbours answer, live. The first ten pixels lock the axis: up-down on screen moves it in height, anything else moves it on the floor plane |
+| **release** | viable → a `HOLD TO COMMIT` pill. Unviable → it springs back and says why |
+| **long press** | its becoming: prior states standing in the world as ghosts, on a scrubable ribbon |
+| **tap a ghost** | that old position is put up for judgement against the building *as it is now* |
+
+Nothing is written by playing. A drag is a question; only the hold is an edit, and
+only the hold makes a journal entry and a trace.
+
+While a member is being dragged the answer is immediate and measured:
+
+```
+stud.W.65  +0.25 / +30.25 / +0.00 in
+STRUCTURE  CLEAR
+SUPPORT    BEARING
+```
+
+Drag the same stud into the middle of the room and it reads `SUPPORT FLOATING`,
+refuses the release, and says *nothing would carry it*. Lift the deck and it names
+the four sole plates it would drop. The relationships that are answering are drawn
+as lines **through the building** for as long as the disturbance lasts — red for
+what it hits, orange for what it would let fall, green for what carries it, blue
+for what it carries — and then they are gone.
+
+## Arguing with an object's history
+
+Prior geometry is not stored a second time; it is recovered from the journal
+snapshots that were already being kept for reversibility. Long-press a member and
+its earlier positions stand in the world as translucent ghosts on an encounter
+ribbon — consequential states, not frames.
+
+Grabbing one does not restore it. It submits it:
+
+```
+the t2 position of stud.W.65 no longer works — shelf.1 is there now
+```
+
+The old state is evaluated against the building as it is now, which is usually a
+different building from the one that state belonged to.
+
+## Voices
+
+A member speaks only from its own state — identity, relationship, constraint — and
+only observes or requests when a consequence has given it something to say:
+
+```
+stud.W.33
+I_AM               stud 2x4 in frame
+I_AM_SUPPORTED_BY  sole.W
+I_SUPPORT          top1.W
+I_WAS_BORED        2.00 in for water.sink, -0.50 in of edge left
+I_OBSERVE          2.00 in bore in stud.W.33 is 57% of a 3.5 in bearing stud; limit is 40%
+I_REQUEST          reroute
+```
+
+A member with nothing wrong stays quiet.
+
+## Two governing interactions
+
+- **touch anything** → see how it became that way
+- **change anything** → watch who has to answer
 
 History is a journal of before/after state hashes with a full snapshot, so any
 move walks back exactly. Each member also carries its own trace — what systems,
@@ -159,6 +221,12 @@ polish; each one is a place where running the thing contradicted the plan.
 | Openings render as visible voids | a cut is a thing that happened and should look like one |
 | Roof fall is fitted over the longest run of roof columns | measured over every occupied column it reported the fender as a 48 in slope |
 | A proposed repair runs as one transaction (`commitChain`) | judged step by step, pitching the roof reported forty conflicts that the very next step closed, and the invariant counter learned thirty-one "overlaps" from states the building was never in |
+| `supportGraph` got a broad-phase reject | it was 24 ms of the 30 ms lint, running full SAT on 6480 ordered pairs almost none of which were near each other; 30 ms → 15.75 ms, identical graph |
+| Disturbance is evaluated locally (`probe.js`), not by re-linting | even at 15.75 ms a full lint is the entire frame budget, so a drag could not have answered at all. The performance limit and the LOCAL principle turned out to want the same thing: 0.6 ms per probe, through the member's actual neighbours |
+| Gestures moved to the capture phase | OrbitControls takes pointer capture on the canvas and listens for moves on the document, so a bubble-phase handler never got to claim the gesture for the object; the camera won every drag |
+| Any movement cancels the long press | cancelling it only once the drag threshold was crossed meant a slow small movement fired the long press *mid-drag* and stole the gesture — which is exactly what happened, repeatedly, before it was instrumented |
+| pointerdown prefers the already-selected member | tap-cycling ran on press as well as on tap, so pressing to drag stepped to a different member and the drag grabbed the wrong thing — or nothing |
+| A deduped final state is relabelled "current" | when a member had not moved since its last journalled state, the last dot on its ribbon read "before header" instead of "now" |
 
 ## A run that shows the whole chain
 

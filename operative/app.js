@@ -9,6 +9,8 @@ import { commit, commitChain, undo, OPS } from './ops.js';
 import { checkAll } from './checks.js';
 import { parse, nextMove, VOCABULARY } from './language.js';
 import { learn, preflight } from './invariants.js';
+import { probeMove, speak, geometryHistory } from './probe.js';
+import { box as mkbox } from './geom.js';
 import { parseSTL, bindReference, compareToReference } from './reference.js';
 import { View } from './view.js';
 
@@ -23,6 +25,7 @@ const LAYERS = ['foundation', 'frame', 'walls', 'roof', 'interior', 'services'];
 
 const $ = (s) => document.querySelector(s);
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
+const el2 = el;   // methods shadow `el` with the element under inspection
 
 export class App {
   constructor() {
@@ -41,15 +44,88 @@ export class App {
   // ---------------------------------------------------------------- plumbing
   wire() {
     const canvas = $('#viewport');
-    let down = null;
-    canvas.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; });
-    canvas.addEventListener('pointerup', (e) => {
+    // Tap selects. Dragging on the member that is already selected disturbs it —
+    // dragging anywhere else orbits. Long press opens its becoming.
+    let down = null, drag = null, longPress = null;
+    const SNAP = 0.25;
+    const snap = (v) => Math.round(v / SNAP) * SNAP;
+
+    const CAP = { capture: true };
+    canvas.addEventListener('pointerdown', (e) => {
+      const ghost = this.view.pickGhost(e.clientX, e.clientY);
+      if (ghost !== null && this.view.ghosts[ghost]) return this.adoptGhost(ghost);
+      const stack = this.view.pickStack(e.clientX, e.clientY);
+      // Pressing on the member you already selected grabs *it*, even when other
+      // members are in front of it — otherwise you can never drag anything you had
+      // to reach by stepping behind something else.
+      const hit = (this.selected && stack.includes(this.selected)) ? this.selected : (stack[0] || null);
+      down = { x: e.clientX, y: e.clientY, t: performance.now(), hit, stack };
+      longPress = setTimeout(() => {
+        if (!down || drag) return;
+        longPress = null;
+        if (down.hit) { this.select(down.hit); this.showBecoming(down.hit); down = null; }
+      }, 480);
+    }, CAP);
+
+    canvas.addEventListener('pointermove', (e) => {
+      if (!down) return;
+      const dx = e.clientX - down.x, dy = e.clientY - down.y;
+      const moved = Math.hypot(dx, dy);
+      if (!drag) {
+        // Any real movement cancels the press-and-hold. Cancelling it only once the
+        // drag threshold was crossed meant a slow, small movement fired the long
+        // press mid-drag and stole the gesture.
+        if (moved > 3 && longPress) { clearTimeout(longPress); longPress = null; }
+        if (moved < 10) return;
+        if (down.hit !== this.selected) { down = null; return; }   // not the selected member: let the camera have it
+        const el = this.world.get(down.hit);
+        if (!el) { down = null; return; }
+        // the first ten pixels choose the axis: up-down on screen means height
+        const axis = Math.abs(dy) > Math.abs(dx) * 1.4 ? 'z' : 'xy';
+        const grab = this.view.planePoint(down.x, down.y, el.box.p, axis);
+        if (!grab) { down = null; return; }
+        drag = { id: down.hit, axis, grab, origin: el.box.p.slice(), shear: el.shear };
+        this.view.controls.enabled = false;
+        canvas.setPointerCapture(e.pointerId);
+        this.beginDisturb(drag);
+      }
+      const now = this.view.planePoint(e.clientX, e.clientY, drag.origin, drag.axis);
+      if (!now) return;
+      const p = drag.origin.slice();
+      if (drag.axis === 'z') p[2] = snap(drag.origin[2] + (now[2] - drag.grab[2]));
+      else { p[0] = snap(drag.origin[0] + (now[0] - drag.grab[0])); p[1] = snap(drag.origin[1] + (now[1] - drag.grab[1])); }
+      e.stopPropagation();          // the object has the gesture; the camera does not
+      this.disturb(drag, p);
+    }, CAP);
+
+    const release = (e) => {
+      clearTimeout(longPress); longPress = null;
+      if (drag) {
+        this.view.controls.enabled = true;
+        try { canvas.releasePointerCapture(e.pointerId); } catch {}
+        this.endDisturb(drag);
+        drag = null; down = null;
+        return;
+      }
       if (!down) return;
       const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
-      const quick = performance.now() - down.t < 500;
+      const quick = performance.now() - down.t < 480;
+      const stack = down.stack || [];
       down = null;
-      if (moved < 8 && quick) this.select(this.view.pick(e.clientX, e.clientY));
-    });
+      if (moved >= 8 || !quick) return;
+      // A tap on the same spot steps behind what it hit, so interior framing and
+      // services are reachable without hiding a layer first.
+      let next = stack[0] || null;
+      const at = stack.indexOf(this.selected);
+      if (at >= 0 && stack.length > 1) next = stack[(at + 1) % stack.length];
+      this.select(next);
+      if (stack.length > 1 && next) {
+        const n = stack.indexOf(next) + 1;
+        this.hint(`${n} of ${stack.length} under your finger — tap again to step behind`);
+      }
+    };
+    canvas.addEventListener('pointerup', release, CAP);
+    canvas.addEventListener('pointercancel', release, CAP);
 
     $('#say').addEventListener('keydown', (e) => { if (e.key === 'Enter') this.speak($('#say').value); });
     $('#send').addEventListener('click', () => this.speak($('#say').value));
@@ -79,6 +155,132 @@ export class App {
       });
       layers.appendChild(b);
     }
+  }
+
+  // ------------------------------------------------------------ disturbance
+  beginDisturb(drag) {
+    const el = this.world.get(drag.id);
+    this.view.pending = { id: drag.id, box: mkbox(el.box.p, el.box.s), shear: el.shear, ok: true };
+    this.dismissHold();
+    $('#answer').hidden = false;
+  }
+
+  /** Every frame of a drag the neighbours answer. Nothing is committed. */
+  disturb(drag, p) {
+    const el = this.world.get(drag.id);
+    if (!el) return;
+    const next = mkbox(p, el.box.s);
+    const r = probeMove(this.world, drag.id, next, el.shear);
+    drag.probe = r; drag.at = p;
+    this.view.pending = { id: drag.id, box: next, shear: el.shear, ok: r.ok };
+    this.view.showLinks(this.world, drag.id, r);
+    this.view.sync(this.world);
+    const d = p.map((v, i) => v - drag.origin[i]);
+    const moved = d.map(v => (v >= 0 ? '+' : '') + v.toFixed(2)).join(' / ');
+    $('#answer').className = 'answer ' + (r.ok ? 'clear' : 'clash');
+    $('#answer').innerHTML = '';
+    const row = (k, v, cls) => { const n = el2('span', 'ans ' + (cls || '')); n.appendChild(el2('i', '', k)); n.appendChild(el2('b', '', v)); return n; };
+    $('#answer').appendChild(row('', `${drag.id}  ${moved} in`, 'who'));
+    $('#answer').appendChild(row('STRUCTURE', r.structure, r.clashes.length ? 'bad' : 'good'));
+    $('#answer').appendChild(row('SUPPORT', r.support, r.support === 'FLOATING' ? 'bad' : 'good'));
+    if (r.clashes.length) $('#answer').appendChild(row('HITS', r.clashes.slice(0, 3).map(c => `${c.id} ${c.depth}in`).join(', '), 'bad'));
+    if (r.orphaned.length) $('#answer').appendChild(row('DROPS', r.orphaned.slice(0, 3).join(', ') + (r.orphaned.length > 3 ? ` +${r.orphaned.length - 3}` : ''), 'bad'));
+  }
+
+  /** Viable release offers a hold. An unviable one springs back. */
+  endDisturb(drag) {
+    this.view.showLinks(null, null, null);
+    if (!drag.probe || !drag.at) { this.springBack(); return; }
+    if (!drag.probe.ok) {
+      this.springBack();
+      const why = drag.probe.clashes.length ? `${drag.probe.clashes[0].id} is in the way`
+        : drag.probe.orphaned.length ? `it would drop ${drag.probe.orphaned.join(', ')}`
+        : 'nothing would carry it';
+      this.say(`${drag.id} sprang back — ${why}`, 'bad');
+      return;
+    }
+    this.offerHold(drag.id, drag.at, drag.origin);
+  }
+
+  springBack() {
+    this.view.pending = null;
+    this.view.sync(this.world);
+    $('#answer').hidden = true;
+    this.dismissHold();
+  }
+
+  /** Playing with the model is free; writing to it takes a deliberate hold. */
+  offerHold(id, at, origin) {
+    const bar = $('#hold');
+    bar.hidden = false;
+    bar.textContent = 'HOLD TO COMMIT';
+    bar.className = 'hold';
+    let timer = null, cancel = null;
+    const start = () => {
+      bar.classList.add('arming');
+      timer = setTimeout(() => {
+        bar.classList.remove('arming');
+        this.view.pending = null;
+        const delta = at.map((v, i) => +(v - origin[i]).toFixed(3));
+        this.run('move', { id, delta }, 'disturbed by hand');
+        $('#answer').hidden = true;
+        this.dismissHold();
+        if (this.becoming === id) this.showBecoming(id);
+      }, 620);
+    };
+    const stop = () => { clearTimeout(timer); bar.classList.remove('arming'); };
+    bar._start = start; bar._stop = stop;
+    bar.addEventListener('pointerdown', start);
+    bar.addEventListener('pointerup', stop);
+    bar.addEventListener('pointerleave', stop);
+    clearTimeout(this.holdTimeout);
+    // an offer that is ignored is not an edit
+    this.holdTimeout = setTimeout(() => { if (!bar.hidden) { this.springBack(); this.say('let go — nothing committed'); } }, 6000);
+    cancel = () => {};
+  }
+
+  dismissHold() {
+    const bar = $('#hold');
+    if (!bar) return;
+    clearTimeout(this.holdTimeout);
+    bar.hidden = true;
+    bar.classList.remove('arming');
+    const clone = bar.cloneNode(true);
+    bar.parentNode.replaceChild(clone, bar);
+  }
+
+  /** Grab an old state and argue with it: the runtime judges it against the world as it is now. */
+  adoptGhost(index) {
+    const st = this.view.ghosts[index];
+    if (!st || !this.becoming) return;
+    const el = this.world.get(this.becoming);
+    if (!el) return;
+    const next = mkbox(st.box.p, el.box.s);
+    const r = probeMove(this.world, this.becoming, next, el.shear);
+    this.view.pending = { id: this.becoming, box: next, shear: el.shear, ok: r.ok };
+    this.view.showLinks(this.world, this.becoming, r);
+    this.view.sync(this.world);
+    $('#answer').hidden = false;
+    $('#answer').className = 'answer ' + (r.ok ? 'clear' : 'clash');
+    $('#answer').innerHTML = '';
+    const line = el2('span', 'ans who');
+    line.appendChild(el2('b', '', `t${st.t} state · ${r.structure} · ${r.support}`));
+    $('#answer').appendChild(line);
+    if (r.ok) this.offerHold(this.becoming, st.box.p.slice(), el.box.p.slice());
+    else {
+      this.say(`the t${st.t} position of ${this.becoming} no longer works — ${r.clashes.length ? r.clashes[0].id + ' is there now' : 'nothing would carry it'}`, 'warn');
+      setTimeout(() => this.springBack(), 2600);
+    }
+  }
+
+  /** A one-line aside on the transient readout; never a permanent panel. */
+  hint(text) {
+    const box = $('#answer');
+    if (box.hidden) return;
+    const row = el2('span', 'ans');
+    row.appendChild(el2('i', '', 'depth'));
+    row.appendChild(el2('b', '', text));
+    box.appendChild(row);
   }
 
   say(text, kind = '') {
@@ -159,7 +361,7 @@ export class App {
     st.className = 'status ' + s.tone;
     st.innerHTML = '';
     st.appendChild(el('b', '', s.state));
-    st.appendChild(el('span', 'dim', c.length ? `${c.length} open` : 'nothing outstanding'));
+    st.appendChild(el('span', 'dim', c.length ? `${c.length} open` : 'nothing open'));
     // the strip holds two facts at phone width; the reference reading displaces the
     // piece count rather than sliding off the edge
     if (this.world.reference) {
@@ -196,56 +398,112 @@ export class App {
   }
   closeSheet() { this.sheet.classList.remove('open'); }
 
-  /** Touch anything → see how it became that way. */
+  /** Tap: the world dims to this one member and it says what it is. No sheet. */
   select(id) {
-    if (!id) { this.view.setSelection(null); this.view.sync(this.world); this.closeSheet(); return; }
+    if (!id) {
+      this.selected = null; this.becoming = null;
+      this.view.setSelection(null);
+      this.view.showGhosts(null);
+      this.view.sync(this.world);
+      $('#answer').hidden = true;
+      this.closeSheet();
+      return;
+    }
     const e = this.world.get(id);
     if (!e) return this.say(`no member "${id}"`, 'bad');
+    this.selected = id;
+    if (this.becoming !== id) { this.becoming = null; this.view.showGhosts(null); }
     const g = this.world.grounded();
-    const under = g.under.get(id) || [];
-    const over = g.over.get(id) || [];
-    const related = new Set([id, ...under.map(x => x.id), ...over.map(x => x.id)]);
+    const related = new Set([id, ...(g.under.get(id) || []).map(x => x.id), ...(g.over.get(id) || []).map(x => x.id)]);
     this.view.setSelection(id, related);
     this.view.sync(this.world);
-    this.view.flash([id], 0x38bdf8, 2400);
+    this.view.flash([id], 0x38bdf8, 1800);
 
-    const body = this.openSheet(id);
-    body.appendChild(this.kv('is', `${e.kind}${e.section ? ' · ' + e.section : ''} in ${e.layer}`));
-    body.appendChild(this.kv('made of', e.material.replace('_', ' ')));
-    body.appendChild(this.kv('sits at', `x ${e.lo[0].toFixed(1)}–${e.hi[0].toFixed(1)} · y ${e.lo[1].toFixed(1)}–${e.hi[1].toFixed(1)} · z ${e.lo[2].toFixed(1)}–${e.hi[2].toFixed(1)} in`));
-    if (e.shear) body.appendChild(this.kv('slopes', `${e.shear.rise.toFixed(1)} in across ${e.shear.axis}`));
-    // bearing and fastening are different relationships and are shown as different
-    // relationships: a fastened joint is mutual, a bearing one is not.
+    const v = speak(this.world, id);
+    const box = $('#answer');
+    box.hidden = false;
+    box.className = 'answer ' + (v.quiet ? 'clear' : 'clash');
+    box.innerHTML = '';
+    const head = el2('span', 'ans who');
+    head.appendChild(el2('b', '', id));
+    head.appendChild(el2('i', '', 'drag to disturb · hold for its becoming'));
+    box.appendChild(head);
+    for (const [k, val] of v.lines.slice(0, 6)) {
+      const row = el2('span', 'ans' + (k === 'I_OBSERVE' ? ' bad' : k === 'I_REQUEST' ? ' warn' : ''));
+      row.appendChild(el2('i', '', k));
+      row.appendChild(el2('b', '', val.length > 88 ? val.slice(0, 86) + '…' : val));
+      box.appendChild(row);
+    }
+  }
+
+  /** Long press: how it became this way, with its prior states standing in the world. */
+  showBecoming(id) {
+    const e = this.world.get(id);
+    if (!e) return;
+    this.becoming = id;
+    const states = geometryHistory(this.world, id);
+    this.scrubIndex = states.length - 1;
+    this.view.showGhosts(states, this.scrubIndex);
+    this.view.sync(this.world);
+
+    const body = this.openSheet(`${id} · ${states.length} state${states.length === 1 ? '' : 's'}`);
+    // the encounter ribbon: consequential states, not arbitrary frames
+    const ribbon = el2('div', 'ribbon');
+    states.forEach((st, i) => {
+      const dot = el2('button', 'dot' + (st.current ? ' now' : '') + (i === this.scrubIndex ? ' on' : ''));
+      dot.title = st.note;
+      dot.addEventListener('click', () => this.scrubTo(id, states, i));
+      ribbon.appendChild(dot);
+      if (i < states.length - 1) ribbon.appendChild(el2('span', 'rail'));
+    });
+    body.appendChild(ribbon);
+    body.appendChild(el2('div', 'dim', states.length > 1
+      ? 'Tap a dot, or a ghost in the world, to put this member back there. The runtime judges the old position against the building as it is now.'
+      : 'This member has not moved since it was placed.'));
+
+    const g = this.world.grounded();
+    const under = g.under.get(id) || [], over = g.over.get(id) || [];
     const bearsOn = under.filter(x => x.via === 'bear').map(x => x.id);
     const carries = over.filter(x => x.via === 'bear').map(x => x.id);
     const fastened = under.filter(x => x.via === 'fasten').map(x => x.id);
     const list = (a) => a.length > 8 ? `${a.slice(0, 8).join(', ')} +${a.length - 8} more` : a.join(', ');
+    body.appendChild(this.kv('is', `${e.kind}${e.section ? ' · ' + e.section : ''} in ${e.layer}`));
+    body.appendChild(this.kv('made of', e.material.replace(/_/g, ' ')));
+    body.appendChild(this.kv('sits at', `x ${e.lo[0].toFixed(1)}–${e.hi[0].toFixed(1)} · y ${e.lo[1].toFixed(1)}–${e.hi[1].toFixed(1)} · z ${e.lo[2].toFixed(1)}–${e.hi[2].toFixed(1)} in`));
     if (bearsOn.length) body.appendChild(this.kv('bears on', list(bearsOn)));
     if (carries.length) body.appendChild(this.kv('carries', list(carries)));
     if (fastened.length) body.appendChild(this.kv('fastened to', list(fastened)));
-    if (!bearsOn.length && !carries.length && !fastened.length) body.appendChild(this.kv('connected to', 'nothing'));
     for (const p of e.meta.penetrations || [])
       body.appendChild(this.kv('bored', `${p.dia.toFixed(2)} in for ${p.run}, ${p.edge !== undefined ? p.edge.toFixed(2) + ' in of edge left' : 'through'}`));
-    const mine = (this.world.conditions || []).filter(c => c.elements.includes(id));
-    for (const c of mine) {
-      const d = el('div', 'cond sev' + c.severity);
-      d.appendChild(el('b', '', c.code));
-      d.appendChild(el('span', '', c.message));
+
+    for (const c of (this.world.conditions || []).filter(c => c.elements.includes(id))) {
+      const d = el2('div', 'cond sev' + c.severity);
+      d.appendChild(el2('b', '', c.code));
+      d.appendChild(el2('span', '', c.message));
       if (c.repair) {
-        const b = el('button', 'mini', 'answer this');
-        b.addEventListener('click', () => { this.runRepair({ condition: c, move: c.repair }); this.select(id); });
+        const b = el2('button', 'mini go', 'answer this');
+        b.addEventListener('click', () => { this.runRepair({ condition: c, move: c.repair }); this.showBecoming(id); });
         d.appendChild(b);
       }
       body.appendChild(d);
     }
-    body.appendChild(el('h4', '', 'how it became this way'));
-    if (!e.trace.length) body.appendChild(el('div', 'dim', 'placed with the seed kit; untouched since.'));
+
+    body.appendChild(el2('h4', '', 'what passed through it'));
+    if (!e.trace.length) body.appendChild(el2('div', 'dim', 'placed with the seed kit; untouched since.'));
     for (const tr of e.trace.slice(-14)) {
-      const d = el('div', 'trace');
-      d.appendChild(el('i', '', 't' + tr.t));
-      d.appendChild(el('span', '', `${tr.kind}${tr.cause ? ` (answering ${tr.cause})` : ''} — ${tr.note}`));
+      const d = el2('div', 'trace');
+      d.appendChild(el2('i', '', 't' + tr.t));
+      d.appendChild(el2('span', '', `${tr.kind}${tr.cause ? ` (answering ${tr.cause})` : ''} — ${tr.note}`));
       body.appendChild(d);
     }
+  }
+
+  /** Move the highlight along the ribbon and put that old state up for judgement. */
+  scrubTo(id, states, i) {
+    this.scrubIndex = i;
+    this.view.showGhosts(states, i);
+    if (states[i].current) { this.springBack(); this.view.sync(this.world); return; }
+    this.adoptGhost(i);
   }
 
   kv(k, v) { const d = el('div', 'kv'); d.appendChild(el('i', '', k)); d.appendChild(el('span', '', v)); return d; }

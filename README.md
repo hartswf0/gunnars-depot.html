@@ -12,7 +12,7 @@ The GitHub Pages entry point is `index.html`. The Three.js building environment 
 - `operative-builder.html` - Three.js building environment where instructions become framing operations and the framing answers back. See [OPERATIVE_BUILDER.md](OPERATIVE_BUILDER.md).
 - `operative/` - the world model, deterministic checks, operations, reference comparison, and view behind it.
 - `vendor/three/` - vendored three.js (r185, MIT) so the app runs with no CDN.
-- `tests/run.mjs` - `node tests/run.mjs` runs 61 assertions against the world model.
+- `tests/run.mjs` - `node tests/run.mjs` runs 76 assertions against the world model.
 - `gunnar-thunder-builder.html` - mobile-first parts/layers builder for importing one DAE/STL as the base and building with editable widgets.
 - `builders-game.html` - mobile Builder's Language trailer game where commands become parts on a build grid.
 - `city-builder-game.html` - mobile city-builder sim with map layers, reversible planning, Gemini advisor/drafts, roads, zones, utilities, cash, and happiness.
@@ -30,7 +30,7 @@ The GitHub Pages entry point is `index.html`. The Three.js building environment 
 
 Open `index.html` on GitHub Pages, then launch:
 
-- **Operative Builder**: a building environment that resists. Cut an opening and the interrupted studs say so; route a 2 in supply and the bore rules refuse it; bind one of the five concept studies and the silhouette comparison names what disagrees. Every member can report how it became what it is, every move walks back, and rules the build keeps breaking get promoted to invariants at runtime.
+- **Operative Builder**: a building environment that resists. Cut an opening and the interrupted studs say so; route a 2 in supply and the bore rules refuse it; bind one of the five concept studies and the silhouette comparison names what disagrees. Drag a member and its neighbours answer live before anything is committed; long-press it and its earlier positions stand in the world as ghosts you can argue with. Every member can report how it became what it is, every move walks back, and rules the build keeps breaking get promoted to invariants at runtime.
 - **Gunnar's Depot**: main branded modular structure tool.
 - **Gunnar Thunder Builder**: sharper builder surface with widgets, scene hierarchy, layer visibility, haptics, sound, DAE/STL import, and STL/JSON export.
 - **Builder's Game**: family-friendly mobile game where block, pillar, slab, and beam commands become trailer-building actions.

@@ -65,7 +65,35 @@
     padding:12px 13px;border-radius:12px;font-size:13px;font-family:inherit}
   #send{background:#0b3346;border-color:#1d4a63;color:#7dd3fc}
 
-  #sheet{position:fixed;inset:auto 0 0 0;z-index:8;max-height:64vh;transform:translateY(102%);
+  /* transient readouts: they appear because something is happening, then leave */
+  .answer{position:fixed;left:10px;right:10px;top:calc(env(safe-area-inset-top,0px) + 76px);z-index:7;
+    display:flex;flex-direction:column;gap:2px;padding:9px 11px;border-radius:11px;
+    background:rgba(12,16,22,.92);backdrop-filter:blur(10px);border:1px solid #24303e;
+    font-size:11px;letter-spacing:.04em;pointer-events:none}
+  .answer.clear{border-color:#14532d;box-shadow:0 0 0 1px rgba(34,197,94,.16)}
+  .answer.clash{border-color:#7f1d1d;box-shadow:0 0 0 1px rgba(239,68,68,.18)}
+  .ans{display:flex;gap:9px;align-items:baseline}
+  .ans i{flex:0 0 74px;font-style:normal;color:#64748b;font-size:9px;text-transform:uppercase;letter-spacing:.1em}
+  .ans b{font-weight:600;color:#cbd5e1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ans.who b{color:#e8edf3;font-size:12px} .ans.who i{flex:none;order:2;color:#475569;text-transform:none;letter-spacing:0}
+  .ans.good b{color:#86efac} .ans.bad b{color:#fca5a5} .ans.warn b{color:#fcd34d}
+
+  .hold{position:fixed;left:50%;transform:translateX(-50%);box-shadow:0 10px 30px rgba(0,0,0,.55);bottom:calc(172px + var(--safe-b));z-index:9;
+    border:1px solid #1d4a63;background:#08222e;color:#7dd3fc;padding:12px 22px;border-radius:99px;
+    font-size:12px;font-family:inherit;letter-spacing:.14em;overflow:hidden}
+  .hold:before{content:"";position:absolute;inset:0;background:#0ea5e9;opacity:.35;
+    transform:scaleX(0);transform-origin:left;transition:none}
+  .hold.arming:before{transform:scaleX(1);transition:transform .62s linear}
+
+  .ribbon{display:flex;align-items:center;gap:0;padding:6px 2px 10px;flex-wrap:wrap}
+  .dot{width:13px;height:13px;border-radius:50%;border:1px solid #475569;background:#1b2530;
+    padding:0;flex:0 0 auto}
+  .dot.on{background:#a78bfa;border-color:#c4b5fd;box-shadow:0 0 0 3px rgba(167,139,250,.22)}
+  .dot.now{background:#38bdf8;border-color:#7dd3fc}
+  .dot.now.on{box-shadow:0 0 0 3px rgba(56,189,248,.25)}
+  .rail{flex:1 1 14px;min-width:14px;height:1px;background:#334155}
+
+  #sheet{position:fixed;inset:auto 0 0 0;z-index:8;max-height:52vh;transform:translateY(102%);
     transition:transform .26s cubic-bezier(.2,.8,.2,1);background:#0f151d;
     border-top:1px solid #24303e;border-radius:18px 18px 0 0;display:flex;flex-direction:column}
   #sheet.open{transform:translateY(0)}
@@ -129,6 +157,9 @@
       <button id="send">go</button>
     </div>
   </div>
+
+  <div id="answer" class="answer" hidden></div>
+  <button id="hold" class="hold" hidden>HOLD TO COMMIT</button>
 
   <div id="sheet">
     <div id="sheetHead"><div id="sheetTitle"></div><button id="closeSheet">×</button></div>

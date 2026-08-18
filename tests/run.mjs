@@ -11,6 +11,8 @@ import { commit, commitChain, undo } from '../operative/ops.js';
 import { parse, nextMove, planPath } from '../operative/language.js';
 import { learn, preflight, THRESHOLD } from '../operative/invariants.js';
 import { parseSTL, bindReference, compareToReference } from '../operative/reference.js';
+import { probeMove, speak, geometryHistory, dependents } from '../operative/probe.js';
+import { box as mkbox } from '../operative/geom.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let pass = 0, fail = 0;
@@ -192,6 +194,60 @@ const ew = seedTrailer();
 const tall = commit(ew, 'raise', { by: 90 });
 check('an over-tall build breaks the towing envelope', ew.conditions.some(c => c.code === 'ENVELOPE'),
   ew.conditions.map(c => c.code).join(','));
+
+// ------------------------------------------- 11. disturbance without commitment
+group('a disturbance is answered before it is committed');
+const dw = seedTrailer();
+const stud = dw.get('stud.W.65');
+const t0 = Date.now();
+let probe;
+for (let i = 0; i < 30; i++) probe = probeMove(dw, 'stud.W.65', mkbox([stud.box.p[0], stud.box.p[1] + 30, stud.box.p[2]], stud.box.s));
+const per = (Date.now() - t0) / 30;
+check('a probe costs a fraction of a frame', per < 8, `${per.toFixed(2)} ms`);
+check('sliding a stud along its own wall stays viable', probe.ok && probe.support === 'BEARING', JSON.stringify(probe).slice(0, 120));
+check('the probe leaves the world exactly as it found it',
+  dw.get('stud.W.65').box.p[1] === stud.box.p[1] && dw.hash() === seedTrailer().hash());
+
+const intoRoom = probeMove(dw, 'stud.W.65', mkbox([36, 72, stud.box.p[2]], stud.box.s));
+check('a stud dragged into the room reports itself unsupported', intoRoom.support === 'FLOATING' && !intoRoom.ok);
+
+const deckEl = dw.get('deck');
+const lifted = probeMove(dw, 'deck', mkbox([deckEl.box.p[0], deckEl.box.p[1], deckEl.box.p[2] + 6], deckEl.box.s));
+check('lifting the deck reports what it would drop',
+  lifted.orphaned.includes('sole.W') && lifted.orphaned.length >= 4, JSON.stringify(lifted.orphaned));
+check('lifting the deck also reports the clash', lifted.structure === 'CLASH');
+check('dependents are found before the move', dependents(dw, 'joist.65').includes('deck'));
+
+// ------------------------------------------- 12. a member speaks from state alone
+group('a member speaks from its state, not from a personality');
+const v = speak(dw, 'joist.33');
+const keys = v.lines.map(l => l[0]);
+check('it says what it is and what it holds', keys.includes('I_AM') && keys.includes('I_SUPPORT') && keys.includes('I_AM_SUPPORTED_BY'));
+check('a member with nothing wrong stays quiet', v.quiet && !keys.includes('I_OBSERVE'));
+const noisy = seedTrailer();
+commit(noisy, 'cut', { wall: 'S', from: 20, to: 56, type: 'door' });
+const vs = speak(noisy, 'door.S.20');
+check('a member with a condition observes and requests',
+  vs.lines.some(l => l[0] === 'I_OBSERVE') && vs.lines.some(l => l[0] === 'I_REQUEST'), JSON.stringify(vs.lines.map(l=>l[0])));
+
+// ------------------------------------------- 13. ghosts, recovered not stored
+group('prior states are recoverable without storing them twice');
+const gw = seedTrailer();
+const before1 = gw.get('stud.W.65').box.p[1];
+commit(gw, 'move', { id: 'stud.W.65', delta: [0, 30, 0] }, 'disturbed by hand');
+commit(gw, 'raise', { by: 12 });
+const hist = geometryHistory(gw, 'stud.W.65');
+check('the journal yields the member\'s earlier geometry', hist.length >= 3, `${hist.length} states`);
+check('the first state is where it started', Math.abs(hist[0].box.p[1] - before1) < 0.01);
+check('the last state is marked as now', hist[hist.length - 1].current === true);
+check('identical consecutive states are not counted twice',
+  new Set(hist.map(h => JSON.stringify(h.box))).size === hist.length);
+
+// an old position is judged against the world as it is now, not as it was
+commit(gw, 'place', { id: 'shelf.1', kind: 'panel', layer: 'interior', at: [6, before1, 44], size: [9, 30, 1], material: 'plywood' });
+const old = probeMove(gw, 'stud.W.65', mkbox(hist[0].box.p, gw.get('stud.W.65').box.s));
+check('an old state that no longer fits is refused, with the reason',
+  !old.ok && old.clashes.some(c => c.id === 'shelf.1'), JSON.stringify(old.clashes));
 
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);

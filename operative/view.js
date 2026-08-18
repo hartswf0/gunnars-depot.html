@@ -57,6 +57,10 @@ export class View {
     this.refGroup = new THREE.Group(); this.scene.add(this.refGroup);
 
     this.xray = true;             // skins translucent, so the frame can be read
+    this.ghostGroup = new THREE.Group(); this.scene.add(this.ghostGroup);
+    this.linkGroup = new THREE.Group(); this.scene.add(this.linkGroup);
+    this.pending = null;          // { id, box, shear, ok } — a disturbance not yet committed
+    this.ghosts = [];             // prior states of the selected member
     this.meshes = new Map();      // element id -> mesh
     this.hidden = new Set();      // hidden layer ids
     this.selected = null;
@@ -120,7 +124,8 @@ export class View {
         this.meshes.set(el.id, mesh);
       }
       mesh.matrixAutoUpdate = false;
-      mesh.matrix.copy(this.matrixFor(el));
+      const held = this.pending && this.pending.id === el.id;
+      mesh.matrix.copy(held ? this.matrixFor({ box: this.pending.box, shear: this.pending.shear }) : this.matrixFor(el));
       mesh.userData.layer = el.layer;
       const base = isService ? (SYSTEM_COLOR[el.system] || 0x94a3b8) : (MATERIAL_COLORS[el.material] || 0x9aa3ad);
       mesh.material.color.setHex(base);
@@ -131,6 +136,10 @@ export class View {
       mesh.material.opacity = op;
       mesh.material.depthWrite = op > 0.9;
       mesh.renderOrder = op < 1 ? 1 : 0;
+      if (mesh.material.emissive) {
+        if (held) { mesh.material.emissive.setHex(this.pending.ok ? 0x22c55e : 0xef4444); mesh.material.emissiveIntensity = 0.55; }
+        else if (!this.pulse.has(el.id)) { mesh.material.emissive.setHex(0x000000); mesh.material.emissiveIntensity = 0; }
+      }
     }
     for (const [id, mesh] of this.meshes) {
       if (seen.has(id)) continue;
@@ -203,12 +212,23 @@ export class View {
   }
 
   pick(clientX, clientY) {
+    const stack = this.pickStack(clientX, clientY);
+    return stack.length ? stack[0] : null;
+  }
+
+  /** Everything under the point, front to back — so a tap can step behind what it hit. */
+  pickStack(clientX, clientY) {
     const r = this.canvas.getBoundingClientRect();
     const ndc = new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
     this.raycaster.setFromCamera(ndc, this.camera);
     const hits = this.raycaster.intersectObjects([...this.elementGroup.children, ...this.serviceGroup.children], false)
-      .filter(h => h.object.visible && h.object.material.opacity > 0.3);
-    return hits.length ? hits[0].object.userData.id : null;
+      .filter(h => h.object.visible && h.object.material.opacity > 0.14);
+    const seen = [];
+    for (const h of hits) {
+      const id = h.object.userData.id;
+      if (id && !seen.includes(id)) seen.push(id);
+    }
+    return seen;
   }
 
   frame(world) {
@@ -229,6 +249,95 @@ export class View {
     const dir = new THREE.Vector3(0.62, -0.72, 0.42).normalize();
     this.camera.position.set(c[0] + dir.x * dist, c[1] + dir.y * dist, c[2] + dir.z * dist);
     this.controls.update();
+  }
+
+  /**
+   * Prior states of one member, standing in the world as translucent solids.
+   * Recovered from journal snapshots, so this costs no extra bookkeeping.
+   */
+  showGhosts(states, activeIndex) {
+    while (this.ghostGroup.children.length) {
+      const c = this.ghostGroup.children.pop();
+      c.geometry.dispose?.(); c.material.dispose?.();
+    }
+    this.ghosts = states || [];
+    if (!states) return;
+    states.forEach((st, i) => {
+      if (st.current) return;                          // the present state is already solid
+      const active = i === activeIndex;
+      const g = new THREE.BoxGeometry(1, 1, 1);
+      const mat = new THREE.MeshBasicMaterial({
+        color: active ? 0xa78bfa : 0x94a3b8, transparent: true,
+        opacity: active ? 0.36 : 0.2, depthWrite: false, side: THREE.DoubleSide
+      });
+      const mesh = new THREE.Mesh(g, mat);
+      mesh.matrixAutoUpdate = false;
+      mesh.matrix.copy(this.matrixFor(st));
+      mesh.renderOrder = 3;
+      mesh.userData.ghostIndex = i;
+      this.ghostGroup.add(mesh);
+      const edge = new THREE.LineSegments(new THREE.EdgesGeometry(g),
+        new THREE.LineBasicMaterial({ color: active ? 0xc4b5fd : 0xcbd5e1, transparent: true, opacity: active ? 0.95 : 0.6 }));
+      edge.matrixAutoUpdate = false;
+      edge.matrix.copy(this.matrixFor(st));
+      edge.renderOrder = 4;
+      this.ghostGroup.add(edge);
+    });
+  }
+
+  /**
+   * Dependency drawn through the building rather than beside it. Only while
+   * something is being disturbed, and only the relationships that are answering.
+   */
+  showLinks(world, id, probe) {
+    while (this.linkGroup.children.length) {
+      const c = this.linkGroup.children.pop();
+      c.geometry.dispose(); c.material.dispose();
+    }
+    if (!id || !probe) return;
+    const from = this.pending && this.pending.id === id ? this.pending.box.p : (world.get(id) || {}).box?.p;
+    if (!from) return;
+    const draw = (ids, color) => {
+      for (const otherId of ids || []) {
+        const o = world.get(otherId);
+        if (!o) continue;
+        const g = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(...from), new THREE.Vector3(...o.box.p)
+        ]);
+        this.linkGroup.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.85 })));
+      }
+    };
+    draw(probe.clashes.map(c => c.id), 0xef4444);        // conflicts with
+    draw(probe.orphaned, 0xf97316);                      // would let down
+    draw(probe.bearing, 0x22c55e);                       // is carried by
+    draw((probe.dependents || []).filter(d => !probe.orphaned.includes(d)), 0x38bdf8);  // carries
+  }
+
+  /** Where the finger lands, on the plane the drag is locked to. */
+  planePoint(clientX, clientY, origin, axis) {
+    const r = this.canvas.getBoundingClientRect();
+    const ndc = new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+    this.raycaster.setFromCamera(ndc, this.camera);
+    let normal;
+    if (axis === 'z') {
+      // a vertical plane facing the camera, so up-down on screen reads as height
+      const dir = new THREE.Vector3().subVectors(this.camera.position, new THREE.Vector3(...origin));
+      dir.z = 0;
+      normal = dir.normalize();
+    } else {
+      normal = new THREE.Vector3(0, 0, 1);
+    }
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(normal, new THREE.Vector3(...origin));
+    const hit = new THREE.Vector3();
+    return this.raycaster.ray.intersectPlane(plane, hit) ? [hit.x, hit.y, hit.z] : null;
+  }
+
+  pickGhost(clientX, clientY) {
+    const r = this.canvas.getBoundingClientRect();
+    const ndc = new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+    this.raycaster.setFromCamera(ndc, this.camera);
+    const hits = this.raycaster.intersectObjects(this.ghostGroup.children.filter(c => c.userData.ghostIndex !== undefined), false);
+    return hits.length ? hits[0].object.userData.ghostIndex : null;
   }
 
   /** Refit only when the building has actually outgrown the view, so the camera
