@@ -108,7 +108,11 @@ while (steps++ < 6) {
   if (!n) break;
   commitChain(w, n.move.chain || [n.move], n.condition.code);
 }
-const HABITABILITY = ['PONDING', 'NO_DAYLIGHT', 'NO_VIEW_OUT', 'UNLIT'];
+// Conditions about living in it rather than it standing up. This six-move world is
+// a frame with one opening cut in it — it is not a failed dwelling, it is an
+// unfinished one, and the check here is whether the structure walked itself back.
+const HABITABILITY = ['PONDING', 'NO_DAYLIGHT', 'NO_VIEW_OUT', 'UNLIT',
+                      'NO_EGRESS', 'LOW_HEADROOM', 'NO_CLEARANCE'];
 check('the world walked itself back to settled',
   w.conditions.filter(c => !HABITABILITY.includes(c.code)).length === 0,
   w.conditions.map(c => c.code).join(','));
@@ -1158,6 +1162,58 @@ check('the linters simply join the accusation', (() => {
   const j = VDX.joinAccusation('the roof is wrong', [{ code: 'X', message: 'y' }], spokenText);
   return /WHAT SUCKS VISUALLY/.test(j) && /WHAT SUCKS DETERMINISTICALLY/.test(j) &&
          /WHAT SUCKS STIGMERGICALLY/.test(j);
+})());
+
+// ------------------------------------------- 34. can a person use it
+group('a body in the space');
+const HB = await import('../operative/habitat.js');
+const WD = await import('../operative/world.js');
+const GM = await import('../operative/geom.js');
+
+// Calibration first. A habitability reading that has not been fired at a room you
+// could measure with a tape is not evidence.
+const hcal = HB.calibrate({ World: WD.World, Element: WD.Element, box: GM.box });
+check('the instrument can measure a room it did not design', hcal.ok, hcal.verdict);
+check('and gets its floor area right to within the grid',
+  Math.abs(hcal.floor - hcal.exact) <= 4, `${hcal.floor} sq ft vs ${hcal.exact} exact`);
+check('and can walk across it', hcal.reachable >= hcal.floor * 0.9,
+  `${hcal.reachable} of ${hcal.floor} sq ft reachable in an empty room`);
+check('and reads its ceiling', Math.abs(hcal.height - 84) <= 1, `${hcal.height} in`);
+
+const H34 = HB.habitat(BUILT);
+check('the trailer has a floor to stand on', H34.headroom.floor > 100, `${H34.headroom.floor} sq ft`);
+check('and you can stand up in nearly all of it',
+  H34.headroom.coach >= H34.headroom.floor * 0.9,
+  `${H34.headroom.coach} of ${H34.headroom.floor} sq ft over ${HB.CODE.headroom.coach} in`);
+check('the door is big enough to be an exit', H34.egress.door && H34.egress.door.ok,
+  H34.egress.door ? `${H34.egress.door.w}x${H34.egress.door.h}` : 'no door');
+check('and at least one window is big enough and low enough to climb out of',
+  !!H34.egress.window, H34.egress.windows.map(x => `${x.id} ${x.area}sqft sill${x.sill}`).join(', '));
+check('every measure cites what it is against',
+  typeof HB.CODE.headroom.basis === 'string' && typeof HB.CODE.egressWindow.basis === 'string');
+
+// The finding this instrument exists for.
+const bedPath = H34.paths.find(p => p.id === 'bed.base');
+check('it can say whether you can get to the bed', !!bedPath);
+check('and on this trailer you cannot: the dinette spans the full width',
+  bedPath && bedPath.bottleneck !== null && bedPath.bottleneck < HB.CODE.aisle.min,
+  bedPath ? `${bedPath.bottleneck} in at the narrowest, wants ${HB.CODE.aisle.min}` : '');
+// Arithmetic, not opinion: bench + table + bench against the width at the axles.
+const pinchW = BUILT.get('well.E.side').lo[0] - BUILT.get('well.W.side').hi[0];
+const dinette = BUILT.get('bench.E').hi[0] - BUILT.get('bench.W').lo[0];
+check('because the dinette is exactly as wide as the trailer is at the wheel wells',
+  Math.abs(dinette - pinchW) < 1, `dinette ${dinette.toFixed(0)} in, clear width ${pinchW.toFixed(0)} in`);
+check('and a face-to-face dinette plus an aisle does not fit there',
+  18 + 33 + 18 + HB.CODE.aisle.min > pinchW, `needs ${18+33+18+HB.CODE.aisle.min} in, has ${pinchW.toFixed(0)}`);
+check('but does fit clear of the axles',
+  18 + 33 + 18 + HB.CODE.aisle.min <= (BUILT.get('sole.E.0').lo[0] - BUILT.get('sole.W.0').hi[0]),
+  `${BUILT.get('sole.E.0').lo[0] - BUILT.get('sole.W.0').hi[0]} in of full width`);
+
+check('the loop cannot call it settled while the bed is unreachable',
+  checkAll(BUILT).some(c => c.code === 'AISLE_TOO_NARROW' && c.severity === 3));
+check('and a frame with no openings is not told it lacks a fire escape', (() => {
+  const bare = ing.shell();
+  return !checkAll(bare).some(c => ['NO_EGRESS', 'LOW_HEADROOM', 'AISLE_TOO_NARROW'].includes(c.code));
 })());
 
 console.log(results.join('\n'));

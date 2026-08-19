@@ -7,6 +7,7 @@
 import { separation, overlapVolume, aabb, containsFully } from './poly.js';
 import { referenceConditions } from './reference.js';
 import { scheduleFor, required, joinKey, scheduleForPair, sortOf } from './joints.js';
+import { habitat, CODE as HABIT } from './habitat.js';
 import { floorUnder, mountsFor, workspaceOf, intrusion, blockage, daylightOf, CLEARANCE } from './gravity.js';
 import { shake } from './loads.js';
 import { rain, MIN_SLOPE, MIN_OVERHANG } from './weather.js';
@@ -588,6 +589,48 @@ export function checkAll(world) {
       `${j.a} to ${j.b}: ${j.count} ${j.size} where the schedule wants ${j.required} (${j.schedule})`,
       [j.a, j.b], { has: j.count, wants: j.required, size: j.size, basis: 'IRC R602.3(1)' },
       { op: 'join', args: { a: j.a, b: j.b, count: j.required } }));
+  }
+
+  // 7f. can a person use it
+  //
+  // Thirty condition codes before this one and not a single one was about a body.
+  // The model would tell you a conductor was undersized and a plate bored past
+  // half its depth, and had no opinion at all about whether you could get to the
+  // bed. You could not: the dinette runs the full width of the trailer — bench,
+  // table, bench, wheel well to wheel well — leaving two four-inch slots, and
+  // everything aft of it is unreachable from the door.
+  {
+    // Only once it claims to be a building. A frame with no openings cut in it has
+    // no egress and no headroom by these measures, and saying so is true and
+    // useless — it is not a failed dwelling, it is an unfinished one. Asked of a
+    // bare seed frame this reported NO_EGRESS and LOW_HEADROOM at severity 3 and
+    // buried four structural tests in habitability noise.
+    const claimsToBeARoom = world.all({ kind: 'opening' }).length > 0;
+    const h = claimsToBeARoom ? habitat(world) : null;
+    if (h && h.headroom.floor > 20) {
+      const short = h.headroom.floor - h.headroom.coach;
+      if (short > 8) out.push(cond('LOW_HEADROOM', SEVERITY.serious,
+        `${short.toFixed(0)} of ${h.headroom.floor.toFixed(0)} sq ft has less than ${HABIT.headroom.coach} in of headroom`,
+        [], { over84: h.headroom.habitable, over78: h.headroom.coach, floor: h.headroom.floor,
+              basis: HABIT.headroom.basis }, null));
+      for (const p of h.paths) {
+        if (p.bottleneck === null) out.push(cond('UNREACHABLE', SEVERITY.blocking,
+          `${p.id} cannot be reached from the door at all`, [p.id],
+          { basis: HABIT.aisle.basis }, null));
+        else if (p.bottleneck < HABIT.aisle.min) out.push(cond('AISLE_TOO_NARROW', SEVERITY.blocking,
+          `the best route from the door to ${p.id} narrows to ${p.bottleneck} in; ${HABIT.aisle.min} in is the minimum`,
+          [p.id], { bottleneck: p.bottleneck, wants: HABIT.aisle.min, basis: HABIT.aisle.basis,
+                    resolution: 'the widest available route at torso height, on a 2 in grid' }, null));
+      }
+      for (const c of h.clearances) if (!c.ok) out.push(cond('NO_CLEARANCE', SEVERITY.serious,
+        `${c.clear} in of floor in front of ${c.id}; ${c.need} in is the minimum`,
+        [c.id], { clear: c.clear, wants: c.need, basis: c.basis }, null));
+      if (!h.egress.ok) out.push(cond('NO_EGRESS', SEVERITY.blocking,
+        h.egress.door && h.egress.door.ok
+          ? 'no window big enough or low enough to climb out of'
+          : 'no exit door of the required size',
+        [], { door: h.egress.door, basis: HABIT.egressWindow.basis }, null));
+    }
   }
 
   // 8. the drawing gets a say

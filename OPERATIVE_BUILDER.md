@@ -1236,3 +1236,90 @@ back — followed from one accusation no existing instrument was shaped to make.
 
 The value of a weak sensor that goes where nobody sent it is not its accuracy. It
 is that it is not wrong in the same way as everything else.
+
+
+## Can a person use it
+
+`operative/habitat.js`. Thirty condition codes, and not one of them was about a
+body. The model would tell you a conductor was undersized, a rafter overspanned, a
+plate bored past half its depth, a panel unfastened and a roof unflashed — and it
+had no opinion at all about whether you could stand up in the room, get to the
+toilet, or reach the shelf. **A trailer could pass every check in this project and
+be unusable, and nothing in it would notice.**
+
+Measured against published minimums rather than adjectives: IRC R305.1 and NFPA
+1192 4.4 for headroom, NFPA 1192 6.2/6.3 and IRC R310.2.1 for egress, IRC R307.1
+for clearance at a toilet and a lavatory, NFPA 1192 4.5 for an aisle.
+
+### Calibrated first
+
+The instrument is fired at a room whose answer is arithmetic: 96 x 120 in of clear
+floor, 84 in to the ceiling, one 36 in doorway, nothing in it. Eighty square feet.
+
+The first version reported **zero**, because it asked the CT what was inside and
+the CT means *airtight* — an open doorway means no air is enclosed. It would have
+said the same about any real house with the door open, and it had just told me the
+trailer had 70 usable square feet out of 161. Inside, for a body, is floor below
+and a roof over your head; it has nothing to do with whether the air can get out.
+
+Two more instrument errors before any reading survived:
+
+- **Every route bottlenecked at 2 in.** The widest-path search seeded from a single
+  cell — the one nearest the door's centre, which on a 36 in door is hard against a
+  jamb. A widest path is the minimum along it, so the doorway seed capped every
+  destination in the building. The bottleneck was the instrument standing in the
+  doorway.
+- **The galley had 4 in of clearance in front of a 7 ft aisle.** The clearance probe
+  started half a cell off the cabinet face, and the grid cell that straddles that
+  face is marked blocked *by the cabinet*.
+
+Calibration now ships with the module and runs in the suite. **83 sq ft against 80
+by arithmetic, 77.5 of it reachable, ceiling 84 in.**
+
+### What it found
+
+```
+floor            164.6 sq ft gross      ceiling 24 - 104 in
+over 84 in (IRC) 153.7 sq ft            over 78 in (coach)  158
+clear walking     70 sq ft
+door             36 x 80 in             egress windows  win.dinette, win.bed
+clearances       wc 26  lav 60  sink 60  fridge 60  shower 34   — all pass
+route from the door to the bed:  2 in at the narrowest
+```
+
+**You cannot get to the bed.** Not a tight squeeze — the trailer is severed in two.
+The dinette runs bench, table, bench across the whole width, and it sits at
+y 118-178, which is exactly where the wheel wells pinch the trailer narrowest:
+
+```
+clear width at the wheel wells      77 in
+the dinette                         77 in   (18 bench + 33 table + 18 bench)
+```
+
+It fits to the inch, with nothing left over. Everything aft of it — the bed, the
+batteries, the aft third of the trailer — is reachable only by climbing over the
+table.
+
+Two layouts do work, and both are arithmetic rather than taste:
+
+```
+face-to-face dinette + 22 in aisle   needs 91 in
+  at the wheel wells   77 in   does not fit
+  clear of the axles   94 in   fits
+one bench against a wall + aisle     needs 73 in
+  at the wheel wells   77 in   fits
+```
+
+So either the dinette moves off the axles, or it loses a bench. That is a design
+decision and the loop does not get to make it — but the loop can no longer pretend
+the question is not there. `AISLE_TOO_NARROW` is severity 3, so the trailer cannot
+settle while the bed is unreachable, and `UNREACHABLE` fires when there is no route
+at all.
+
+### The gate
+
+Habitability is only asked of a building that claims to be one — at least one
+opening cut, and more than 20 sq ft of floor. Asked of a bare seed frame it
+reported `NO_EGRESS` and `LOW_HEADROOM` at severity 3 and buried four structural
+tests in noise. A stack of lumber is not a failed dwelling; it is an unfinished
+one.
