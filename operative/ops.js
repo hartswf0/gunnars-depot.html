@@ -173,6 +173,78 @@ const memberDepth = (el) => (el.section && SECTIONS[el.section]) ? SECTIONS[el.s
   : Math.min(...el.box.s);
 
 // ------------------------------------------------------------------ the vocabulary
+/**
+ * Expand a polyline into axis-aligned legs. Already-axial input is returned
+ * unchanged, so this is safe to apply to every route.
+ */
+export function axial(path, sloped = false) {
+  const out = [path[0].slice()];
+  const push = (p) => { const l = out[out.length - 1];
+    if (Math.abs(l[0] - p[0]) > 1e-6 || Math.abs(l[1] - p[1]) > 1e-6 || Math.abs(l[2] - p[2]) > 1e-6) out.push(p.slice()); };
+  for (let i = 0; i < path.length - 1; i++) {
+    const a = out[out.length - 1], b = path[i + 1];
+    const d = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+    const moving = [0, 1, 2].filter(k => Math.abs(d[k]) > 1e-6);
+    if (moving.length <= 1) { push(b); continue; }
+    const horiz = [0, 1].filter(k => Math.abs(d[k]) > 1e-6)
+      .sort((x, y) => Math.abs(d[y]) - Math.abs(d[x]));   // the long leg first
+    const hlen = Math.hypot(d[0], d[1]);
+    // A shallow slope over a long horizontal run is not a diagonal shortcut, it is
+    // a fall. Squaring it off cost the drain every inch of its slope — the floor
+    // was deepened to 2x8 to make that slope legal — so a leg gentler than 3 in
+    // per foot keeps its z, distributed across the horizontal legs it becomes.
+    // Only gravity drainage gets this. A 12 V wire dropping 38 in across 17 ft is
+    // not a fall, it is a diagonal, and letting it ramp put the conduit back on
+    // the slant the whole expansion exists to remove.
+    const SLOPE = 0.25;
+    if (sloped && hlen > 1e-6 && Math.abs(d[2]) / hlen <= SLOPE) {
+      const p = a.slice();
+      let done = 0;
+      for (const k of horiz) {
+        done += Math.abs(d[k]);
+        p[k] = b[k];
+        p[2] = a[2] + d[2] * (done / (Math.abs(d[0]) + Math.abs(d[1])));
+        push(p);
+      }
+      push(b);
+      continue;
+    }
+    // Otherwise: rise early, fall late. A wire goes up the wall then across the
+    // ceiling; a vertical drop happens at the end of the horizontal run.
+    const order = Math.abs(d[2]) > 1e-6 ? (d[2] > 0 ? [2, ...horiz] : [...horiz, 2]) : horiz;
+    const p = a.slice();
+    for (const k of order) { p[k] = b[k]; push(p); }
+    push(b);
+  }
+  return out;
+}
+
+/**
+ * The vocabulary, with real argument names, read off the functions themselves.
+ *
+ * Written by hand this list goes stale the first time an op changes, and a caller
+ * working from a stale list calls `move(id, by)` against `move(id, delta)`: the
+ * op refuses, the refusal is silent enough to look like a no-op, and the loop
+ * spins answering a criticism it never acted on.
+ */
+export function signatures() {
+  const out = {};
+  for (const [name, fn] of Object.entries(OPS)) {
+    const src = fn.toString();
+    const m = src.match(/^[^(]*\(\s*world\s*,\s*\{([^}]*)\}/);
+    out[name] = m
+      ? m[1].split(',').map(a => a.split(/[:=]/)[0].trim()).filter(Boolean)
+      : [];
+  }
+  return out;
+}
+
+/** One line per op, for a prompt or a help screen. */
+export function vocabulary() {
+  const sig = signatures();
+  return Object.keys(sig).sort().map(k => `${k}(${sig[k].join(', ')})`).join('\n');
+}
+
 /** Is this element a point on some service run? Then its position is a decision. */
 function onARun(world, e) {
   for (const r of Object.values(world.runs || {}))
@@ -306,6 +378,17 @@ export const OPS = {
   route(world, { system, run, path, dia = 0.75, amps, awg, volts, load }) {
     if (!path || path.length < 2) return { ok: false, note: 'a run needs at least two points' };
     const runId = run || `${system}.${world.all({ kind: 'run' }).length + 1}`;
+    // A segment is drawn as a box around its two endpoints. A diagonal leg
+    // therefore becomes a solid the size of its own bounding box: `dc.fan` ran
+    // from the fuse block to the bathroom fan and was modelled as a 60 x 204 x 38
+    // in block of conduit sitting in the middle of the trailer. Nobody saw it
+    // because nobody had ever taken an interior photograph.
+    //
+    // Real conduit and real pipe run in axial legs along the framing, so a path
+    // is expanded into axial legs before anything is built from it. Rise early,
+    // fall late: a wire goes up the wall then across the ceiling, a drain runs
+    // along and then down.
+    path = axial(path, system === 'waste');
     OPS.unroute(world, { run: runId });
     world.runs = world.runs || {};
     world.runs[runId] = { system, path: path.map(p => p.slice()), dia, amps, awg, volts: volts || 12, load };

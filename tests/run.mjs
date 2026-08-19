@@ -6,8 +6,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { seedTrailer } from '../operative/kit.js';
+import { build } from '../operative/ingold.js';
 import { checkAll } from '../operative/checks.js';
-import { commit, commitChain, undo } from '../operative/ops.js';
+import { commit, commitChain, undo, OPS as OPSALL } from '../operative/ops.js';
 import { parse, nextMove, planPath } from '../operative/language.js';
 import { learn, preflight, THRESHOLD } from '../operative/invariants.js';
 import { parseSTL, bindReference, compareToReference } from '../operative/reference.js';
@@ -453,6 +454,138 @@ check('it alternated between building and answering',
   built.loop.trace.some(t => t.brief) && built.loop.trace.some(t => t.answering && !t.brief));
 check('every kept move records what the world looked like before and after',
   built.loop.trace.filter(t => t.before).every(t => t.after && typeof t.before.total === 'number'));
+
+// ------------------------------------------- 18. gravity
+group('switch gravity on and see what falls');
+const { dropTest, mountsFor, floorUnder, workspaceOf, intrusion } = await import('../operative/gravity.js');
+const G = framed();
+// under a rafter, where a light belongs; and one out in the middle of the room
+const gr = G.all({ kind: 'rafter' })[2];
+commit(G, 'fixture', { id: 'ghost.light', system: 'power', kind: 'light',
+  at: [30, (gr.lo[1] + gr.hi[1]) / 2, gr.lo[2] - 3], size: [5, 5, 1.5] });
+commit(G, 'fixture', { id: 'ghost.orphan', system: 'power', kind: 'light',
+  at: [30, 40, 44], size: [5, 5, 1.5] });
+const dt = dropTest(G);
+check('a fixture placed in mid-air is reported, not exempted',
+  dt.falling.some(f => f.id === 'ghost.light'), dt.falling.map(f => f.id).join(','));
+check('and the measure is how far it would fall',
+  dt.falling.find(f => f.id === 'ghost.light').fall > 40,
+  JSON.stringify(dt.falling.find(f => f.id === 'ghost.light')));
+check('the drop stops at whatever is under it, not at zero',
+  floorUnder(G, G.get('ghost.light'), G.solids()) >= 0);
+check('it says what is within reach to mount to', mountsFor(G, G.get('ghost.light')).length >= 0);
+const mounted = commit(G, 'mountAll', {});
+check('mounting the one under a rafter closes its condition',
+  !checkAll(G).some(c => c.code === 'FLOATING' && c.elements[0] === 'ghost.light'),
+  mounted.note);
+check('an asserted joint counts even where the contact patch is tiny',
+  G.grounded().seen.has('ghost.light'), JSON.stringify(mountsFor(G, G.get('ghost.light'))[0]));
+// The honest half: a thing with nothing near it stays reported, and the note says why.
+check('the one in the middle of the room stays in the air',
+  checkAll(G).some(c => c.code === 'FLOATING' && c.elements[0] === 'ghost.orphan'));
+check('and the refusal says there is nothing to hang it on',
+  /nothing within reach/.test(mounted.note), mounted.note);
+
+const T2 = build({ budget: 90 }).world;
+check('the finished trailer holds every one of its own parts',
+  dropTest(T2).falling.length === 0,
+  dropTest(T2).falling.map(f => `${f.id} ${f.fall}`).join(', '));
+check('and nothing in it is only touching', !checkAll(T2).some(c => c.code === 'UNJOINED'));
+const ws = workspaceOf(T2, T2.get('dc.panel'));
+check('an electrical panel claims working space in front of it', !!ws && ws.rule.basis === 'NEC 110.26(A)');
+check('and the claim is a real box', !!ws && ws.hi[2] - ws.lo[2] === 78);
+check('the space opens into the building, not out through the wall',
+  ws.lo[0] >= T2.get('dc.panel').hi[0] - 0.01 || ws.hi[0] <= T2.get('dc.panel').lo[0] + 0.01 ||
+  ws.lo[1] >= T2.get('dc.panel').hi[1] - 0.01 || ws.hi[1] <= T2.get('dc.panel').lo[1] + 0.01);
+const { blockage } = await import('../operative/gravity.js');
+check('and nothing is standing in it', blockage(T2, ws, new Set(['dc.panel'])).fraction <= 0.25,
+  JSON.stringify(blockage(T2, ws, new Set(['dc.panel'])).by));
+// A sink belongs in a counter and a shower pan belongs in a floor. A rule that
+// complains about those trains you to ignore it when it complains about the fuse box.
+check('the rule does not fire on things that are supposed to be built in',
+  !workspaceOf(T2, T2.get('sink')) && !workspaceOf(T2, T2.get('shower.pan')));
+check('nor on a solar panel bolted to a roof', !workspaceOf(T2, T2.get('pv.1')));
+check('equipment inside a hollow carcass is reached by opening it, not by standing in it',
+  !checkAll(T2).some(c => c.code === 'ACCESS_BLOCKED' && c.elements[0] === 'battery.1'));
+// the move that made it settle
+const bed = T2.get('bed.base');
+check('the fuse block is not behind the bed',
+  T2.get('dc.panel').lo[1] < bed.lo[1],
+  `panel y ${T2.get('dc.panel').lo[1]}, bed y ${bed.lo[1]}`);
+check('a shelf parked in front of a panel is caught even though nothing collides', (() => {
+  const P = build({ budget: 90 }).world;
+  const p2 = P.get('dc.panel');
+  commit(P, 'place', { id: 'shelf.test', kind: 'cabinet', layer: 'interior',
+    at: [p2.box.p[0] + 20, p2.box.p[1], 40], size: [30, 24, 40], material: 'plywood' });
+  const cs = checkAll(P);
+  return cs.some(c => c.code === 'ACCESS_BLOCKED' && c.elements.includes('shelf.test')) &&
+         !cs.some(c => c.code === 'OVERLAP' && c.elements.includes('shelf.test'));
+})(), 'the whole point: not touching, still blocking');
+
+// ------------------------------------------- 19. views
+group('the building has to survive being looked at');
+const V = await import('../operative/views.js');
+check('there is more than one camera', V.VIEWS.length >= 10, `${V.VIEWS.length}`);
+check('they cover outside, inside, plan and services',
+  ['exterior', 'interior', 'plan', 'service'].every(k => V.VIEWS.some(v => v.kind === k)));
+const placed = V.VIEWS.map(v => ({ v, p: V.place(T2, v) }));
+check('every view resolves to a real camera',
+  placed.every(x => x.p && x.p.eye.every(Number.isFinite) && x.p.target.every(Number.isFinite)));
+check('no interior camera stands inside a solid',
+  placed.filter(x => x.v.inside).every(x => !V.occupied(T2, x.p.eye)),
+  placed.filter(x => x.v.inside).map(x => `${x.v.id}:${V.occupied(T2, x.p.eye)}`).join(','));
+check('a side view is further out than a front view, because the trailer is longer than it is wide',
+  Math.abs(V.place(T2, V.byId('left')).eye[0]) > Math.abs(V.place(T2, V.byId('front')).eye[1]));
+check('criticism about the roof sends the camera somewhere it can see the roof',
+  ['plan', 'threeq', 'threeq.rear', 'front', 'rear'].includes(
+    V.chooseView([], { hint: 'the roof overshoots the wall' }).id),
+  V.chooseView([], { hint: 'the roof overshoots the wall' }).id);
+check('after a repair judged from the front, it looks from the rear',
+  V.chooseView([{ view: 'front' }], { lastView: 'front', after: true }).id === 'rear');
+check('otherwise it takes the least recently inspected',
+  V.chooseView([{ view: 'front' }, { view: 'rear' }], { lastView: 'rear' }).id !== 'rear');
+
+// ------------------------------------------- 20. the critic protocol
+group('fucked until proven otherwise');
+const C = await import('../operative/critic.js');
+const obs = [{ view: 'front', label: 'FRONT', score: 8 }, { view: 'left', label: 'LEFT', score: 12 },
+             { view: 'rear', label: 'REAR', score: 76 }, { view: 'inside.entry', label: 'INTERIOR ENTRY', score: 84 },
+             { view: 'plan', label: 'PLAN', score: 21 }];
+const avg = obs.reduce((a, o) => a + o.score, 0) / obs.length;
+check('the world score is the worst view, not the average',
+  C.worldScore(obs).score === 84 && Math.round(avg) === 40, `max ${C.worldScore(obs).score} vs mean ${avg.toFixed(1)}`);
+check('and it names which view is the worst', C.worldScore(obs).worst === 'inside.entry');
+check('a view that has already been judged is replaced, not accumulated',
+  C.worldScore([...obs, { view: 'rear', label: 'REAR', score: 3 }]).views.length === obs.length);
+check('zero from one view does not settle anything',
+  C.settlement([{ view: 'front', label: 'FRONT', score: 0 }], 0).state === 'FUCKED');
+const sweep = C.VIEWS ? [] : [
+  { view: 'front', score: 4 }, { view: 'rear', score: 5 }, { view: 'left', score: 6 },
+  { view: 'inside.entry', score: 7 }, { view: 'inside.reverse', score: 8 },
+  { view: 'plan', score: 9 }, { view: 'service', score: 10 }];
+check('a full clean sweep with no hard failures is NOT CURRENTLY FUCKED, never DONE',
+  C.settlement(sweep, 0).state === 'NOT CURRENTLY FUCKED', C.settlement(sweep, 0).why);
+check('one open hard failure reopens it however clean the pictures are',
+  C.settlement(sweep, 1).state === 'FUCKED');
+const parsed = C.parseVerdict('SUCK SCORE: 78\n\nWHAT SUCKS:\nThe rear elevation falls apart.');
+check('the verdict parses out of ordinary prose', parsed.score === 78 && /rear elevation/.test(parsed.whatSucks));
+check('an unparseable reply is treated as completely wrong, not as fine',
+  C.parseVerdict('I think it looks quite good actually').score === 100);
+const bp = C.builderPrompt('The roof overshoots.', [{ code: 'FLOATING', message: 'x falls 4 in' }], 'REAR');
+check('the criticism reaches the builder verbatim, unsummarised', bp.includes('The roof overshoots.'));
+check('and the linters simply join the accusation', /WHAT SUCKS DETERMINISTICALLY/.test(bp) && bp.includes('FLOATING'));
+check('the critic prompt forbids proposing fixes',
+  /Do not explain how to fix it/.test(C.CRITIC_PROMPT) && /Do not write code/.test(C.CRITIC_PROMPT));
+
+// ------------------------------------------- 21. the vocabulary is read, not written
+group('the op list cannot go stale');
+const { vocabulary, signatures } = await import('../operative/ops.js');
+const sigs = signatures();
+check('every op reports its real argument names', sigs.move.includes('delta') && !sigs.move.includes('by'),
+  JSON.stringify(sigs.move));
+check('the list covers the whole vocabulary', Object.keys(sigs).length === Object.keys(OPSALL).length);
+check('it renders as one line per op', vocabulary().split('\n').length === Object.keys(sigs).length);
+
 
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);

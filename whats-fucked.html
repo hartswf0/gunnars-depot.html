@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>What's Fucked — Ingold Builder</title>
+<link rel="icon" href="assets/branding/favicon.svg">
+<style>
+  :root {
+    --bg:#0b0e12; --ink:#e8edf3; --dim:#7c8894; --line:#1e262f;
+    --bad:#ef4444; --mid:#f59e0b; --ok:#22c55e; --critic:#f472b6; --builder:#38bdf8;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink);
+    font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; overscroll-behavior:none }
+  body { display:flex; flex-direction:column }
+
+  /* --- the stage ------------------------------------------------------- */
+  #stage { position:relative; flex:1 1 auto; min-height:34vh }
+  canvas { display:block; width:100%; height:100% }
+
+  /* --- top left: the reference and the score, always --------------------- */
+  #hud { position:absolute; top:0; left:0; padding:8px; display:flex; gap:8px; align-items:flex-start;
+         pointer-events:none; max-width:min(96%,420px) }
+  #refbox { pointer-events:auto; width:84px; flex:0 0 84px }
+  #refbox img { width:100%; display:block; border:1px solid var(--line); background:#111; min-height:56px }
+  #refbox { cursor:pointer }
+  #refbox .cap { font-size:8px; letter-spacing:.12em; color:var(--dim); padding-top:3px }
+  #scorebox { background:rgba(11,14,18,.82); border:1px solid var(--line); padding:6px 8px; backdrop-filter:blur(6px) }
+  #score { font-size:34px; line-height:1; font-weight:700; letter-spacing:-.02em }
+  #scoreword { font-size:8px; letter-spacing:.14em; color:var(--dim); text-transform:uppercase; margin-top:2px }
+  #views { margin-top:6px; font-size:9px; line-height:1.5 }
+  #views div { display:flex; gap:6px; justify-content:space-between; color:var(--dim) }
+  #views b { font-weight:600; font-variant-numeric:tabular-nums }
+  #views .f { color:var(--bad) }
+  #state { position:absolute; top:8px; right:8px; font-size:9px; letter-spacing:.12em;
+           padding:4px 8px; border:1px solid var(--line); background:rgba(11,14,18,.82) }
+  #now { position:absolute; bottom:8px; left:8px; font-size:9px; letter-spacing:.14em; color:var(--dim) }
+
+  /* --- bottom: two agents talking --------------------------------------- */
+  #dock { flex:0 0 auto; height:46vh; display:flex; flex-direction:column;
+          border-top:1px solid var(--line); background:#080b0e }
+  #bar { display:flex; gap:6px; padding:6px; border-bottom:1px solid var(--line); align-items:center; flex-wrap:wrap }
+  button, select { font:inherit; font-size:11px; background:#131a22; color:var(--ink);
+    border:1px solid var(--line); padding:5px 9px; cursor:pointer }
+  button:disabled { opacity:.35; cursor:default }
+  button.go { background:#1c2b3a; border-color:#2b4256 }
+  button.stop { background:#2a1416; border-color:#4a2226 }
+  .grow { flex:1 }
+  #log { flex:1; overflow-y:auto; padding:8px; -webkit-overflow-scrolling:touch }
+  .msg { border-left:2px solid var(--line); padding:4px 0 10px 8px; margin-bottom:2px; white-space:pre-wrap;
+         word-break:break-word }
+  .msg .who { font-size:9px; letter-spacing:.14em; color:var(--dim); margin-bottom:3px }
+  .msg.critic { border-left-color:var(--critic) } .msg.critic .who { color:var(--critic) }
+  .msg.builder { border-left-color:var(--builder) } .msg.builder .who { color:var(--builder) }
+  .msg.world { border-left-color:#64748b } .msg.world .who { color:#94a3b8 }
+  .msg.err { border-left-color:var(--bad) } .msg.err .who { color:var(--bad) }
+  .msg img { max-width:150px; border:1px solid var(--line); margin-top:5px; display:block }
+  .msg .pair { display:flex; gap:6px }
+  .msg .pair figure { margin:0 } .msg .pair figcaption { font-size:8px; color:var(--dim); letter-spacing:.1em }
+  .sc { font-weight:700 }
+  #setup { padding:10px; border-bottom:1px solid var(--line); display:none; gap:6px; flex-direction:column }
+  #setup.open { display:flex }
+  #setup input { font:inherit; font-size:11px; background:#0b0e12; color:var(--ink);
+    border:1px solid var(--line); padding:6px; width:100% }
+  #setup label { font-size:9px; letter-spacing:.12em; color:var(--dim) }
+  #setup p { margin:0; font-size:10px; color:var(--dim); line-height:1.5 }
+  @media (min-width:820px) {
+    body { flex-direction:row }
+    #stage { flex:1 1 62% } #dock { flex:0 0 38%; height:100%; border-top:0; border-left:1px solid var(--line) }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+  <div id="hud">
+    <div id="refbox">
+      <img id="ref" alt="reference">
+      <div class="cap">REFERENCE</div>
+    </div>
+    <div id="scorebox">
+      <div id="score">—</div>
+      <div id="scoreword">world suck score</div>
+      <div id="views"></div>
+    </div>
+  </div>
+  <div id="state">READY</div>
+  <div id="now"></div>
+</div>
+
+<div id="dock">
+  <div id="bar">
+    <button id="run" class="go">RUN</button>
+    <button id="step">STEP</button>
+    <button id="halt" class="stop" disabled>STOP</button>
+    <select id="mode">
+      <option value="auto">critic: model</option>
+      <option value="linters">critic: linters only</option>
+    </select>
+    <span class="grow"></span>
+    <button id="cog">⚙</button>
+  </div>
+  <div id="setup">
+    <label>ANTHROPIC API KEY — kept in this browser only, never sent anywhere but api.anthropic.com</label>
+    <input id="key" type="password" placeholder="sk-ant-…" autocomplete="off">
+    <label>MODEL</label>
+    <select id="model" style="width:100%">
+      <option value="claude-opus-5">claude-opus-5</option>
+      <option value="claude-sonnet-5">claude-sonnet-5</option>
+      <option value="claude-haiku-4-5">claude-haiku-4-5</option>
+    </select>
+    <label>REFERENCE IMAGE</label>
+    <input id="reffile" type="file" accept="image/*">
+    <p>With no key the critic is the linters: deterministic, honest, and blind to
+       everything nobody thought to check. That blindness is the point of the other mode.</p>
+    <button id="save">SAVE</button>
+  </div>
+  <div id="log"></div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"./vendor/three/three.module.min.js","three/addons/":"./vendor/three/addons/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { View } from './operative/view.js';
+import { build } from './operative/ingold.js';
+import { VIEWS, place, byId, chooseView } from './operative/views.js';
+import { CRITIC_PROMPT, builderPrompt, parseVerdict, worldScore, settlement,
+         THRESHOLD, meaning, accusation } from './operative/critic.js';
+import { OPS, commitChain, vocabulary } from './operative/ops.js';
+
+const $ = (s) => document.querySelector(s);
+const LS = 'whats-fucked';
+const cfg = Object.assign({ key: '', model: 'claude-opus-5', ref: '' },
+  JSON.parse(localStorage.getItem(LS) || '{}'));
+
+// ---------------------------------------------------------------- the world
+const view = new View($('#c'));
+const { world, loop } = build();
+view.sync(world); view.resize(); view.frame(world); view.render();
+
+let observations = [];
+let lastView = null, running = false, busy = false, pendingRefusal = null;
+
+// ---------------------------------------------------------------- the sensor
+// Every image this page holds knows what it is. A render is origin:'render' and
+// carries the view it was taken from; the reference is origin:'reference' and
+// never gets mixed into that list. "can we tell which images came from the scene
+// and which is the reference?" — only if it is recorded at the moment of capture,
+// so it is.
+function shoot(v) {
+  const p = place(world, v, 45, view.camera.aspect);
+  view.controls.enabled = false;
+  view.camera.fov = p.fov; view.camera.near = 0.5;
+  view.camera.updateProjectionMatrix();
+  view.camera.position.set(...p.eye);
+  view.camera.up.set(0, 0, 1);
+  view.camera.lookAt(...p.target);
+  view.camera.updateMatrixWorld(true);
+  const hide = v.xray ? new Set(['sheathing', 'deck', 'wellcap']) : null;
+  for (const [id, m] of view.meshes) {
+    const el = world.get(id); if (!el) continue;
+    m.visible = !hide || !hide.has(el.kind);
+    m.material.transparent = true;
+    m.material.opacity = v.xray && ['stud','plate','joist','rafter','cabinet','bed','bench','counter'].includes(el.kind) ? 0.2 : 1;
+  }
+  view.render();
+  $('#now').textContent = v.label;
+  return { origin: 'render', view: v.id, label: v.label,
+           data: $('#c').toDataURL('image/jpeg', 0.72) };
+}
+
+// ---------------------------------------------------------------- two agents
+// Each keeps its own message array. That is the whole isolation: the critic never
+// sees the builder's reasoning and the builder never sees the picture. All that
+// crosses between them is the accusation, verbatim.
+class Agent {
+  constructor(name, system) { this.name = name; this.system = system; this.messages = []; }
+  async say(content, opts = {}) {
+    this.messages.push({ role: 'user', content });
+    const text = await callClaude({ system: this.system, messages: this.messages, ...opts });
+    this.messages.push({ role: 'assistant', content: text });
+    // Keep the window bounded without losing the thread: the first exchange sets
+    // the terms, the last few carry the state.
+    if (this.messages.length > 16) this.messages.splice(2, this.messages.length - 14);
+    return text;
+  }
+}
+
+// Read off the functions, not written down: a hand-kept list goes stale and the
+// builder starts calling move(id, by) against move(id, delta), which the world
+// refuses so quietly it looks like nothing happened.
+const BUILDER_SYSTEM = `You are the builder. You change a real building model.
+
+The model is inches, Z up. It is a 8'-6" x 20'-0" trailer on a steel chassis.
+Every member is an addressable element with an id, a kind, a layer and a box.
+
+You answer ONLY with a JSON array of operations, in a \`\`\`json fence. Nothing else.
+
+  [{"op":"move","args":{"id":"cab.galley","delta":[0,0,-4]},"why":"it was floating"}]
+
+The vocabulary, with its real argument names:
+
+${vocabulary()}
+
+Rules:
+- Small, specific, reversible moves. Two or three at a time, not twenty.
+- Use ids that exist. If you are not sure an id exists, do not use it.
+- Every op carries a "why" naming the criticism it answers.
+- If the criticism names something you cannot act on, return [] and nothing else.
+- Do not explain. Do not apologise. The JSON is the whole answer.`;
+
+const critic = new Agent('CRITIC', CRITIC_PROMPT);
+const builder = new Agent('BUILDER', BUILDER_SYSTEM);
+
+// ---------------------------------------------------------------- the API
+// Deliberately dumb: one function, raw fetch, explicit retries, and errors that
+// say what actually happened instead of failing silently.
+async function callClaude({ system, messages, maxTokens = 4000 }) {
+  if (!cfg.key) throw new Error('no API key — open ⚙, or switch the critic to linters only');
+  const body = {
+    model: cfg.model, max_tokens: maxTokens, system,
+    messages: messages.map(m => ({ role: m.role, content: m.content }))
+  };
+  let wait = 1000, lastErr;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': cfg.key,
+          'anthropic-version': '2023-06-01',
+          // required for a browser to talk to the API directly
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify(body)
+      });
+      if (r.status === 429 || r.status >= 500) {
+        const after = Number(r.headers.get('retry-after')) * 1000;
+        lastErr = new Error(`${r.status} ${r.statusText}`);
+        await sleep(after || wait); wait *= 2; continue;
+      }
+      const j = await r.json().catch(() => null);
+      if (!r.ok) throw new Error(`${r.status} ${(j && j.error && j.error.message) || r.statusText}`);
+      if (j.stop_reason === 'refusal')
+        throw new Error(`the model declined (${(j.stop_details && j.stop_details.category) || 'no category'})`);
+      return (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+    } catch (e) {
+      lastErr = e;
+      if (/no API key|declined|^4[0-9][0-9] /.test(e.message)) throw e;   // not worth retrying
+      await sleep(wait); wait *= 2;
+    }
+  }
+  throw lastErr || new Error('unreachable');
+}
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+// ---------------------------------------------------------------- judging
+function lintersOnly(shot) {
+  const cs = world.conditions;
+  const blocking = cs.filter(c => c.severity >= 3).length;
+  const serious = cs.filter(c => c.severity === 2).length;
+  const score = Math.min(100, blocking * 25 + serious * 10 + (cs.length - blocking - serious) * 4);
+  return {
+    score,
+    whatSucks: cs.length
+      ? cs.slice(0, 6).map(c => `${c.code} ${c.message}`).join('\n')
+      : 'The checks find nothing. They only ever look for what someone thought to ask about, ' +
+        'so this is not the same as the building being right — it is the same as nobody having looked.'
+  };
+}
+
+async function judge(shot) {
+  if ($('#mode').value === 'linters' || !cfg.key) return lintersOnly(shot);
+  const content = [];
+  if (cfg.ref) content.push({ type: 'image', source: dataUrlToSource(cfg.ref) });
+  content.push({ type: 'image', source: dataUrlToSource(shot.data) });
+  content.push({ type: 'text', text:
+    (cfg.ref ? 'IMAGE 1 is the reference. IMAGE 2 is the current build.\n'
+             : 'There is no reference image. The target is a road-legal 8\'-6" x 20\'-0" ' +
+               'off-grid tiny house on a trailer: bath, galley, dinette, bed, plumbed and wired.\n') +
+    `The current build is seen from ${shot.label}.\n\n` +
+    CRITIC_PROMPT.replace('{VIEW}', shot.label) });
+  const text = await critic.say(content);
+  return parseVerdict(text);
+}
+function dataUrlToSource(u) {
+  const m = /^data:([^;]+);base64,(.*)$/.exec(u);
+  return { type: 'base64', media_type: m ? m[1] : 'image/jpeg', data: m ? m[2] : '' };
+}
+
+// ---------------------------------------------------------------- one turn
+async function turn() {
+  if (busy) return; busy = true;
+  try {
+    const hint = observations.length ? observations[observations.length - 1].whatSucks : null;
+    const after = observations.length > 0;
+    const v = chooseView(observations, { lastView, after, hint });
+    const shot = shoot(v);
+    lastView = v.id;
+    say('world', `looking from ${v.label}`, shot.data);
+
+    const verdict = await judge(shot);
+    observations.push({ view: v.id, label: v.label, score: verdict.score,
+                        whatSucks: verdict.whatSucks, origin: 'render' });
+    say('critic', `SUCK SCORE ${verdict.score} — ${meaning(verdict.score)}\n\n${verdict.whatSucks}`,
+        null, verdict.score);
+    paint();
+
+    if (verdict.score <= THRESHOLD) {
+      // A low score is not a result. It is a reason to move.
+      say('world', `${v.label} failed to find a problem. That is not the same as being finished. ` +
+                   `Moving the camera.`);
+      return;
+    }
+
+    if ($('#mode').value === 'linters' || !cfg.key) {
+      say('world', 'linters-only mode: the accusation stands, nobody is acting on it. ' +
+                   'Add a key to let the builder answer.');
+      return;
+    }
+
+    // The criticism goes across verbatim, with the linters simply joining it.
+    let prompt = builderPrompt(verdict.whatSucks, world.conditions, v.label);
+    if (pendingRefusal) {
+      prompt += `\n\nYOUR LAST MOVE DID NOT LAND:\n${pendingRefusal}`;
+      pendingRefusal = null;
+    }
+    const reply = await builder.say(prompt);
+    const ops = parseOps(reply);
+    if (!ops.length) { say('builder', reply || '(nothing)'); return; }
+    say('builder', ops.map(o => `${o.op} ${JSON.stringify(o.args)}\n  ${o.why || ''}`).join('\n'));
+
+    const before = world.conditions.length;
+    const hashBefore = world.hash();
+    const r = commitChain(world, ops.map(o => ({ op: o.op, args: o.args })), 'WHAT SUCKS');
+    view.sync(world);
+    const moved = world.hash() !== hashBefore;
+    const answer = (r.ok === false ? 'REFUSED: ' : '') + (r.note || '') +
+      `\nopen conditions ${before} -> ${world.conditions.length}` +
+      (moved ? '' : '\nthe building did not change') +
+      (r.opened && r.opened.length ? `\nthe world answers: ` +
+        r.opened.slice(0, 4).map(c => `${c.code} ${c.message}`).join('\n  ') : '');
+    say('world', answer);
+    // A refusal is the world talking, and the builder is the one who needs to
+    // hear it. Swallowed, the loop re-criticises something nobody ever acted on.
+    if (r.ok === false || !moved) pendingRefusal = answer;
+    paint();
+  } catch (e) {
+    say('err', String(e.message || e));
+    running = false; setRunning();
+  } finally { busy = false; }
+}
+
+/** Tolerant on purpose: a model will fence it six different ways. */
+function parseOps(text) {
+  const t = String(text || '');
+  const fenced = t.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const raw = fenced ? fenced[1] : (t.match(/\[[\s\S]*\]/) || [''])[0];
+  let arr;
+  try { arr = JSON.parse(raw); } catch { return []; }
+  if (!Array.isArray(arr)) arr = [arr];
+  // validated against the real vocabulary before anything touches the building
+  return arr.filter(o => o && typeof o.op === 'string' && OPS[o.op])
+            .map(o => ({ op: o.op, args: o.args || {}, why: o.why || '' }));
+}
+
+// ---------------------------------------------------------------- the HUD
+function paint() {
+  const ws = worldScore(observations);
+  const hard = world.conditions.filter(c => c.severity >= 3).length;
+  const st = settlement(observations, hard);
+  $('#score').textContent = observations.length ? ws.score : '—';
+  $('#score').style.color = ws.score > 60 ? 'var(--bad)' : ws.score > THRESHOLD ? 'var(--mid)' : 'var(--ok)';
+  $('#scoreword').textContent = observations.length ? `worst of ${ws.views.length} views` : 'world suck score';
+  $('#views').innerHTML = ws.views.map(v =>
+    `<div><span>${v.label}</span><b class="${v.fucked ? 'f' : ''}">${String(v.score).padStart(2, '0')}</b></div>`).join('');
+  $('#state').textContent = st.state;
+  $('#state').style.color = st.state === 'FUCKED' ? 'var(--bad)' : 'var(--ok)';
+  $('#state').title = st.why;
+}
+
+function say(who, text, img, score) {
+  const d = document.createElement('div');
+  d.className = `msg ${who}`;
+  d.innerHTML = `<div class="who">${who.toUpperCase()}</div>`;
+  const body = document.createElement('div');
+  body.textContent = text;
+  d.appendChild(body);
+  if (img) {
+    const pair = document.createElement('div');
+    pair.className = 'pair';
+    if (cfg.ref) pair.innerHTML += `<figure><img src="${cfg.ref}"><figcaption>REFERENCE</figcaption></figure>`;
+    pair.innerHTML += `<figure><img src="${img}"><figcaption>RENDER</figcaption></figure>`;
+    d.appendChild(pair);
+  }
+  $('#log').appendChild(d);
+  $('#log').scrollTop = $('#log').scrollHeight;
+}
+
+// ---------------------------------------------------------------- controls
+async function runLoop() {
+  while (running) {
+    await turn();
+    if (!running) break;
+    const hard = world.conditions.filter(c => c.severity >= 3).length;
+    const st = settlement(observations, hard);
+    if (st.state === 'NOT CURRENTLY FUCKED') {
+      say('world', `NOT CURRENTLY FUCKED — ${st.why}.\n` +
+        `Not done. Any new camera, request, structural check or reference discrepancy reopens it.`);
+      running = false; setRunning(); break;
+    }
+    await sleep(400);
+  }
+}
+function setRunning() {
+  $('#run').disabled = running; $('#step').disabled = running; $('#halt').disabled = !running;
+  $('#run').textContent = running ? 'RUNNING' : 'RUN';
+}
+$('#run').onclick = () => { running = true; setRunning(); runLoop(); };
+$('#step').onclick = () => turn();
+$('#halt').onclick = () => { running = false; setRunning(); };
+$('#cog').onclick = () => $('#setup').classList.toggle('open');
+$('#save').onclick = () => {
+  cfg.key = $('#key').value.trim(); cfg.model = $('#model').value;
+  localStorage.setItem(LS, JSON.stringify(cfg));
+  $('#setup').classList.remove('open');
+  say('world', cfg.key ? `key saved in this browser, model ${cfg.model}` : 'no key — linters only');
+};
+$('#reffile').onchange = (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const fr = new FileReader();
+  fr.onload = () => { cfg.ref = fr.result; $('#ref').src = cfg.ref;
+    localStorage.setItem(LS, JSON.stringify(cfg)); say('world', 'reference set'); };
+  fr.readAsDataURL(f);
+};
+
+// ---------------------------------------------------------------- start
+$('#key').value = cfg.key; $('#model').value = cfg.model;
+if (cfg.ref) $('#ref').src = cfg.ref;
+else {
+  // No default reference. The sheet this trailer was drawn from is a page of
+  // written notes, and shipping a page of text as the visual reference would make
+  // every comparison meaningless while looking like it worked.
+  $('#refbox').querySelector('.cap').textContent = 'NO REFERENCE — TAP';
+}
+$('#refbox').onclick = () => { $('#setup').classList.add('open'); $('#reffile').click(); };
+say('world',
+  `${world.elements.size} members, ${world.joints.size} joints, ${loop.state.toLowerCase()} ` +
+  `after ${loop.steps} decisions, ${world.conditions.length} conditions open.\n\n` +
+  `That is what the checks know. The default state of this build is not "probably correct" — ` +
+  `it is FUCKED UNTIL PROVEN OTHERWISE. Press RUN and it will photograph itself from a named ` +
+  `view, assume the picture is wrong, and say why. A low score does not end anything. It moves ` +
+  `the camera.`);
+paint();
+addEventListener('resize', () => { view.resize(); view.render(); });
+window.wf = { world, view, observations, shoot, critic, builder, turn };
+</script>
+</body>
+</html>

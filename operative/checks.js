@@ -7,7 +7,7 @@
 import { separation, overlapVolume, aabb, containsFully } from './poly.js';
 import { referenceConditions } from './reference.js';
 import { scheduleFor, required, joinKey } from './joints.js';
-import { floorUnder, mountsFor, workspaceOf, intrusion, daylightOf, CLEARANCE } from './gravity.js';
+import { floorUnder, mountsFor, workspaceOf, intrusion, blockage, daylightOf, CLEARANCE } from './gravity.js';
 
 export const SEVERITY = { blocking: 3, serious: 2, open: 1, note: 0 };
 
@@ -366,6 +366,34 @@ export function checkAll(world) {
               shortfall: +(wh - Math.min(usable, pv)).toFixed(0),
               loads: loads.map(e => `${e.id} ${e.meta.watts}W x ${e.meta.hoursPerDay}h`) }, null));
     }
+  }
+
+  // 7d-bis. things you have to reach need somewhere to stand.
+  //
+  // "we have hanging shelves that cover things". A model that only asks whether
+  // parts collide will never say this: the bed is not touching the fuse panel,
+  // it is parked in front of it, and every geometric check passes while the panel
+  // is unreachable. NEC 110.26(A) is 30 in wide, 36 in deep and 78 in high of
+  // clear floor, and a trailer is exactly where that gets built over.
+  for (const e of world.all()) {
+    const space = workspaceOf(world, e);
+    if (!space) continue;
+    // Equipment inside a hollow carcass is reached by opening the carcass. A
+    // battery box under a bed platform with a lift-up lid is serviceable; the
+    // rule is about standing room, and you do not stand inside the box.
+    if (e.meta.hostedBy) {
+      const host = world.get(e.meta.hostedBy);
+      if (host && host.meta.hollow) continue;
+    }
+    const b = blockage(world, space, new Set([e.id]));
+    if (b.fraction <= 0.25) continue;
+    out.push(cond('ACCESS_BLOCKED', SEVERITY.serious,
+      `${(b.fraction * 100).toFixed(0)}% of the space you have to stand in to reach ${e.id} is taken by ` +
+      `${b.by.slice(0, 2).map(x => x.id).join(' and ')}; ${space.rule.why}`,
+      [e.id, ...b.by.slice(0, 2).map(x => x.id)],
+      { fraction: b.fraction, needs: `${space.rule.width} x ${space.rule.depth} x ${space.rule.height} in`,
+        by: b.by.slice(0, 4), basis: space.rule.basis },
+      null));
   }
 
   // 7e. what is touching is not joined until it is nailed

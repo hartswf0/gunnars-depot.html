@@ -57,25 +57,25 @@
  "systems": [
   {
    "system": "water",
-   "parts": 30,
+   "parts": 38,
    "devices": 6,
    "connected": 6
   },
   {
    "system": "waste",
-   "parts": 20,
+   "parts": 23,
    "devices": 7,
    "connected": 7
   },
   {
    "system": "power",
-   "parts": 46,
+   "parts": 73,
    "devices": 21,
    "connected": 21
   },
   {
    "system": "propane",
-   "parts": 10,
+   "parts": 14,
    "devices": 2,
    "connected": 2
   },
@@ -94,13 +94,13 @@
   "pvDailyWh": 1200,
   "loads": 13
  },
- "members": 298,
+ "members": 340,
  "open": 0,
  "joints": 432,
  "loop": {
   "state": "SETTLED",
-  "steps": 22,
-  "seconds": 5.8,
+  "steps": 26,
+  "seconds": 6.6,
   "walkedBack": 0,
   "moves": [
    {
@@ -161,7 +161,7 @@
     "note": "stage services",
     "kept": true,
     "before": 9,
-    "after": 18
+    "after": 23
    },
    {
     "step": 7,
@@ -170,8 +170,8 @@
     "move": "nailOff",
     "note": "nailed off 4 joints; 250 contacts have no schedule entry",
     "kept": true,
-    "before": 18,
-    "after": 14
+    "before": 23,
+    "after": 19
    },
    {
     "step": 8,
@@ -180,8 +180,8 @@
     "move": "mount",
     "note": "grey.out hung from deck.fore on a 2.5 in hanger — it stays where it is",
     "kept": true,
-    "before": 14,
-    "after": 13
+    "before": 19,
+    "after": 18
    },
    {
     "step": 9,
@@ -190,8 +190,8 @@
     "move": "stage",
     "note": "stage venting",
     "kept": true,
-    "before": 13,
-    "after": 15
+    "before": 18,
+    "after": 20
    },
    {
     "step": 10,
@@ -200,8 +200,8 @@
     "move": "mount",
     "note": "trap.shower.pan hung from deck.fore (deck)",
     "kept": true,
-    "before": 15,
-    "after": 14
+    "before": 20,
+    "after": 19
    },
    {
     "step": 11,
@@ -210,8 +210,8 @@
     "move": "stage",
     "note": "stage propane",
     "kept": true,
-    "before": 14,
-    "after": 15
+    "before": 19,
+    "after": 20
    },
    {
     "step": 12,
@@ -220,8 +220,8 @@
     "move": "nailOff",
     "note": "nailed off 1 joint; 267 contacts have no schedule entry",
     "kept": true,
-    "before": 15,
-    "after": 14
+    "before": 20,
+    "after": 19
    },
    {
     "step": 13,
@@ -230,18 +230,18 @@
     "move": "stage",
     "note": "stage electrical",
     "kept": true,
-    "before": 14,
-    "after": 8
+    "before": 19,
+    "after": 12
    },
    {
     "step": 14,
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 2 joints; 270 contacts have no schedule entry",
+    "note": "nailed off 2 joints; 274 contacts have no schedule entry",
     "kept": true,
-    "before": 8,
-    "after": 7
+    "before": 12,
+    "after": 11
    },
    {
     "step": 15,
@@ -250,8 +250,8 @@
     "move": "regauge",
     "note": "bank.inverter: 8 AWG -> 2/0 AWG",
     "kept": true,
-    "before": 7,
-    "after": 6
+    "before": 11,
+    "after": 10
    },
    {
     "step": 16,
@@ -260,8 +260,8 @@
     "move": "reroute",
     "note": "run lpg.heater rerouted: centred in joist.113 on y; centred in fridge on y",
     "kept": true,
-    "before": 6,
-    "after": 5
+    "before": 10,
+    "after": 9
    },
    {
     "step": 17,
@@ -270,31 +270,71 @@
     "move": "vent",
     "note": "1.5 in vent at trap.shower.pan, stack up through the roof, hung from shell.E on a 1.0 in hanger — it stays where it is",
     "kept": true,
-    "before": 5,
-    "after": 4
+    "before": 9,
+    "after": 8
    },
    {
     "step": 18,
     "answering": "VOLTAGE_DROP",
     "brief": false,
     "move": "regauge",
-    "note": "pv.string: 10 AWG -> 6 AWG",
+    "note": "pv.string: 10 AWG -> 4 AWG",
     "kept": true,
-    "before": 4,
-    "after": 3
+    "before": 8,
+    "after": 7
    },
    {
     "step": 19,
     "answering": "VOLTAGE_DROP",
     "brief": false,
     "move": "regauge",
-    "note": "dc.lights: 18 AWG -> 16 AWG",
+    "note": "mppt.bank: 8 AWG -> 4 AWG",
+    "kept": true,
+    "before": 7,
+    "after": 6
+   },
+   {
+    "step": 20,
+    "answering": "VOLTAGE_DROP",
+    "brief": false,
+    "move": "regauge",
+    "note": "bank.dc: 8 AWG -> 4 AWG",
+    "kept": true,
+    "before": 6,
+    "after": 5
+   },
+   {
+    "step": 21,
+    "answering": "VOLTAGE_DROP",
+    "brief": false,
+    "move": "regauge",
+    "note": "dc.lights: 18 AWG -> 14 AWG",
+    "kept": true,
+    "before": 5,
+    "after": 4
+   },
+   {
+    "step": 22,
+    "answering": "VOLTAGE_DROP",
+    "brief": false,
+    "move": "regauge",
+    "note": "dc.fridge: 14 AWG -> 12 AWG",
+    "kept": true,
+    "before": 4,
+    "after": 3
+   },
+   {
+    "step": 23,
+    "answering": "VOLTAGE_DROP",
+    "brief": false,
+    "move": "regauge",
+    "note": "dc.pumpfeed: 14 AWG -> 12 AWG",
     "kept": true,
     "before": 3,
     "after": 2
    },
    {
-    "step": 20,
+    "step": 24,
     "answering": "PLATE_TIE_REQUIRED",
     "brief": false,
     "move": "strap",
@@ -304,7 +344,7 @@
     "after": 1
    },
    {
-    "step": 21,
+    "step": 25,
     "answering": "PLATE_TIE_REQUIRED",
     "brief": false,
     "move": "strap",

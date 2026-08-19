@@ -397,7 +397,13 @@ export function electrical(w, log = []) {
     w.get(`pv.${i + 1}`).meta.pvWatts = 200;
     w.get(`pv.${i + 1}`).system = 'power';
   }
-  put('mppt', 'controller', [84.3, WALL_FACE.N - 1.5, 78], [8, 3, 10], {}, 'MPPT charge controller, screwed to a stud on the end wall');
+  // The end wall is where the bed is. Panels went there because it was a flat
+  // surface, and the model then reported 100% of the standing space in front of
+  // all three taken by the bed base and the mattress: a fuse box you can only
+  // reach by crawling across a mattress. They move to the aisle wall between the
+  // bathroom and the dinette, which is the only stretch of this trailer with
+  // 36 in of clear floor in front of it.
+  put('mppt', 'controller', [WALL_FACE.W + 1.5, 88.75, 80], [3, 8, 10], {}, 'MPPT charge controller on the aisle wall');
   for (const [i, x] of [22, 40].entries()) {
     log.push(step(w, 'source', { id: `battery.${i + 1}`, system: 'power', at: [x, 226, D + 8],
       size: [13, 7, 9], layer: 'interior', hostedBy: 'bed.base' }, '100 Ah LiFePO4'));
@@ -405,8 +411,8 @@ export function electrical(w, log = []) {
     w.get(`battery.${i + 1}`).meta.volts = 12;
   }
   put('inverter', 'inverter', [62, 226, D + 8], [12, 7, 8], { layer: 'interior', host: 'bed.base' }, '2 kW pure sine');
-  put('dc.panel', 'panel', [20.3, WALL_FACE.N - 1.5, 62], [9, 3, 7], {}, '12 V fuse block on stud.N.20');
-  put('ac.panel', 'panel', [84.3, WALL_FACE.N - 1.5, 62], [9, 3, 7], {}, '120 V breakers on stud.N.84');
+  put('dc.panel', 'panel', [WALL_FACE.W + 1.5, 88.75, 62], [3, 9, 7], {}, '12 V fuse block, with somewhere to stand in front of it');
+  put('ac.panel', 'panel', [WALL_FACE.W + 1.5, 104.75, 62], [3, 9, 7], {}, '120 V breakers beside it');
 
   // loads
   // A puck screws to the underside of a rafter. It therefore lives under a rafter.
@@ -439,17 +445,17 @@ export function electrical(w, log = []) {
   // wiring — deliberately gauged the way it would be guessed, so the drop can answer
   const R = (run, path, dia, amps, awg, why, volts) =>
     log.push(step(w, 'route', { system: 'power', run, path, dia, amps, awg, volts: volts || 12 }, why));
-  R('pv.string', [[26, 70, ROOF_TOP], [76, 70, ROOF_TOP], [76, 230, ROOF_TOP], [84.3, 234, 78]], 0.5, 17, '10', 'string across both panels, then down to the controller');
-  R('mppt.bank', [[84.3, 234, 78], [40, 226, D + 8]], 0.6, 30, '8', 'controller to the bank');
+  R('pv.string', [[26, 70, ROOF_TOP], [76, 70, ROOF_TOP], [76, 230, ROOF_TOP], [5, 88.75, 80]], 0.5, 17, '10', 'string across both panels, then down to the controller');
+  R('mppt.bank', [[5, 88.75, 80], [40, 226, D + 8]], 0.6, 30, '8', 'controller to the bank');
   R('bank.inverter', [[40, 226, D + 8], [62, 226, D + 8]], 1.0, 167, '8', 'bank to the inverter');
-  R('bank.dc', [[40, 226, D + 8], [20.3, 234, 62]], 0.6, 40, '8', 'bank to the fuse block');
-  R('inv.ac', [[62, 226, D + 8], [84.3, 234, 62]], 0.5, 17, '12', 'inverter to the breakers', 120);
-  R('dc.lights', [[20.3, 234, 62], [50.5, 208.75, 104], [50.5, 16.75, 104]], 0.3, 1.5, '18', 'one run down the centre for the pucks');
-  R('dc.fridge', [[20.3, 234, 62], [86, 120, 100], [86, 104, D + 8]], 0.3, 3.8, '14', 'fridge circuit');
-  R('dc.pumpfeed', [[20.3, 234, 62], [70, 196, D + 5]], 0.3, 5, '14', 'pump circuit');
-  R('dc.fan', [[20.3, 234, 62], [80, 30, 100], [80, 16.75, 104]], 0.3, 1.3, '18', 'bath extract');
-  R('ac.outlets', [[84.3, 234, 62], [4.25, 192.75, D + 20], [4.25, 48.75, D + 20]], 0.3, 3, '14', 'outlet ring west, at socket height', 120);
-  R('ac.outlets.e', [[84.3, 234, 62], [96.75, 160.75, D + 20], [96.75, 144.75, D + 20]], 0.3, 3, '14', 'and east', 120);
+  R('bank.dc', [[40, 226, D + 8], [5, 88.75, 62]], 0.6, 40, '8', 'bank to the fuse block');
+  R('inv.ac', [[62, 226, D + 8], [5, 104.75, 62]], 0.5, 17, '12', 'inverter to the breakers', 120);
+  R('dc.lights', [[5, 88.75, 62], [50.5, 208.75, 104], [50.5, 16.75, 104]], 0.3, 1.5, '18', 'one run down the centre for the pucks');
+  R('dc.fridge', [[5, 88.75, 62], [86, 120, 100], [86, 104, D + 8]], 0.3, 3.8, '14', 'fridge circuit');
+  R('dc.pumpfeed', [[5, 88.75, 62], [70, 196, D + 5]], 0.3, 5, '14', 'pump circuit');
+  R('dc.fan', [[5, 88.75, 62], [80, 30, 100], [80, 16.75, 104]], 0.3, 1.3, '18', 'bath extract');
+  R('ac.outlets', [[5, 104.75, 62], [4.25, 192.75, D + 20], [4.25, 48.75, D + 20]], 0.3, 3, '14', 'outlet ring west, at socket height', 120);
+  R('ac.outlets.e', [[5, 104.75, 62], [96.75, 160.75, D + 20], [96.75, 144.75, D + 20]], 0.3, 3, '14', 'and east', 120);
   return log;
 }
 

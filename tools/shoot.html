@@ -1,0 +1,65 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>shoot</title>
+<style>html,body{margin:0;background:#0b0e12}canvas{display:block;width:100vw;height:100vh}</style>
+<canvas id="c"></canvas>
+<script type="importmap">
+{"imports":{"three":"../vendor/three/three.module.min.js","three/addons/":"../vendor/three/addons/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { View } from '../operative/view.js';
+import { build } from '../operative/ingold.js';
+import { VIEWS, place, byId } from '../operative/views.js';
+
+const view = new View(document.getElementById('c'));
+const { world, loop } = build();
+view.sync(world);
+view.resize();
+
+// Point the camera at a named view instead of orbiting to it. The whole reason
+// this page exists is that one three-quarter shot of one corner was the only
+// picture anyone ever took of this building.
+function look(id) {
+  const v = byId(id);
+  const p = place(world, v, 45, view.camera.aspect);
+  // Drive the camera directly. OrbitControls clamps the polar angle just short of
+  // horizontal and damps toward its own target, which is fine for a finger on
+  // glass and wrong for a survey: every interior frame came back a flat brown
+  // rectangle because the controls swung the camera back into a wall.
+  view.controls.enabled = false;
+  view.camera.fov = p.fov;
+  view.camera.near = 0.5;
+  view.camera.updateProjectionMatrix();
+  view.camera.position.set(...p.eye);
+  view.camera.up.set(0, 0, 1);
+  view.camera.lookAt(...p.target);
+  view.camera.updateMatrixWorld(true);
+  // X-ray drops the skin so the services read; that is the only view that hides
+  // anything, and it says so in its name.
+  const hide = v.xray ? new Set(['sheathing', 'deck', 'wellcap']) : null;
+  for (const [id, m] of view.meshes) {
+    const el = world.get(id);
+    if (!el) continue;
+    m.visible = !hide || !hide.has(el.kind);
+    const ghost = v.xray && ['stud', 'plate', 'joist', 'rafter', 'cabinet', 'bed', 'bench', 'counter'].includes(el.kind);
+    m.material.transparent = true;
+    m.material.opacity = ghost ? 0.2 : 1;
+  }
+  view.render();
+  return { id: v.id, label: v.label, eye: p.eye, target: p.target };
+}
+window.probe = (id) => {
+  look(id);
+  const rc = new THREE.Raycaster();
+  rc.setFromCamera(new THREE.Vector2(0, 0), view.camera);
+  const hits = rc.intersectObjects([view.elementGroup, view.serviceGroup], true)
+    .filter(h => h.object.visible).slice(0, 5)
+    .map(h => ({ id: h.object.userData.id, d: +h.distance.toFixed(1) }));
+  return { eye: view.camera.position.toArray().map(n => +n.toFixed(1)), hits };
+};
+window.shoot = { look, world, loop, VIEWS: VIEWS.map(v => ({ id: v.id, label: v.label, kind: v.kind })),
+  stats: { members: world.elements.size, joints: world.joints.size,
+           open: world.conditions.map(c => ({ code: c.code, message: c.message })), state: loop.state } };
+window.ready = true;
+</script>

@@ -14,7 +14,7 @@ Open `operative-builder.html` from GitHub Pages or any local static server
 Everything else runs offline: `three` (r185, MIT) is vendored under
 `vendor/three/`, and the reference studies are read from this repository.
 
-Run the receipts with `node tests/run.mjs` (183 assertions, no dependencies).
+Run the receipts with `node tests/run.mjs` (228 assertions, no dependencies).
 
 The trailer is a working MEP model, not decorated geometry: **289 members**, five
 connected systems, and every device on its system's graph.
@@ -33,10 +33,10 @@ chase. Conductors are sized against **both** ampacity (NEC 310.16) and 3% voltag
 drop; traps against trap-arm limits (IPC 909.1).
 
 **`ingold-trailer.html` is the building this was for.** The environment above is the
-means; the trailer is the result. 289 members and 400 joints on the reference
+means; the trailer is the result. 340 members and 432 joints on the reference
 sheets' 8'-6" x 20'-0" envelope: bath, galley, dinette, bed, five headed
 openings, and water, waste and off-grid power as connected systems. Nobody
-scripted it — the builder ran the loop for 18 decisions and settled with nothing
+scripted it — the builder ran the loop for 26 decisions and settled with nothing
 outstanding, and the page replays its own construction move by move, with what
 the building answered at each one. `making-of.html` shows the 18 decisions as a
 table and the session that produced them as a plain transcript.
@@ -61,6 +61,9 @@ operative/
   ops.js         the operative vocabulary; every move reversible and journalled
   joints.js      the fastening schedule — what actually holds two members together
   loop.js        the builder's own loop: rank, choose, preview, act, verify, walk back
+  gravity.js     switch gravity on and see what falls; working space you can stand in
+  views.js       twelve named cameras, and the rule for which one to look from next
+  critic.js      the suck score protocol — fucked until proven otherwise
   reference.js   STL silhouette extraction and comparison against the concepts
   language.js    sentences become operations
   invariants.js  rules promoted at runtime after repeated failure
@@ -132,10 +135,62 @@ Deterministic, measured, and each citing its basis:
 | `PROFILE_DEVIATION` | the silhouette disagrees with the bound concept study |
 | `UNJOINED` | two members are touching where the schedule requires fasteners, and there are none |
 | `UNDER_NAILED` | a joint exists but carries fewer fasteners than its schedule row requires |
+| `FLOATING` | nothing holds it; the measure is how far it would fall |
+| `ACCESS_BLOCKED` | you cannot stand where you would have to stand to reach it (NEC 110.26(A), IFGC 303) |
 
 The support graph distinguishes **bearing** (gravity, seated) from **fastening**
 (nailed, welded, lagged), because construction does. Sheathing hangs; a
 crossmember is welded to a rail web; neither is carrying the building.
+
+## Switch gravity on
+
+For a long time this check carried an exemption:
+
+```js
+if (e.layer === 'services') continue;
+// Service equipment is strapped to framing rather than stacked, so it is
+// asked for continuity (check 6) instead of for a gravity path.
+```
+
+The floating things were exempted from the floating check, with a justification
+written next to them. Switch gravity on and **23 of 214 solids fell a total of
+678 in**. Six ceiling lights fell 85 in each. Two distribution panels, a charge
+controller and four outlets fell 18 in. The world had been asked whether the
+lights were *wired*, never whether they were *held*.
+
+`FLOATING` replaces the exemption, and the measure is the honest one: how far
+would it fall. The repairs are `mount` (bring it into contact and screw it off),
+`hanger` (bridge the gap without moving the thing — a drain that falls 1.25 in
+across the trailer must not be shoved 2.5 in to reach the deck), and `blocking`
+(a 2x4 flat between the nearest members, what an electrician does when the box
+lands in a bay). Each of them refuses rather than inventing: mounting something
+six inches from its support is relocating it, and blocking to catch an object
+four feet from any framing is not blocking.
+
+The 20-footer now holds every one of its own parts. **0 of 262 solids fall.**
+
+## Nothing is collided with, and still in the way
+
+> "we have hanging shelves that cover things"
+
+A model that only asks whether parts collide will never say this. The bed was not
+*touching* the fuse panel — it was parked in front of it, and every geometric
+check passed while the panel was unreachable.
+
+`ACCESS_BLOCKED` measures the floor of the working space a rule requires: NEC
+110.26(A) is 30 in wide, 36 in deep and 78 in high of clear floor in front of
+anything you have to open. It reported 100% of the standing space in front of the
+fuse block, the breakers and the inverter taken by the bed base and the mattress.
+The panels moved to the aisle wall, which is the only stretch of this trailer with
+36 in of clear floor in front of it.
+
+Two things that version got wrong and this one does not: the rule is keyed on
+`meta.role`, not on `kind` — every panel in this trailer is kind `fixture`, so a
+kind-keyed rule quietly matched a generic 12 in cube and never fired. And it is
+deliberately short. The first version put a rule on every fixture and reported
+twenty-one violations, most of them nonsense: a sink is *supposed* to be in a
+counter, a shower pan is *supposed* to be in a floor. A check that cries about the
+sink teaches you to ignore it when it cries about the fuse box.
 
 ## Nothing is connected until it is nailed
 
@@ -480,3 +535,130 @@ profile deviations stay open: a standard 80 in door forced this trailer 30 in
 taller than the concept study it is being compared against, and the study has a
 covered porch on its east side that this build does not. Neither is a code
 failure. They are recorded, measured, and left for the next move.
+
+
+## Fucked until proven otherwise
+
+Every condition above answers a question someone thought to ask. `whats-fucked.html`
+exists for the enormous set of problems nobody thought to ask about — the ones you
+can only find by looking at the thing.
+
+```
+BUILD -> TAKE PICTURE -> REFERENCE vs PICTURE -> ASSUME IT IS FUCKED ->
+WHAT SUCKS? -> SUCK SCORE -> CRITICISM BECOMES THE NEXT PROMPT -> BUILD AGAIN
+```
+
+The rule that makes this different from a scoring loop: **a low score is not a
+result.** It means this camera failed to find a problem, so it triggers a move.
+
+```
+"Looks good from here."   ->   "Fine. Look somewhere else."
+```
+
+### Are we not taking enough photos?
+
+We were not. Every screenshot in this repository until `tools/shoot.mjs` existed
+was the same three-quarter view of the same corner. Six ceiling lights hung in
+mid-air across a dozen of them because no picture ever looked up. The first
+interior photograph ever taken of this trailer came back a flat brown rectangle:
+a conduit run from the fuse block to the bathroom fan, drawn as a box around its
+two endpoints, was a **60 x 204 x 38 in solid block** sitting in the middle of the
+room. Real conduit runs in axial legs along the framing, so `route` expands a path
+into legs before building anything from it — rise early, fall late, except for
+gravity drainage, where a shallow slope is a fall and squaring it off costs the
+drain every inch of it.
+
+`views.js` holds twelve named cameras — front, rear, left, right, two
+three-quarters, plan, three interiors, the underside, an x-ray — and three rules
+for choosing the next one:
+
+1. the view that would show what was just criticised
+2. after a repair, the opposite of where the repair was judged from
+3. otherwise the least recently inspected
+
+No camera-planning intelligence. The third rule guarantees every view comes round.
+
+### The score is the worst view, never the average
+
+```
+front 8   left 12   rear 76   interior 84   plan 21
+```
+
+The mean is 40.2, which disguises the failure completely. A building that works
+from four views and falls apart from the fifth is fucked. `worldScore` takes the
+max and names which view it came from.
+
+### It is never DONE
+
+`settlement()` returns **NOT CURRENTLY FUCKED**, and only when a full sweep of
+materially different views — three exterior, two interior, a plan, a service view
+— has each recently failed to find a problem *and* no deterministic check is open.
+Any new camera, request, structural check or reference discrepancy reopens it.
+
+### Two agents, two context windows
+
+The critic gets the reference image and the render, and is told to assume the
+build is fucked, to say what it actually sees, and not to propose a fix — an
+evaluator that proposes repairs starts defending them. The builder gets the
+criticism **verbatim**, with the linters simply joining the accusation:
+
+```
+WHAT SUCKS VISUALLY:
+The table appears to float slightly above the floor.
+
+WHAT SUCKS DETERMINISTICALLY:
+FLOATING table is held by nothing; switch gravity on and it falls 2.3 in
+ACCESS_BLOCKED 100% of the space you have to stand in to reach dc.panel is taken by bed.base
+```
+
+No translation layer. The builder answers with a JSON array of operations, which
+are validated against the real vocabulary before anything touches the building —
+and that vocabulary is **read off the functions**, not written down. A hand-kept
+list goes stale and the builder starts calling `move(id, by)` against
+`move(id, delta)`, which the world refuses so quietly it looks like nothing
+happened. When a move does not land, the refusal goes back to the builder as the
+next accusation.
+
+With no API key the critic is the linters: deterministic, honest, and blind to
+everything nobody thought to check. That blindness is the argument for the other
+mode, and the taxonomy makes it in one table.
+
+## What kinds of thing actually go wrong
+
+`node tools/taxonomy.mjs` counts three separate populations, kept separate because
+confusing them is how you end up believing the model is fine.
+
+**What the checks caught, building the trailer:**
+
+```
+SERVICE_ORPHAN   38    UNJOINED             29    FLOATING             24
+ONE_END_BEARING   6    VOLTAGE_DROP          6    OPENING_UNHEADED      5
+OVERLAP           3    PLATE_TIE_REQUIRED    2    NO_TRAP               1
+UNVENTED_TRAP     1    EDGE_CLEARANCE        1    UNDERSIZED_CONDUCTOR  1
+```
+
+**What a person caught by looking at a picture**, lifted from the Operative
+Correspondent chat archive:
+
+```
+7  the roof is wrong
+2  things do not connect
+1  proportion and count
+1  openings and surface are illegible
+1  other
+```
+
+Not one condition code in the first list is about the roof reading wrong, about
+proportion, or about legibility. The second list is not a subset of the first,
+and that is the whole argument for a critic.
+
+## Which picture is which
+
+> "can we tell from the context windows and the record which images came from the
+> scene and which is the reference?"
+
+Only if it is recorded at the moment of capture, so it is. Every render carries
+`origin: 'render'` and the view it was taken from; a reference carries
+`origin: 'reference'` and never enters the observation list. `assets/views/manifest.json`
+records it for the shot set, the page labels each thumbnail REFERENCE or RENDER in
+the log, and the observation objects the critic scores carry it too.

@@ -101,27 +101,50 @@ export function mountsFor(world, e, reach = REACH) {
  */
 export const WORKSPACE = { width: 30, depth: 36, height: 78 };
 
-/** Kinds that need to be reachable, and how much room each needs in front. */
+/**
+ * What has to be reachable, and how much room in front of it.
+ *
+ * Keyed on the *role*, and deliberately short. The first version put a rule on
+ * every `fixture` and reported twenty-one violations, most of them nonsense: a
+ * sink is supposed to be in a counter, a shower pan is supposed to be in a floor,
+ * and a PV panel on a roof is not something you stand in front of. A check that
+ * cries about the sink teaches you to ignore it when it cries about the fuse box.
+ *
+ * These five are the things a person has to walk up to, open, and work on.
+ */
 export const CLEARANCE = {
-  panel:    { depth: 36, width: 30, height: 78, basis: 'NEC 110.26(A)', why: 'you have to be able to open it and stand there' },
+  panel:      { depth: 36, width: 30, height: 78, basis: 'NEC 110.26(A)', why: 'you have to be able to open it and stand there' },
   controller: { depth: 30, width: 24, height: 60, basis: 'NEC 110.26(A)', why: 'a charge controller is serviced in place' },
-  battery:  { depth: 24, width: 24, height: 36, basis: 'NEC 110.26(A)', why: 'terminals get torqued and cells get checked' },
-  source:   { depth: 18, width: 18, height: 30, basis: 'IFGC 303', why: 'a shutoff you cannot reach is not a shutoff' },
-  fixture:  { depth: 12, width: 12, height: 12, basis: 'field practice', why: 'a fixture behind a cabinet cannot be serviced or used' }
+  inverter:   { depth: 30, width: 24, height: 48, basis: 'NEC 110.26(A)', why: 'an inverter is serviced in place' },
+  battery:    { depth: 24, width: 24, height: 36, basis: 'NEC 110.26(A)', why: 'terminals get torqued and cells get checked' },
+  regulator:  { depth: 18, width: 18, height: 30, basis: 'IFGC 303', why: 'a shutoff you cannot reach is not a shutoff' }
 };
+
+/** Structure is the room, not clutter in it. You stand on the floor. */
+export const NOT_AN_OBSTRUCTION = new Set([
+  'deck', 'joist', 'chassis', 'pad', 'wheel', 'rafter', 'purlin', 'sheathing',
+  'plate', 'stud', 'king', 'jack', 'cripple', 'header', 'blocking', 'strap',
+  'hanger', 'wellcap', 'wellside', 'panel', 'opening'
+]);
 
 /** The box in front of e that has to stay empty, on the wall face it opens from. */
 export function workspaceOf(world, e) {
-  const c = CLEARANCE[e.kind] || (e.meta && e.meta.serviceable ? CLEARANCE.fixture : null);
+  // `fixture` is the element kind for everything from an outlet to a fuse block;
+  // what it actually *is* lives in meta.role. Keyed on kind alone this rule never
+  // fired once, on any panel, in a trailer full of them.
+  const role = e.meta && e.meta.role;
+  // role first: every panel in this trailer is kind 'fixture', so keying on kind
+  // matched the generic fixture rule and a 12 in cube stood in for NEC's 30 x 36 x 78.
+  const c = CLEARANCE[role] || CLEARANCE[e.kind] || null;
   if (!c) return null;
-  // the face it opens from: the widest horizontal face, pointing away from the
-  // nearest wall. Mounted on the E wall, it opens west.
-  const cx = (e.lo[0] + e.hi[0]) / 2, cy = (e.lo[1] + e.hi[1]) / 2;
-  const W = world.walls || {};
-  let axis = 0, dir = 1;
-  const spanX = e.hi[0] - e.lo[0], spanY = e.hi[1] - e.lo[1];
-  if (spanX <= spanY) { axis = 0; dir = cx < ((W.E && W.E.at) || 51) ? 1 : -1; }
-  else { axis = 1; dir = cy < ((W.N && W.N.at) || 120) ? 1 : -1; }
+  if (e.lo[2] > 100) return null;      // roof-mounted: you get to it from outside, on a ladder
+  // It opens off its thin axis, facing into the building. Guessing the direction
+  // from which side of a wall line it fell on put the fuse block's working space
+  // outside the trailer, where nothing could ever intrude on it.
+  const b = worldCentre(world);
+  const ec = [0, 1, 2].map(i => (e.lo[i] + e.hi[i]) / 2);
+  const axis = (e.hi[0] - e.lo[0]) <= (e.hi[1] - e.lo[1]) ? 0 : 1;
+  const dir = b[axis] >= ec[axis] ? 1 : -1;
   const lo = [e.lo[0], e.lo[1], e.lo[2]], hi = [e.hi[0], e.hi[1], e.hi[2]];
   const other = axis === 0 ? 1 : 0;
   const octr = (lo[other] + hi[other]) / 2;
@@ -131,6 +154,32 @@ export function workspaceOf(world, e) {
   if (dir > 0) { lo[axis] = hi[axis]; hi[axis] = lo[axis] + c.depth; }
   else { hi[axis] = lo[axis]; lo[axis] = hi[axis] - c.depth; }
   return { lo, hi, rule: c, axis, dir };
+}
+
+/**
+ * How much of the working space's *floor* is taken, which is the thing the rule
+ * is actually about. Measured as a volume fraction, a bed base filling the whole
+ * standing area of a 30 x 36 x 78 in space scored 8%, because most of that box is
+ * air above head height. You cannot stand in the 8%.
+ */
+export function blockage(world, space, ignore = new Set()) {
+  const area = (space.hi[0] - space.lo[0]) * (space.hi[1] - space.lo[1]);
+  if (area <= 0) return { fraction: 0, by: [] };
+  const by = [];
+  let covered = 0;
+  for (const o of world.solids()) {
+    if (ignore.has(o.id)) continue;
+    if (o.kind === 'run' || o.layer === 'services') continue;   // a wire is not an obstruction
+    if (NOT_AN_OBSTRUCTION.has(o.kind)) continue;               // nor is the floor you stand on
+    if (o.hi[2] <= space.lo[2] + 0.5 || o.lo[2] >= space.hi[2] - 0.5) continue;
+    const ox = Math.min(space.hi[0], o.hi[0]) - Math.max(space.lo[0], o.lo[0]);
+    const oy = Math.min(space.hi[1], o.hi[1]) - Math.max(space.lo[1], o.lo[1]);
+    if (ox <= 0.5 || oy <= 0.5) continue;
+    covered += ox * oy;
+    by.push({ id: o.id, kind: o.kind, part: +(ox * oy / area).toFixed(2) });
+  }
+  by.sort((a, b) => b.part - a.part);
+  return { fraction: Math.min(1, +(covered / area).toFixed(2)), by };
 }
 
 /** How much of a box another solid eats, as a fraction of that box's volume. */
@@ -155,4 +204,13 @@ export function daylightOf(world, op, depth = 24) {
   if (inward > 0) { lo[axis] = hi[axis]; hi[axis] = lo[axis] + depth; }
   else { hi[axis] = lo[axis]; lo[axis] = hi[axis] - depth; }
   return { lo, hi, axis };
+}
+
+/** Centre of the framed box, used to work out which way a wall-mounted thing faces. */
+export function worldCentre(world) {
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  const pool = world.solids().filter(e => e.layer === 'frame');
+  for (const e of (pool.length ? pool : world.solids()))
+    for (let i = 0; i < 3; i++) { lo[i] = Math.min(lo[i], e.lo[i]); hi[i] = Math.max(hi[i], e.hi[i]); }
+  return [0, 1, 2].map(i => (lo[i] + hi[i]) / 2);
 }

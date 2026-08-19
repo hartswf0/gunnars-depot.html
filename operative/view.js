@@ -25,7 +25,10 @@ export const SEVERITY_COLOR = { 3: 0xef4444, 2: 0xf97316, 1: 0xfacc15 };
 export class View {
   constructor(canvas) {
     this.canvas = canvas;
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    // preserveDrawingBuffer so the frame can be read back after it is drawn. The
+    // critic loop photographs the canvas; without this the buffer is already
+    // cleared by the time toDataURL runs and every picture comes back black.
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, preserveDrawingBuffer: true });
     this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0d1014);

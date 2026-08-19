@@ -1,0 +1,151 @@
+{
+ "built": {
+  "members": 340,
+  "joints": 432,
+  "state": "SETTLED",
+  "decisions": 26,
+  "stillOpen": 0
+ },
+ "conditions": [
+  {
+   "code": "SERVICE_ORPHAN",
+   "opened": 38,
+   "closed": 38,
+   "example": "lav is not connected to any water source"
+  },
+  {
+   "code": "UNJOINED",
+   "opened": 29,
+   "closed": 30,
+   "example": "8 contacts are touching but not nailed (sole.W.0/king.door.entry.0, sole.W.0/king.door.entry.1, top1.W/king.door.entry.0, …)"
+  },
+  {
+   "code": "FLOATING",
+   "opened": 24,
+   "closed": 42,
+   "example": "table is held by nothing; switch gravity on and it falls 14 in"
+  },
+  {
+   "code": "ONE_END_BEARING",
+   "opened": 6,
+   "closed": 6,
+   "example": "rafter.17 bears at one end only (on light.1); the other end is in the air"
+  },
+  {
+   "code": "VOLTAGE_DROP",
+   "opened": 6,
+   "closed": 6,
+   "example": "pv.string: 17 A over 37.9 ft of 10 AWG drops 1.29 V (10.8% of 12 V); 3% is the limit"
+  },
+  {
+   "code": "OPENING_UNHEADED",
+   "opened": 5,
+   "closed": 5,
+   "example": "door.entry interrupted 2 studs with nothing carrying the load over it"
+  },
+  {
+   "code": "OVERLAP",
+   "opened": 3,
+   "closed": 3,
+   "example": "cab.galley and trap.sink occupy the same 3.75 in of space"
+  },
+  {
+   "code": "PLATE_TIE_REQUIRED",
+   "opened": 2,
+   "closed": 2,
+   "example": "2.00 in bore removes 57% of top1.E; a plate cut past 50% needs a steel tie"
+  },
+  {
+   "code": "NO_TRAP",
+   "opened": 1,
+   "closed": 1,
+   "example": "shower.pan drains straight to the line with no trap — sewer gas has a clear path into the room"
+  },
+  {
+   "code": "UNVENTED_TRAP",
+   "opened": 1,
+   "closed": 1,
+   "example": "trap.shower.pan is unvented from the nearest vent; a 1.5 in trap arm may run 72 in"
+  },
+  {
+   "code": "EDGE_CLEARANCE",
+   "opened": 1,
+   "closed": 1,
+   "example": "bore in joist.113 sits -0.19 in from the edge; joists need 2 in"
+  },
+  {
+   "code": "UNDERSIZED_CONDUCTOR",
+   "opened": 1,
+   "closed": 1,
+   "example": "bank.inverter carries 167 A on 8 AWG, which is rated 50 A"
+  }
+ ],
+ "session": {
+  "loops": 216,
+  "failed": 8,
+  "kinds": [
+   {
+    "name": "a check refused the change",
+    "n": 3
+   },
+   {
+    "name": "ran too long",
+    "n": 2
+   },
+   {
+    "name": "other",
+    "n": 2
+   },
+   {
+    "name": "wrong assumption about an API",
+    "n": 1
+   }
+  ],
+  "byPhase": [
+   {
+    "name": "verify",
+    "n": 7
+   },
+   {
+    "name": "orient",
+    "n": 1
+   }
+  ]
+ },
+ "seen": {
+  "comparisons": 12,
+  "kinds": [
+   {
+    "name": "the roof is wrong",
+    "n": 7
+   },
+   {
+    "name": "things do not connect",
+    "n": 2
+   },
+   {
+    "name": "other",
+    "n": 1
+   },
+   {
+    "name": "proportion and count",
+    "n": 1
+   },
+   {
+    "name": "openings and surface are illegible",
+    "n": 1
+   }
+  ],
+  "examples": [
+   "windmill: The sails looked structurally/silhouettically wrong despite passing symbolic count constraints.",
+   "typewriter: Entry/stairs did not connect and keys/typewriter identity were insufficiently legible.",
+   "rabbit: Box house with rabbit parts; wrong camera, muzzle/head/body hierarchy.",
+   "rabbit: Door/nose/entry/haunches remained unresolved; triggered anatomy rebuild.",
+   "taj-mahal: Giant spherical dome, blank facade, weak iwan and tower/podium proportions.",
+   "taj-mahal: Front and dome still wrong; triggered iwan/onion-dome rebuild.",
+   "taj-mahal: Roof terrace projected outside facade envelope.",
+   "parthenon: Roof geometry visibly crossed/broke."
+  ]
+ },
+ "note": "CONDITIONS are what the checks caught. SEEN is what a person caught by looking. The second list is not a subset of the first, which is the whole argument for a critic."
+}
