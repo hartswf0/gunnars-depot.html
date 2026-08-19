@@ -7,8 +7,9 @@ import { Element, SECTIONS } from './world.js';
 import { box } from './geom.js';
 import { poly, segmentPoly, aabb } from './poly.js';
 import { checkAll, SPAN_TABLE, BORE } from './checks.js';
-import { scheduleFor, required, joinKey } from './joints.js';
+import { scheduleFor, required, joinKey, scheduleForPair, sortOf } from './joints.js';
 import { mountsFor, REACH } from './gravity.js';
+import { artificial, TARGET_FC } from './light.js';
 
 const key = (c) => `${c.code}:${c.elements.join('|')}`;
 
@@ -243,6 +244,14 @@ export function signatures() {
 export function vocabulary() {
   const sig = signatures();
   return Object.keys(sig).sort().map(k => `${k}(${sig[k].join(', ')})`).join('\n');
+}
+
+/** The roof plane an element comes through, if any. */
+function roofUnder(world, e) {
+  return world.solids().find(p => p.layer === 'roof' && p.kind === 'panel' &&
+    e.lo[2] < p.hi[2] && e.hi[2] > p.lo[2] &&
+    Math.min(p.hi[0], e.hi[0]) - Math.max(p.lo[0], e.lo[0]) > 0.1 &&
+    Math.min(p.hi[1], e.hi[1]) - Math.max(p.lo[1], e.lo[1]) > 0.1) || null;
 }
 
 /** Is this element a point on some service run? Then its position is a decision. */
@@ -792,7 +801,7 @@ export const OPS = {
   join(world, { a, b, count, type, size, how }) {
     const A = world.get(a), B = world.get(b);
     if (!A || !B) return { ok: false, note: `need both ${a} and ${b}` };
-    const rule = scheduleFor(A.kind, B.kind);
+    const rule = scheduleForPair(A, B);
     const len = contactLength(A, B);
     const need = rule ? required(rule, len) : 2;
     const j = {
@@ -820,7 +829,7 @@ export const OPS = {
         const A = world.get(id), B = world.get(u.id);
         if (!A || !B) continue;
         if (world.joints.has(joinKey(id, u.id))) continue;
-        const rule = scheduleFor(A.kind, B.kind);
+        const rule = scheduleForPair(A, B);
         if (!rule) { skipped++; continue; }
         if (only && ![A.kind, B.kind].includes(only)) continue;
         const r = OPS.join(world, { a: id, b: u.id });
@@ -1010,6 +1019,86 @@ export const OPS = {
     const m = OPS.mount(world, { id, to: bid });
     return { changed: [bid, id, first.id, mate.o.id],
       note: `2x4 blocking between ${first.id} and ${mate.o.id}; ${m.ok === false ? m.note : m.note}` };
+  },
+
+  /**
+   * Flash a penetration. A pipe through a roof is a hole in the only surface
+   * keeping water out, and flashing is a *thing* — a collar and an apron — not an
+   * attribute. If the model does not contain it, it is not on the building.
+   */
+  flash(world, { id, through }) {
+    const e = world.get(id);
+    if (!e) return { ok: false, note: `no element "${id}"` };
+    const roof = through ? world.get(through) : roofUnder(world, e);
+    if (!roof) return { ok: false, note: `${id} does not come through anything` };
+    const fid = `flash.${id}`;
+    if (world.get(fid)) return { ok: false, note: `${fid} already exists` };
+    // An apron 8 in all round, clipped to the roof it sits on. A vent 2 in from the
+    // edge got an apron that hung 3.5 in past it and put the trailer at 104.5 in
+    // overall — the flashing broke the towing envelope.
+    const pad = 8;
+    const lo = [0, 1].map(i => Math.max(roof.lo[i], e.lo[i] - pad));
+    const hi = [0, 1].map(i => Math.min(roof.hi[i], e.hi[i] + pad));
+    const w = Math.min(hi[0] - lo[0], hi[1] - lo[1]);
+    world.add(new Element({ id: fid, kind: 'flashing', layer: 'roof', material: 'steel',
+      box: box([(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, roof.hi[2] + 0.03],
+               [hi[0] - lo[0], hi[1] - lo[1], 0.06]),      // sheet metal, drawn as sheet metal
+      meta: { role: 'flashing', seals: id, through: roof.id,
+              detail: 'apron on the roof, storm collar on the pipe' } }));
+    OPS.join(world, { a: fid, b: roof.id });
+    OPS.join(world, { a: fid, b: id });
+    return { changed: [fid, id, roof.id],
+      note: `${id} flashed where it comes through ${roof.id} — ${w.toFixed(0)} in apron and a storm collar` };
+  },
+
+  /**
+   * Put enough fasteners in. The shake test says what the joint has to carry; the
+   * schedule says what one fastener takes; this closes the gap rather than leaving
+   * a joint at 1.03 times its capacity and calling it fine.
+   */
+  refasten(world, { id, factor = 1.5 }) {
+    const e = world.get(id);
+    if (!e) return { ok: false, note: `no element "${id}"` };
+    const g = world.grounded();
+    const downs = (g.under.get(id) || []).filter(u => u.via !== 'touch');
+    if (!downs.length) return { ok: false, note: `${id} has nothing below it to fasten to` };
+    let raised = 0;
+    for (const u of downs) {
+      const key = joinKey(id, u.id);
+      const j = world.joints.get(key);
+      if (!j) { OPS.join(world, { a: id, b: u.id }); raised++; continue; }
+      const before = j.count;
+      j.count = Math.ceil(j.count * factor);
+      if (j.count > before) raised++;
+      e.trace.push({ t: world.clock + 1, kind: 'refastened',
+        note: `${before} -> ${j.count} ${j.size} to ${u.id}` });
+    }
+    return { changed: [id, ...downs.map(u => u.id)],
+      note: `${id}: ${raised} joint${raised === 1 ? '' : 's'} taken up to ${Math.round(factor * 100)}%` };
+  },
+
+  /**
+   * Put enough light in. Six 3 W pucks in a 168 sq ft house average 4.3
+   * foot-candles, which is a stairwell. The power budget passed the whole time,
+   * because 18 W is easy on a battery — the electrical system was optimised
+   * against a constraint that rewarded being dim.
+   */
+  relamp(world, { target = TARGET_FC, watts } = {}) {
+    const lamps = world.all().filter(e => (e.meta.role === 'light' || e.kind === 'light') && e.meta.watts);
+    if (!lamps.length) return { ok: false, note: 'there are no lamps to change' };
+    const a = artificial(world);
+    if (!a) return { ok: false, note: 'no floor to light' };
+    const each = watts || Math.ceil((a.wattsNeeded / lamps.length) * (target / TARGET_FC));
+    const before = a.watts;
+    for (const l of lamps) {
+      l.meta.watts = each;
+      l.trace.push({ t: world.clock + 1, kind: 'relamped', note: `${each} W` });
+    }
+    const after = artificial(world);
+    return { changed: lamps.map(l => l.id),
+      note: `${lamps.length} lamps ${before / lamps.length} W -> ${each} W each; ` +
+            `${after.average} fc average against a ${target} fc target ` +
+            `(${(each * lamps.length - before)} W more on the bank)` };
   },
 
   place(world, { id, kind, layer, at, size, material, section, shear }) {

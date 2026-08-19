@@ -14,7 +14,7 @@ Open `operative-builder.html` from GitHub Pages or any local static server
 Everything else runs offline: `three` (r185, MIT) is vendored under
 `vendor/three/`, and the reference studies are read from this repository.
 
-Run the receipts with `node tests/run.mjs` (228 assertions, no dependencies).
+Run the receipts with `node tests/run.mjs` (259 assertions, no dependencies).
 
 The trailer is a working MEP model, not decorated geometry: **289 members**, five
 connected systems, and every device on its system's graph.
@@ -62,6 +62,9 @@ operative/
   joints.js      the fastening schedule — what actually holds two members together
   loop.js        the builder's own loop: rank, choose, preview, act, verify, walk back
   gravity.js     switch gravity on and see what falls; working space you can stand in
+  loads.js       what it weighs, and what the road does to every fastener
+  weather.js     where the water goes: slope, ponding, penetrations, the drip line
+  light.js       can you see in here — daylight, and whether the lamps reach the floor
   views.js       twelve named cameras, and the rule for which one to look from next
   critic.js      the suck score protocol — fucked until proven otherwise
   reference.js   STL silhouette extraction and comparison against the concepts
@@ -137,6 +140,13 @@ Deterministic, measured, and each citing its basis:
 | `UNDER_NAILED` | a joint exists but carries fewer fasteners than its schedule row requires |
 | `FLOATING` | nothing holds it; the measure is how far it would fall |
 | `ACCESS_BLOCKED` | you cannot stand where you would have to stand to reach it (NEC 110.26(A), IFGC 303) |
+| `SHAKE_FAILURE` | a joint over capacity under road loads (FMCSA 393.102) |
+| `PONDING` | the roof is flatter than 1/4 in per foot, so water sits on it (IRC R905.10.1) |
+| `UNFLASHED` | something comes through the roof with nothing sealing it (IRC R903.2) |
+| `NO_DRIP_EDGE` | the roof does not project past the wall it drains onto (IRC R905.2.8.5) |
+| `UNLIT` | the lamps do not reach the floor |
+| `NO_DAYLIGHT` | glazing below 8% of the floor it serves (IRC R303.1) |
+| `NO_VIEW_OUT` | most of the floor cannot see a window from where a person sits |
 
 The support graph distinguishes **bearing** (gravity, seated) from **fastening**
 (nailed, welded, lagged), because construction does. Sheathing hangs; a
@@ -662,3 +672,118 @@ Only if it is recorded at the moment of capture, so it is. Every render carries
 `origin: 'reference'` and never enters the observation list. `assets/views/manifest.json`
 records it for the shot set, the page labels each thumbnail REFERENCE or RENDER in
 the log, and the observation objects the critic scores carry it too.
+
+
+## Four kinds of physics, and what each one found
+
+The deterministic checks up to this point were all about *geometry* — what
+touches what, what carries what, what fits. Four more were added because a
+building is not only a shape:
+
+### Shake it
+
+`loads.js`. 436 fasteners existed before anything ever *loaded* one. A schedule
+you never check is a schedule you are trusting, which is the same mistake as the
+support check that skipped services. A house is shaken by wind once in its life;
+a trailer is shaken every mile, so the cases are FMCSA 393.102 — 0.8 g panic
+stop, 0.5 g swerve, 0.2 g uplift over a crest — plus a 2 g landing.
+
+The first thing it found was not a fastener. **The trailer weighed 18,631 lb**,
+more than its own axles are rated for, because the model is *volumes*: a plastic
+water tank taken at steel's density weighed 4,492 lb, a C6 channel drawn at its
+3 x 6 in envelope weighed 1,225 lb, and a hollow storage platform weighed 1,300 lb
+of solid plywood. Steel is sold by the foot, tanks are water in a shell, and
+hollow things weigh their shell. It weighs 7,049 lb now.
+
+The second thing it found was that **the entire interior was unfastened** — see
+below.
+
+### Rain it
+
+`weather.js`. Rain is the cheapest physics there is: it falls, it runs downhill,
+and everywhere it stops or gets in is a place the building fails slowly instead
+of all at once.
+
+The roof had been **dead flat for the whole life of the project** and no check
+had ever mentioned it, because no check had ever been about water. It ponded, it
+had 0.5 in of projection past the wall, and four penetrations came through it
+with nothing sealing them.
+
+The fix generated a real design consequence. The road caps the width at 102 in
+and the skin was already at 102, so **an eave on the low side is illegal**. The
+fall goes across the width because that is where it fits; the overhang goes along
+the length because that is the only direction the road allows one; and the low
+side gets a drip edge turned *down* over the cladding instead of out past it. The
+first drip edge projected the 0.75 in a drip edge normally would and put the
+trailer at 103.3 in overall — the flashing broke the towing envelope, and the
+same constraint that forbade the eave forbade the detail's usual shape.
+
+### Look at it
+
+The three-quarter photograph showed daylight under the roof. The wall skin
+stopped at the top plate and the roof started at the underside of the rafters, so
+a pitched roof left **a band of open air right around the building** — 6 in on the
+high side, ramping on the ends, filled only by rafters at 16 in centres. Every
+check passed. None of them was about the envelope being *closed*.
+
+The end-wall infill is a triangle, and a sheared box is a parallelogram: drawn as
+one, its low corner dropped 3 in below the top plate and straight through the wall
+skin. It is framed the way it is actually framed, in stepped strips.
+
+### Light it
+
+`light.js`. Six 3 W pucks in a 168 sq ft house average **4.3 foot-candles**,
+which is a stairwell. The power budget had passed the whole time, because 18 W is
+easy on a battery — **the electrical system had been optimised against a
+constraint that rewarded being dim.** Two models, because they answer two
+questions: the lumen method gives the room its average, and a point-source pass
+finds the corner a cabinet is shadowing, which an average cannot. It runs at 42 W
+and 10.1 fc now.
+
+## One name per thing
+
+The model had two naming systems and they disagreed. `kind` is the structural
+class the geometry engine cares about — everything in the interior is `fixture`.
+`meta.role` is what the thing actually *is*: cabinet, bed, counter, fridge.
+
+Every rule written against `kind` alone silently missed. The NEC working
+clearance never fired on a single panel. The fastening schedule skipped the
+**entire interior** — fourteen `fixture`/`fixture` contacts including an 836 lb
+water tank sitting loose in a bed platform, found only when something finally
+tried to shake the trailer. Three separate rules, three separate misses, all the
+same cause. There is one `sortOf()` now, and everything asks it.
+
+A miss is silent. That is what makes it expensive.
+
+## The fly's eye
+
+> "think like this is inside a fly's eye and then we give the ai a sheet of many
+> images of it of each element"
+
+`tools/flyseye.mjs`. The twelve named views tell you about the building and almost
+nothing about the *parts*, because a part is four pixels in a photograph of a
+trailer. This takes a close-up of every element — subject painted, neighbours
+ghosted, a wireframe cage over the top — and lays them on one contact sheet.
+
+A model looking at one sheet of ninety tiles can compare them to each other. A
+model looking at ninety separate images cannot. Difference is easier to see than
+absence.
+
+Getting there took four failures worth keeping:
+
+1. At full opacity against 16% neighbours the subject was still unfindable — a
+   1.5 in stud is four pixels wide and the same brown as everything else. It gets
+   a colour nothing else in the model has.
+2. Ghosts at 10% still wrote depth, so on nineteen tiles the subject was hidden
+   behind something you could see straight through.
+3. Fifteen ghosts at 10% leave 21% of the subject showing, which against a dark
+   background is nothing. Hence the cage, drawn last, ignoring depth.
+4. **The camera moved between the render and the photograph.** The View runs an
+   animation loop that calls `controls.update()` every frame, and OrbitControls
+   damps the camera back toward its own remembered target. On a wide view the
+   drift is invisible. On a close-up the subject left the frame entirely — and
+   **forty-six tiles came back byte-identical while looking completely
+   plausible.** The only signal was the md5.
+
+That last one is the most useful failure in this repository. A camera that
+quietly disagrees with where you put it produces images that look like answers.

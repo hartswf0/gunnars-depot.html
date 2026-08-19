@@ -49,7 +49,24 @@ check('and it says how far each one would fall',
   JSON.stringify(stackedFloat[0] && stackedFloat[0].measure));
 const w0 = framed();
 w0.conditions = checkAll(w0);
-check('nailing it off settles it', w0.conditions.length === 0, w0.conditions.map(c => c.code).join(','));
+// The seed roof is dead flat on purpose, so the reference has something to argue
+// with. Nothing ever checked what water thinks of that until there was a check
+// about water, and then it turned out the deliberate choice was also a defect.
+// A nailed frame with no openings in it. Three checks have opinions about that
+// and none of them are about structure: the roof is flat, there is no glazing,
+// and from every point on the floor you cannot see out.
+check('a nailed frame is structurally sound and still not somewhere to live',
+  ['PONDING', 'NO_DAYLIGHT', 'NO_VIEW_OUT'].every(c => w0.conditions.some(x => x.code === c)) &&
+  w0.conditions.length === 3,
+  w0.conditions.map(c => c.code).join(','));
+check('and the daylight rule cites the fraction, not a feeling',
+  w0.conditions.find(c => c.code === 'NO_DAYLIGHT').measure.basis === 'IRC R303.1');
+const pitched = framed();
+commit(pitched, 'raise', { wall: 'W', by: 8 });
+commit(pitched, 'pitch', {});
+commit(pitched, 'nailOff', {});
+check('and pitching it is what closes it',
+  !checkAll(pitched).some(c => c.code === 'PONDING'), checkAll(pitched).map(c => c.code).join(','));
 const g0 = w0.grounded();
 check('every member has a load path', w0.solids().every(e => e.layer === 'services' || g0.seen.has(e.id)));
 check('sheathing hangs rather than bears', !g0.bearing.has('shell.W') && g0.seen.has('shell.W'));
@@ -78,7 +95,10 @@ while (steps++ < 6) {
   if (!n) break;
   commitChain(w, n.move.chain || [n.move], n.condition.code);
 }
-check('the world walked itself back to settled', w.conditions.length === 0, w.conditions.map(c => c.code).join(','));
+const HABITABILITY = ['PONDING', 'NO_DAYLIGHT', 'NO_VIEW_OUT', 'UNLIT'];
+check('the world walked itself back to settled',
+  w.conditions.filter(c => !HABITABILITY.includes(c.code)).length === 0,
+  w.conditions.map(c => c.code).join(','));
 check('it took more than one move', w.history.filter(h => h.kind === 'op').length >= 3);
 const hdr = w.get('header.door.S.20');
 check('a header now carries the opening', !!hdr && hdr.section.startsWith('(2)'));
@@ -134,9 +154,16 @@ const air = m.conditions.filter(c => c.code === 'FLOATING');
 check('the equipment is in the air until it is hung', air.length === 2, air.map(c => c.elements[0]).join(','));
 check('and the world proposes hanging it', air.every(c => c.repair && ['mount', 'blocking'].includes(c.repair.op)));
 const hung = commit(m, 'mountAll', {});
+const stillOpen = m.conditions.filter(c =>
+  !['PONDING', 'SHAKE_FAILURE', 'NO_DAYLIGHT', 'NO_VIEW_OUT', 'UNLIT'].includes(c.code));
 check('hanging what can be hung leaves only what cannot',
-  m.conditions.length === 1 && m.conditions[0].code === 'FLOATING' && m.conditions[0].elements[0] === 'sink',
+  stillOpen.length === 1 && stillOpen[0].code === 'FLOATING' && stillOpen[0].elements[0] === 'sink',
   m.conditions.map(c => c.code).join(','));
+// A source and a sink dropped into a bare frame and hung with one bracket are not
+// road-worthy, and the shake test says so without being asked about this scenario.
+check('and the road has an opinion about the rest',
+  m.conditions.some(c => c.code === 'SHAKE_FAILURE'),
+  m.conditions.filter(c => c.code === 'SHAKE_FAILURE').map(c => c.message.slice(0, 60)).join(' | '));
 // The sink in this probe was dropped into the middle of a bare frame to test
 // routing. There is nothing within reach of it, and the honest answer is to say
 // so rather than to invent a bracket reaching two feet through the air.
@@ -183,7 +210,11 @@ for (const [wall, dir] of [['W', 'W to E'], ['E', 'E to W']]) {
   check(`the raised wall arrives unnailed`, pw.conditions.some(c => c.code === 'UNJOINED'),
     pw.conditions.map(c => c.code).join(','));
   commit(pw, 'nailOff', {});
-  check(`raising ${wall} then pitching settles`, pw.conditions.length === 0,
+  // Same window-less box as the seed; the structural question is the one this
+  // group is about, so the habitability ones are named and set aside rather than
+  // quietly filtered.
+  const struct = pw.conditions.filter(c => !HABITABILITY.includes(c.code));
+  check(`raising ${wall} then pitching settles`, struct.length === 0,
     pw.conditions.map(c => c.code + ' ' + c.message).slice(0, 2).join(' / '));
   check(`the roof falls ${dir}`, pr.note.includes(dir), pr.note);
   const endStuds = pw.all({ kind: 'stud' }).filter(e => e.meta.wall === 'S').map(e => e.box.s[2]);
@@ -586,6 +617,108 @@ check('every op reports its real argument names', sigs.move.includes('delta') &&
 check('the list covers the whole vocabulary', Object.keys(sigs).length === Object.keys(OPSALL).length);
 check('it renders as one line per op', vocabulary().split('\n').length === Object.keys(sigs).length);
 
+
+
+// ------------------------------------------- 22. the road
+group('a house is shaken once; a trailer is shaken every mile');
+const LD = await import('../operative/loads.js');
+const T3 = build({ budget: 120 }).world;
+const sh = LD.shake(T3);
+check('the trailer has a weight', sh.weight > 4000 && sh.weight < 12000, `${sh.weight} lb`);
+// Modelled as solids, a plastic water tank came out at 4,492 lb and a C6 channel
+// at 1,225 lb, and the whole trailer weighed 18,631 — more than its axles are
+// rated for, entirely because nobody had ever weighed it.
+check('a tank weighs its water plus a shell, not its bounding box',
+  Math.abs(LD.elementMass(T3.get('tank.fresh')) - (65 * 8.34)) < 300 &&
+  LD.elementMass(T3.get('tank.fresh')) < 1000,
+  `${LD.elementMass(T3.get('tank.fresh')).toFixed(0)} lb, against 4492 as a solid`);
+check('a steel channel weighs by the foot',
+  Math.abs(LD.elementMass(T3.get('rail.L')) - (8.2 * 20)) < 5,
+  `${LD.elementMass(T3.get('rail.L')).toFixed(0)} lb`);
+check('a hollow platform weighs its shell',
+  LD.elementMass(T3.get('bed.base')) < 400, `${LD.elementMass(T3.get('bed.base')).toFixed(0)} lb`);
+check('it survives every case the road throws at it', sh.failures.length === 0,
+  sh.failures.slice(0, 3).map(f => `${f.id} ${f.case} ${f.ratio}x`).join(', '));
+check('the cases are the securement rule, not invented',
+  LD.ROAD.every(c => c.basis) && LD.ROAD.some(c => /393\.102/.test(c.basis)));
+check('tributary load is a dominator, not a guess', (() => {
+  const t = LD.tributary(T3).tributary;
+  const rail = t.get('rail.L'), stud = t.get('stud.W.49');
+  return rail && stud && rail.carried > stud.carried;
+})(), 'a main rail carries more than one stud');
+// take the fasteners out of one joint and the road notices
+const S4 = build({ budget: 120 }).world;
+for (const [k, j] of S4.joints) if (j.a === 'tank.fresh' || j.b === 'tank.fresh') j.count = 1;
+check('take the straps off the water tank and it says so',
+  LD.shake(S4).failures.some(f => f.id === 'tank.fresh'),
+  LD.shake(S4).failures.slice(0, 2).map(f => f.id).join(','));
+
+// ------------------------------------------- 23. the weather
+group('where the water goes');
+const WX = await import('../operative/weather.js');
+const wet = WX.rain(T3);
+check('the roof drains', wet.drip.slope >= WX.MIN_SLOPE,
+  `${wet.drip.slope} in per foot, minimum ${WX.MIN_SLOPE}`);
+check('nothing ponds', wet.ponds.length === 0, wet.ponds.map(p => p.id).join(','));
+check('every penetration is flashed', wet.penetrations.every(p => p.flashed),
+  wet.penetrations.filter(p => !p.flashed).map(p => p.id).join(','));
+check('and there are penetrations to flash', wet.penetrations.length >= 3, `${wet.penetrations.length}`);
+// The towing width forbids an eave, so the detail has to do the work.
+check('the low side gets a drip edge where an overhang is illegal',
+  !!T3.all({ kind: 'flashing' }).find(f => f.meta.role === 'drip edge'));
+check('and it stays inside the towing envelope',
+  !checkAll(T3).some(c => c.code === 'ENVELOPE'), 'width');
+const flat = framed();
+check('a flat roof is reported as ponding, whoever chose it',
+  checkAll(flat).some(c => c.code === 'PONDING'));
+check('the ponding rule cites its basis',
+  checkAll(flat).find(c => c.code === 'PONDING').measure.basis === 'IRC R905.10.1');
+// The wall skin used to stop at the top plate and the roof start above it.
+check('the wall is closed up to the roof',
+  T3.all({ kind: 'sheathing' }).some(e => /^gable\./.test(e.id)),
+  'no infill between the top plate and the roof');
+
+// ------------------------------------------- 24. light
+group('can you see in here');
+const LI = await import('../operative/light.js');
+const day = LI.daylight(T3);
+check('the glazing meets the fraction', day.glazingFraction >= LI.GLAZING_FRACTION - 1e-9,
+  `${(day.glazingFraction * 100).toFixed(1)}% of ${day.floorArea} sq ft`);
+check('and it is measured against the floor it serves, not asserted',
+  Math.abs(day.needs - day.floorArea * LI.GLAZING_FRACTION) < 0.2);
+check('most of the floor can see a window', day.fraction > 0.8, `${day.fraction}`);
+const night = LI.artificial(T3);
+check('the lamps actually light the place', night.average >= LI.MIN_FC,
+  `${night.average} fc from ${night.watts} W`);
+// 18 W of pucks passed the power budget for months, because a battery is happy
+// with a house that is too dark to read in.
+check('and a dim house is caught even when the power budget is fine', (() => {
+  const D = build({ budget: 120 }).world;
+  for (const l of D.all().filter(e => e.meta.role === 'light')) l.meta.watts = 3;
+  const cs = checkAll(D);
+  return cs.some(c => c.code === 'UNLIT') && !cs.some(c => c.code === 'POWER_BUDGET');
+})(), 'the two checks disagree, which is the point');
+check('the unlit rule says how many watts it wants',
+  typeof (LI.artificial(T3).wattsNeeded) === 'number' && LI.artificial(T3).wattsNeeded > 0);
+check('a windowless box has no daylight and says so',
+  checkAll(flat).some(c => c.code === 'NO_DAYLIGHT'));
+check('line of sight stops at solid things',
+  !LI.clearLine(T3, [4, 120, 40], [98, 120, 40]) ||
+   LI.clearLine(T3, [50, 120, 40], [50, 124, 40]));
+
+// ------------------------------------------- 25. one name per thing
+group('the model had two naming systems and they disagreed');
+const { sortOf, scheduleForPair } = await import('../operative/joints.js');
+check('a cabinet is a cabinet, whatever class it belongs to',
+  sortOf(T3.get('cab.galley')) === 'cabinet' && T3.get('cab.galley').kind === 'fixture');
+// Every rule written against `kind` alone silently missed: the NEC clearance
+// never fired on a panel, and the fastening schedule skipped the whole interior,
+// including an 836 lb water tank sitting loose in the bed platform.
+check('and the schedule finds the row that was written for it',
+  !!scheduleForPair(T3.get('fridge'), T3.get('cab.galley')),
+  'fixture/fixture had no row; fridge/cabinet always did');
+check('nothing in the interior is left merely touching',
+  !checkAll(T3).some(c => c.code === 'UNJOINED'));
 
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);

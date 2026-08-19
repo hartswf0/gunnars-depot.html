@@ -130,6 +130,9 @@ import { VIEWS, place, byId, chooseView } from './operative/views.js';
 import { CRITIC_PROMPT, builderPrompt, parseVerdict, worldScore, settlement,
          THRESHOLD, meaning, accusation } from './operative/critic.js';
 import { OPS, commitChain, vocabulary } from './operative/ops.js';
+import { shake } from './operative/loads.js';
+import { rain } from './operative/weather.js';
+import { artificial, daylight } from './operative/light.js';
 
 const $ = (s) => document.querySelector(s);
 const LS = 'whats-fucked';
@@ -273,6 +276,27 @@ function lintersOnly(shot) {
   };
 }
 
+/**
+ * The physics, as one paragraph the builder can read. Not conditions — those are
+ * already in the accusation — but the numbers behind them, so a criticism about
+ * the roof arrives next to the fact that the roof falls 0.71 in per foot.
+ */
+function physics() {
+  try {
+    const s = shake(world), r = rain(world), n = artificial(world), d = daylight(world);
+    return [
+      `WEIGHT ${s.weight} lb; ${s.failures.length} joint${s.failures.length === 1 ? '' : 's'} over capacity ` +
+      `under FMCSA road loads`,
+      `RAIN roof falls ${r.drip ? r.drip.slope : '?'} in/ft, ` +
+      `${r.penetrations.filter(p => !p.flashed).length} of ${r.penetrations.length} penetrations unflashed, ` +
+      `${r.ponds.length} ponding surface${r.ponds.length === 1 ? '' : 's'}`,
+      n ? `LIGHT ${n.watts} W averaging ${n.average} fc against a ${n.target} fc target` : '',
+      d ? `DAYLIGHT ${d.glazingArea} sq ft of glazing for ${d.floorArea} sq ft of floor ` +
+          `(${(d.glazingFraction * 100).toFixed(1)}%), ${d.dark} of ${d.points} floor samples see no window` : ''
+    ].filter(Boolean).join('\n');
+  } catch (e) { return `physics unavailable: ${e.message}`; }
+}
+
 async function judge(shot) {
   if ($('#mode').value === 'linters' || !cfg.key) return lintersOnly(shot);
   const content = [];
@@ -324,7 +348,8 @@ async function turn() {
     }
 
     // The criticism goes across verbatim, with the linters simply joining it.
-    let prompt = builderPrompt(verdict.whatSucks, world.conditions, v.label);
+    let prompt = builderPrompt(verdict.whatSucks, world.conditions, v.label) +
+      `\n\nWHAT THE PHYSICS SAYS RIGHT NOW:\n${physics()}`;
     if (pendingRefusal) {
       prompt += `\n\nYOUR LAST MOVE DID NOT LAND:\n${pendingRefusal}`;
       pendingRefusal = null;
@@ -445,12 +470,21 @@ else {
   // No default reference. The sheet this trailer was drawn from is a page of
   // written notes, and shipping a page of text as the visual reference would make
   // every comparison meaningless while looking like it worked.
+  // No src at all rather than a broken one: an alt-text placeholder in the slot
+  // reserved for the reference reads, at a glance, like a reference.
+  $('#ref').remove();
+  const slot = document.createElement('div');
+  slot.style.cssText = 'height:56px;border:1px dashed #1e262f;display:flex;align-items:center;' +
+    'justify-content:center;color:#4b5563;font-size:18px';
+  slot.textContent = '+';
+  $('#refbox').prepend(slot);
   $('#refbox').querySelector('.cap').textContent = 'NO REFERENCE — TAP';
 }
 $('#refbox').onclick = () => { $('#setup').classList.add('open'); $('#reffile').click(); };
 say('world',
   `${world.elements.size} members, ${world.joints.size} joints, ${loop.state.toLowerCase()} ` +
   `after ${loop.steps} decisions, ${world.conditions.length} conditions open.\n\n` +
+  physics() + `\n\n` +
   `That is what the checks know. The default state of this build is not "probably correct" — ` +
   `it is FUCKED UNTIL PROVEN OTHERWISE. Press RUN and it will photograph itself from a named ` +
   `view, assume the picture is wrong, and say why. A low score does not end anything. It moves ` +

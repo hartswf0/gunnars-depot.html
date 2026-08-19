@@ -1,12 +1,18 @@
 {
  "built": {
-  "members": 340,
-  "joints": 432,
+  "members": 360,
+  "joints": 459,
   "state": "SETTLED",
-  "decisions": 26,
+  "decisions": 31,
   "stillOpen": 0
  },
  "conditions": [
+  {
+   "code": "SHAKE_FAILURE",
+   "opened": 93,
+   "closed": 201,
+   "example": "header.win.dinette carries 26.1 lb; in a crest of a bump that is 5 lb against nothing holding it down (Infinityx)"
+  },
   {
    "code": "SERVICE_ORPHAN",
    "opened": 38,
@@ -22,26 +28,26 @@
   {
    "code": "FLOATING",
    "opened": 24,
-   "closed": 42,
+   "closed": 59,
    "example": "table is held by nothing; switch gravity on and it falls 14 in"
-  },
-  {
-   "code": "ONE_END_BEARING",
-   "opened": 6,
-   "closed": 6,
-   "example": "rafter.17 bears at one end only (on light.1); the other end is in the air"
   },
   {
    "code": "VOLTAGE_DROP",
    "opened": 6,
    "closed": 6,
-   "example": "pv.string: 17 A over 37.9 ft of 10 AWG drops 1.29 V (10.8% of 12 V); 3% is the limit"
+   "example": "pv.string: 17 A over 38.4 ft of 10 AWG drops 1.31 V (10.9% of 12 V); 3% is the limit"
   },
   {
    "code": "OPENING_UNHEADED",
    "opened": 5,
    "closed": 5,
    "example": "door.entry interrupted 2 studs with nothing carrying the load over it"
+  },
+  {
+   "code": "UNFLASHED",
+   "opened": 4,
+   "closed": 4,
+   "example": "run.stack.vent.stack.3 comes through roof.cover with no flashing; that is a hole in the only surface keeping water out"
   },
   {
    "code": "OVERLAP",
@@ -74,10 +80,34 @@
    "example": "bore in joist.113 sits -0.19 in from the edge; joists need 2 in"
   },
   {
+   "code": "UNLIT",
+   "opened": 1,
+   "closed": 1,
+   "example": "1 lamps totalling 3 W average 0.7 foot-candles; 5 is the floor and 10 is habitable — it wants about 42 W"
+  },
+  {
    "code": "UNDERSIZED_CONDUCTOR",
    "opened": 1,
    "closed": 1,
    "example": "bank.inverter carries 167 A on 8 AWG, which is rated 50 A"
+  },
+  {
+   "code": "ONE_END_BEARING",
+   "opened": 0,
+   "closed": 14,
+   "example": "rafter.17 bears at one end only (on top2.W); the other end is in the air"
+  },
+  {
+   "code": "NO_VIEW_OUT",
+   "opened": 0,
+   "closed": 1,
+   "example": "160 of 160 floor samples cannot see a window from where a person sits"
+  },
+  {
+   "code": "NO_DAYLIGHT",
+   "opened": 0,
+   "closed": 1,
+   "example": "11.3 sq ft of glazing for 168.3 sq ft of floor is 6.7%; habitable space wants 8%"
   }
  ],
  "session": {

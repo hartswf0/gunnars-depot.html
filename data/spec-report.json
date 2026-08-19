@@ -20,12 +20,12 @@
   },
   {
    "of": "height",
-   "got": 116.5,
+   "got": 122.5,
    "want": 126,
    "unit": "in",
    "note": "under the sheet: width was the binding constraint, not height",
    "meets": true,
-   "delta": -9.5
+   "delta": -3.5
   },
   {
    "of": "sleeping",
@@ -87,20 +87,20 @@
   }
  ],
  "power": {
-  "dailyWh": 747,
+  "dailyWh": 843,
   "bankWh": 2400,
   "usableWh": 1920,
   "pvWatts": 400,
   "pvDailyWh": 1200,
   "loads": 13
  },
- "members": 340,
+ "members": 360,
  "open": 0,
- "joints": 432,
+ "joints": 459,
  "loop": {
   "state": "SETTLED",
-  "steps": 26,
-  "seconds": 6.6,
+  "steps": 31,
+  "seconds": 11.8,
   "walkedBack": 0,
   "moves": [
    {
@@ -108,10 +108,10 @@
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 321 joints; 84 contacts have no schedule entry",
+    "note": "nailed off 321 joints; 174 contacts have no schedule entry",
     "kept": true,
-    "before": 27,
-    "after": 6
+    "before": 171,
+    "after": 8
    },
    {
     "step": 2,
@@ -120,17 +120,17 @@
     "move": "stage",
     "note": "stage openings",
     "kept": true,
-    "before": 6,
-    "after": 6
+    "before": 8,
+    "after": 8
    },
    {
     "step": 3,
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 66 joints; 212 contacts have no schedule entry",
+    "note": "nailed off 66 joints; 302 contacts have no schedule entry",
     "kept": true,
-    "before": 6,
+    "before": 8,
     "after": 5
    },
    {
@@ -141,16 +141,16 @@
     "note": "stage interior",
     "kept": true,
     "before": 5,
-    "after": 10
+    "after": 35
    },
    {
     "step": 5,
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 15 joints; 244 contacts have no schedule entry",
+    "note": "nailed off 25 joints; 318 contacts have no schedule entry",
     "kept": true,
-    "before": 10,
+    "before": 35,
     "after": 9
    },
    {
@@ -161,17 +161,17 @@
     "note": "stage services",
     "kept": true,
     "before": 9,
-    "after": 23
+    "after": 43
    },
    {
     "step": 7,
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 4 joints; 250 contacts have no schedule entry",
+    "note": "nailed off 7 joints; 320 contacts have no schedule entry",
     "kept": true,
-    "before": 23,
-    "after": 19
+    "before": 43,
+    "after": 21
    },
    {
     "step": 8,
@@ -180,7 +180,7 @@
     "move": "mount",
     "note": "grey.out hung from deck.fore on a 2.5 in hanger — it stays where it is",
     "kept": true,
-    "before": 19,
+    "before": 21,
     "after": 18
    },
    {
@@ -191,7 +191,7 @@
     "note": "stage venting",
     "kept": true,
     "before": 18,
-    "after": 20
+    "after": 21
    },
    {
     "step": 10,
@@ -200,8 +200,8 @@
     "move": "mount",
     "note": "trap.shower.pan hung from deck.fore (deck)",
     "kept": true,
-    "before": 20,
-    "after": 19
+    "before": 21,
+    "after": 20
    },
    {
     "step": 11,
@@ -210,18 +210,18 @@
     "move": "stage",
     "note": "stage propane",
     "kept": true,
-    "before": 19,
-    "after": 20
+    "before": 20,
+    "after": 29
    },
    {
     "step": 12,
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 1 joint; 267 contacts have no schedule entry",
+    "note": "nailed off 4 joints; 332 contacts have no schedule entry",
     "kept": true,
-    "before": 20,
-    "after": 19
+    "before": 29,
+    "after": 21
    },
    {
     "step": 13,
@@ -230,18 +230,18 @@
     "move": "stage",
     "note": "stage electrical",
     "kept": true,
-    "before": 19,
-    "after": 12
+    "before": 21,
+    "after": 30
    },
    {
     "step": 14,
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 2 joints; 274 contacts have no schedule entry",
+    "note": "nailed off 4 joints; 336 contacts have no schedule entry",
     "kept": true,
-    "before": 12,
-    "after": 11
+    "before": 30,
+    "after": 15
    },
    {
     "step": 15,
@@ -250,8 +250,8 @@
     "move": "regauge",
     "note": "bank.inverter: 8 AWG -> 2/0 AWG",
     "kept": true,
-    "before": 11,
-    "after": 10
+    "before": 15,
+    "after": 14
    },
    {
     "step": 16,
@@ -260,8 +260,8 @@
     "move": "reroute",
     "note": "run lpg.heater rerouted: centred in joist.113 on y; centred in fridge on y",
     "kept": true,
-    "before": 10,
-    "after": 9
+    "before": 14,
+    "after": 13
    },
    {
     "step": 17,
@@ -270,71 +270,121 @@
     "move": "vent",
     "note": "1.5 in vent at trap.shower.pan, stack up through the roof, hung from shell.E on a 1.0 in hanger — it stays where it is",
     "kept": true,
-    "before": 9,
-    "after": 8
+    "before": 13,
+    "after": 13
    },
    {
     "step": 18,
-    "answering": "VOLTAGE_DROP",
+    "answering": "UNFLASHED",
     "brief": false,
-    "move": "regauge",
-    "note": "pv.string: 10 AWG -> 4 AWG",
+    "move": "flash",
+    "note": "run.stack.vent.stack.3 flashed where it comes through roof.cover — 11 in apron and a storm collar",
     "kept": true,
-    "before": 8,
-    "after": 7
+    "before": 13,
+    "after": 12
    },
    {
     "step": 19,
-    "answering": "VOLTAGE_DROP",
+    "answering": "UNFLASHED",
     "brief": false,
-    "move": "regauge",
-    "note": "mppt.bank: 8 AWG -> 4 AWG",
+    "move": "flash",
+    "note": "run.flue.stack.0 flashed where it comes through roof.cover — 17 in apron and a storm collar",
     "kept": true,
-    "before": 7,
-    "after": 6
+    "before": 12,
+    "after": 11
    },
    {
     "step": 20,
-    "answering": "VOLTAGE_DROP",
+    "answering": "UNFLASHED",
     "brief": false,
-    "move": "regauge",
-    "note": "bank.dc: 8 AWG -> 4 AWG",
+    "move": "flash",
+    "note": "run.pv.string.4 flashed where it comes through roof.cover — 13 in apron and a storm collar",
     "kept": true,
-    "before": 6,
-    "after": 5
+    "before": 11,
+    "after": 10
    },
    {
     "step": 21,
-    "answering": "VOLTAGE_DROP",
+    "answering": "UNFLASHED",
     "brief": false,
-    "move": "regauge",
-    "note": "dc.lights: 18 AWG -> 14 AWG",
+    "move": "flash",
+    "note": "run.stack.vent.shower.pan.2 flashed where it comes through roof.cover — 11 in apron and a storm collar",
     "kept": true,
-    "before": 5,
-    "after": 4
+    "before": 10,
+    "after": 9
    },
    {
     "step": 22,
     "answering": "VOLTAGE_DROP",
     "brief": false,
     "move": "regauge",
-    "note": "dc.fridge: 14 AWG -> 12 AWG",
+    "note": "pv.string: 10 AWG -> 4 AWG",
     "kept": true,
-    "before": 4,
-    "after": 3
+    "before": 9,
+    "after": 8
    },
    {
     "step": 23,
     "answering": "VOLTAGE_DROP",
     "brief": false,
     "move": "regauge",
+    "note": "mppt.bank: 8 AWG -> 4 AWG",
+    "kept": true,
+    "before": 8,
+    "after": 7
+   },
+   {
+    "step": 24,
+    "answering": "VOLTAGE_DROP",
+    "brief": false,
+    "move": "regauge",
+    "note": "bank.dc: 8 AWG -> 4 AWG",
+    "kept": true,
+    "before": 7,
+    "after": 6
+   },
+   {
+    "step": 25,
+    "answering": "VOLTAGE_DROP",
+    "brief": false,
+    "move": "regauge",
+    "note": "dc.lights: 18 AWG -> 14 AWG",
+    "kept": true,
+    "before": 6,
+    "after": 5
+   },
+   {
+    "step": 26,
+    "answering": "VOLTAGE_DROP",
+    "brief": false,
+    "move": "regauge",
+    "note": "dc.fridge: 14 AWG -> 12 AWG",
+    "kept": true,
+    "before": 5,
+    "after": 4
+   },
+   {
+    "step": 27,
+    "answering": "VOLTAGE_DROP",
+    "brief": false,
+    "move": "regauge",
     "note": "dc.pumpfeed: 14 AWG -> 12 AWG",
+    "kept": true,
+    "before": 4,
+    "after": 3
+   },
+   {
+    "step": 28,
+    "answering": "UNLIT",
+    "brief": false,
+    "move": "relamp",
+    "note": "6 lamps 3 W -> 7 W each; 10.1 fc average against a 10 fc target (24 W more on the bank)",
     "kept": true,
     "before": 3,
     "after": 2
    },
    {
-    "step": 24,
+    "step": 29,
     "answering": "PLATE_TIE_REQUIRED",
     "brief": false,
     "move": "strap",
@@ -344,7 +394,7 @@
     "after": 1
    },
    {
-    "step": 25,
+    "step": 30,
     "answering": "PLATE_TIE_REQUIRED",
     "brief": false,
     "move": "strap",

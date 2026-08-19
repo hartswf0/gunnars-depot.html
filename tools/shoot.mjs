@@ -36,7 +36,7 @@ const page = await browser.newPage({ viewport: { width: 900, height: 1200 }, dev
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-await page.goto(`http://127.0.0.1:${PORT}/tools/shoot.html`, { waitUntil: 'load' });
+await page.goto(`http://127.0.0.1:${PORT}/tools/shoot.html?t=${Date.now()}`, { waitUntil: 'load' });
 await page.waitForFunction('window.ready === true', { timeout: 90000 });
 
 const stats = await page.evaluate(() => window.shoot.stats);

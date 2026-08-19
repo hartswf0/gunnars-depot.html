@@ -1,0 +1,1387 @@
+{
+ "of": "ingold-trailer",
+ "origin": "render",
+ "framing": "close-up",
+ "parts": 242,
+ "tiles": [
+  {
+   "id": "coupler",
+   "kind": "chassis",
+   "layer": "foundation",
+   "vol": 160,
+   "box": [
+    50.5,
+    -28,
+    9.8,
+    5,
+    8,
+    4
+   ],
+   "file": "coupler.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "cross.156",
+   "kind": "chassis",
+   "layer": "foundation",
+   "vol": 616,
+   "box": [
+    50.5,
+    156,
+    3.8,
+    77,
+    2,
+    4
+   ],
+   "file": "cross.156.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "cross.234",
+   "kind": "chassis",
+   "layer": "foundation",
+   "vol": 616,
+   "box": [
+    50.5,
+    234,
+    3.8,
+    77,
+    2,
+    4
+   ],
+   "file": "cross.234.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "rail.L",
+   "kind": "chassis",
+   "layer": "foundation",
+   "vol": 4320,
+   "box": [
+    10.5,
+    120,
+    4.8,
+    3,
+    240,
+    6
+   ],
+   "file": "rail.L.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "tongue.nose",
+   "kind": "chassis",
+   "layer": "foundation",
+   "vol": 1848,
+   "box": [
+    50.5,
+    -28,
+    4.8,
+    77,
+    4,
+    6
+   ],
+   "file": "tongue.nose.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "deck.aft",
+   "kind": "deck",
+   "layer": "foundation",
+   "vol": 4317.75,
+   "box": [
+    50.5,
+    211.5,
+    15.4,
+    101,
+    57,
+    0.8
+   ],
+   "file": "deck.aft.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "joist.1",
+   "kind": "joist",
+   "layer": "foundation",
+   "vol": 1098.375,
+   "box": [
+    50.5,
+    0.8,
+    11.4,
+    101,
+    1.5,
+    7.3
+   ],
+   "file": "joist.1.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "joist.145",
+   "kind": "joist",
+   "layer": "foundation",
+   "vol": 902.625,
+   "box": [
+    50.5,
+    144.8,
+    11.4,
+    83,
+    1.5,
+    7.3
+   ],
+   "file": "joist.145.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "joist.177",
+   "kind": "joist",
+   "layer": "foundation",
+   "vol": 902.625,
+   "box": [
+    50.5,
+    176.8,
+    11.4,
+    83,
+    1.5,
+    7.3
+   ],
+   "file": "joist.177.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "joist.225",
+   "kind": "joist",
+   "layer": "foundation",
+   "vol": 1098.375,
+   "box": [
+    50.5,
+    224.8,
+    11.4,
+    101,
+    1.5,
+    7.3
+   ],
+   "file": "joist.225.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "joist.49",
+   "kind": "joist",
+   "layer": "foundation",
+   "vol": 1098.375,
+   "box": [
+    50.5,
+    48.8,
+    11.4,
+    101,
+    1.5,
+    7.3
+   ],
+   "file": "joist.49.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "joist.97",
+   "kind": "joist",
+   "layer": "foundation",
+   "vol": 1098.375,
+   "box": [
+    50.5,
+    96.8,
+    11.4,
+    101,
+    1.5,
+    7.3
+   ],
+   "file": "joist.97.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "pad.90.5.12",
+   "kind": "pad",
+   "layer": "foundation",
+   "vol": 175,
+   "box": [
+    90.5,
+    12,
+    0.9,
+    10,
+    10,
+    1.8
+   ],
+   "file": "pad.90.5.12.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "well.W.cap",
+   "kind": "wellcap",
+   "layer": "foundation",
+   "vol": 1224,
+   "box": [
+    6,
+    149,
+    30,
+    12,
+    68,
+    1.5
+   ],
+   "file": "well.W.cap.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "well.E.side",
+   "kind": "wellside",
+   "layer": "foundation",
+   "vol": 726.75,
+   "box": [
+    89.4,
+    149,
+    22.1,
+    0.8,
+    68,
+    14.3
+   ],
+   "file": "well.E.side.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "well.W.side",
+   "kind": "wellside",
+   "layer": "foundation",
+   "vol": 726.75,
+   "box": [
+    11.6,
+    149,
+    22.1,
+    0.8,
+    68,
+    14.3
+   ],
+   "file": "well.W.side.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "wheel.R1",
+   "kind": "wheel",
+   "layer": "foundation",
+   "vol": 5408,
+   "box": [
+    96.5,
+    132,
+    13,
+    8,
+    26,
+    26
+   ],
+   "file": "wheel.R1.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "cripple.E.81.sill",
+   "kind": "cripple",
+   "layer": "frame",
+   "vol": 139.125,
+   "box": [
+    99.3,
+    80.8,
+    30.5,
+    3.5,
+    1.5,
+    26.5
+   ],
+   "file": "cripple.E.81.sill.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "cripple.N.68.sill",
+   "kind": "cripple",
+   "layer": "frame",
+   "vol": 128.625,
+   "box": [
+    68.3,
+    238.3,
+    29.5,
+    1.5,
+    3.5,
+    24.5
+   ],
+   "file": "cripple.N.68.sill.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "cripple.W.129.sill",
+   "kind": "cripple",
+   "layer": "frame",
+   "vol": 70.875,
+   "box": [
+    1.8,
+    128.8,
+    39,
+    3.5,
+    1.5,
+    13.5
+   ],
+   "file": "cripple.W.129.sill.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "cripple.win.bath.0",
+   "kind": "cripple",
+   "layer": "frame",
+   "vol": 124.6875,
+   "box": [
+    62.8,
+    1.8,
+    91.1,
+    1.5,
+    3.5,
+    23.8
+   ],
+   "file": "cripple.win.bath.0.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "cripple.win.bed.1",
+   "kind": "cripple",
+   "layer": "frame",
+   "vol": 135.1875,
+   "box": [
+    46.8,
+    238.3,
+    90.1,
+    1.5,
+    3.5,
+    25.8
+   ],
+   "file": "cripple.win.bed.1.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "cripple.win.dinette.1",
+   "kind": "cripple",
+   "layer": "frame",
+   "vol": 114.1875,
+   "box": [
+    1.8,
+    144.8,
+    92.1,
+    3.5,
+    1.5,
+    21.8
+   ],
+   "file": "cripple.win.dinette.1.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "cripple.win.galley.1",
+   "kind": "cripple",
+   "layer": "frame",
+   "vol": 156.1875,
+   "box": [
+    99.3,
+    90.8,
+    88.1,
+    3.5,
+    1.5,
+    29.8
+   ],
+   "file": "cripple.win.galley.1.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "header.win.bed",
+   "kind": "header",
+   "layer": "frame",
+   "vol": 827.75,
+   "box": [
+    50,
+    238.3,
+    74.5,
+    43,
+    3.5,
+    5.5
+   ],
+   "file": "header.win.bed.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "jack.door.entry.0",
+   "kind": "jack",
+   "layer": "frame",
+   "vol": 420,
+   "box": [
+    1.8,
+    71.3,
+    57.3,
+    3.5,
+    1.5,
+    80
+   ],
+   "file": "jack.door.entry.0.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "jack.win.bath.1",
+   "kind": "jack",
+   "layer": "frame",
+   "vol": 296.625,
+   "box": [
+    86.8,
+    1.8,
+    45.5,
+    1.5,
+    3.5,
+    56.5
+   ],
+   "file": "jack.win.bath.1.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "jack.win.dinette.0",
+   "kind": "jack",
+   "layer": "frame",
+   "vol": 228.375,
+   "box": [
+    1.8,
+    127.3,
+    54,
+    3.5,
+    1.5,
+    43.5
+   ],
+   "file": "jack.win.dinette.0.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "jack.win.galley.1",
+   "kind": "jack",
+   "layer": "frame",
+   "vol": 265.125,
+   "box": [
+    99.3,
+    94.8,
+    42.5,
+    3.5,
+    1.5,
+    50.5
+   ],
+   "file": "jack.win.galley.1.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "king.win.bath.0",
+   "kind": "king",
+   "layer": "frame",
+   "vol": 450.1875,
+   "box": [
+    59.8,
+    1.8,
+    60.1,
+    1.5,
+    3.5,
+    85.8
+   ],
+   "file": "king.win.bath.0.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "king.win.bed.1",
+   "kind": "king",
+   "layer": "frame",
+   "vol": 450.1875,
+   "box": [
+    72.3,
+    238.3,
+    60.1,
+    1.5,
+    3.5,
+    85.8
+   ],
+   "file": "king.win.bed.1.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "king.win.galley.0",
+   "kind": "king",
+   "layer": "frame",
+   "vol": 450.1875,
+   "box": [
+    99.3,
+    71.8,
+    60.1,
+    3.5,
+    1.5,
+    85.8
+   ],
+   "file": "king.win.galley.0.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "sole.E.well",
+   "kind": "plate",
+   "layer": "frame",
+   "vol": 357,
+   "box": [
+    99.3,
+    149,
+    31.5,
+    3.5,
+    68,
+    1.5
+   ],
+   "file": "sole.E.well.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "sole.W.0",
+   "kind": "plate",
+   "layer": "frame",
+   "vol": 603.75,
+   "box": [
+    1.8,
+    57.5,
+    16.5,
+    3.5,
+    115,
+    1.5
+   ],
+   "file": "sole.W.0.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "top1.E",
+   "kind": "plate",
+   "layer": "frame",
+   "vol": 1260,
+   "box": [
+    99.3,
+    120,
+    103.8,
+    3.5,
+    240,
+    1.5
+   ],
+   "file": "top1.E.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "top1.W",
+   "kind": "plate",
+   "layer": "frame",
+   "vol": 1260,
+   "box": [
+    1.8,
+    120,
+    103.8,
+    3.5,
+    240,
+    1.5
+   ],
+   "file": "top1.W.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "top2.S",
+   "kind": "plate",
+   "layer": "frame",
+   "vol": 493.5,
+   "box": [
+    50.5,
+    1.8,
+    105.3,
+    94,
+    3.5,
+    1.5
+   ],
+   "file": "top2.S.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "strap.top2.E",
+   "kind": "strap",
+   "layer": "frame",
+   "vol": 1.080000000000041,
+   "box": [
+    97.5,
+    104,
+    105.3,
+    0.1,
+    12,
+    1.5
+   ],
+   "file": "strap.top2.E.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "stud.E.129",
+   "kind": "stud",
+   "layer": "frame",
+   "vol": 371.4375,
+   "box": [
+    99.3,
+    128.8,
+    67.6,
+    3.5,
+    1.5,
+    70.8
+   ],
+   "file": "stud.E.129.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "stud.E.17",
+   "kind": "stud",
+   "layer": "frame",
+   "vol": 450.1875,
+   "box": [
+    99.3,
+    16.8,
+    60.1,
+    3.5,
+    1.5,
+    85.8
+   ],
+   "file": "stud.E.17.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "stud.E.209",
+   "kind": "stud",
+   "layer": "frame",
+   "vol": 450.1875,
+   "box": [
+    99.3,
+    208.8,
+    60.1,
+    3.5,
+    1.5,
+    85.8
+   ],
+   "file": "stud.E.209.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "stud.E.33",
+   "kind": "stud",
+   "layer": "frame",
+   "vol": 450.1875,
+   "box": [
+    99.3,
+    32.8,
+    60.1,
+    3.5,
+    1.5,
+    85.8
+   ],
+   "file": "stud.E.33.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "stud.E.97",
+   "kind": "stud",
+   "layer": "frame",
+   "vol": 450.1875,
+   "box": [
+    99.3,
+    96.8,
+    60.1,
+    3.5,
+    1.5,
+    85.8
+   ],
+   "file": "stud.E.97.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "stud.N.84",
+   "kind": "stud",
+   "layer": "frame",
+   "vol": 450.1875,
+   "box": [
+    84.3,
+    238.3,
+    60.1,
+    1.5,
+    3.5,
+    85.8
+   ],
+   "file": "stud.N.84.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "stud.S.36",
+   "kind": "stud",
+   "layer": "frame",
+   "vol": 450.1875,
+   "box": [
+    36.3,
+    1.8,
+    60.1,
+    1.5,
+    3.5,
+    85.8
+   ],
+   "file": "stud.S.36.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "stud.S.97",
+   "kind": "stud",
+   "layer": "frame",
+   "vol": 450.1875,
+   "box": [
+    96.8,
+    1.8,
+    60.1,
+    1.5,
+    3.5,
+    85.8
+   ],
+   "file": "stud.S.97.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "stud.W.17",
+   "kind": "stud",
+   "layer": "frame",
+   "vol": 450.1875,
+   "box": [
+    1.8,
+    16.8,
+    60.1,
+    3.5,
+    1.5,
+    85.8
+   ],
+   "file": "stud.W.17.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "stud.W.209",
+   "kind": "stud",
+   "layer": "frame",
+   "vol": 450.1875,
+   "box": [
+    1.8,
+    208.8,
+    60.1,
+    3.5,
+    1.5,
+    85.8
+   ],
+   "file": "stud.W.209.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "stud.W.33",
+   "kind": "stud",
+   "layer": "frame",
+   "vol": 450.1875,
+   "box": [
+    1.8,
+    32.8,
+    60.1,
+    3.5,
+    1.5,
+    85.8
+   ],
+   "file": "stud.W.33.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "chase.flue",
+   "kind": "chase",
+   "layer": "interior",
+   "vol": 2208,
+   "box": [
+    94.5,
+    121,
+    83,
+    6,
+    8,
+    46
+   ],
+   "file": "chase.flue.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "bench.W",
+   "kind": "fixture",
+   "layer": "interior",
+   "vol": 16200,
+   "box": [
+    21,
+    148,
+    23.3,
+    18,
+    60,
+    15
+   ],
+   "file": "bench.W.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "fridge",
+   "kind": "fixture",
+   "layer": "interior",
+   "vol": 5184,
+   "box": [
+    86,
+    104,
+    25.8,
+    18,
+    16,
+    18
+   ],
+   "file": "fridge.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "lav",
+   "kind": "fixture",
+   "layer": "interior",
+   "vol": 1792,
+   "box": [
+    42,
+    15,
+    30.8,
+    16,
+    14,
+    8
+   ],
+   "file": "lav.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "pump",
+   "kind": "fixture",
+   "layer": "interior",
+   "vol": 512,
+   "box": [
+    70,
+    196,
+    20.8,
+    8,
+    8,
+    8
+   ],
+   "file": "pump.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "sink",
+   "kind": "fixture",
+   "layer": "interior",
+   "vol": 2560,
+   "box": [
+    86,
+    84,
+    31.8,
+    16,
+    20,
+    8
+   ],
+   "file": "sink.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "top.galley",
+   "kind": "fixture",
+   "layer": "interior",
+   "vol": 1587,
+   "box": [
+    86,
+    91,
+    37,
+    23,
+    46,
+    1.5
+   ],
+   "file": "top.galley.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "wall.bath.W",
+   "kind": "partition",
+   "layer": "interior",
+   "vol": 11146.1875,
+   "box": [
+    21.8,
+    65.8,
+    59.4,
+    36.5,
+    3.5,
+    87.3
+   ],
+   "file": "wall.bath.W.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "tank.fresh",
+   "kind": "source",
+   "layer": "interior",
+   "vol": 15840,
+   "box": [
+    42,
+    202,
+    24.3,
+    44,
+    24,
+    15
+   ],
+   "file": "tank.fresh.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "flash.run.pv.string.4",
+   "kind": "flashing",
+   "layer": "roof",
+   "vol": 13.117500000000497,
+   "box": [
+    6.6,
+    88.8,
+    118.5,
+    13.3,
+    16.5,
+    0.1
+   ],
+   "file": "flash.run.pv.string.4.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "roof.cover",
+   "kind": "panel",
+   "layer": "roof",
+   "vol": 180992,
+   "box": [
+    50.5,
+    120,
+    115,
+    101,
+    256,
+    1
+   ],
+   "file": "roof.cover.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "rafter.129",
+   "kind": "rafter",
+   "layer": "roof",
+   "vol": 1742.25,
+   "box": [
+    50.5,
+    128.8,
+    111.8,
+    101,
+    1.5,
+    5.5
+   ],
+   "file": "rafter.129.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "rafter.17",
+   "kind": "rafter",
+   "layer": "roof",
+   "vol": 1742.25,
+   "box": [
+    50.5,
+    16.8,
+    111.8,
+    101,
+    1.5,
+    5.5
+   ],
+   "file": "rafter.17.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "rafter.209",
+   "kind": "rafter",
+   "layer": "roof",
+   "vol": 1742.25,
+   "box": [
+    50.5,
+    208.8,
+    111.8,
+    101,
+    1.5,
+    5.5
+   ],
+   "file": "rafter.209.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "rafter.33",
+   "kind": "rafter",
+   "layer": "roof",
+   "vol": 1742.25,
+   "box": [
+    50.5,
+    32.8,
+    111.8,
+    101,
+    1.5,
+    5.5
+   ],
+   "file": "rafter.33.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "rafter.81",
+   "kind": "rafter",
+   "layer": "roof",
+   "vol": 1742.25,
+   "box": [
+    50.5,
+    80.8,
+    111.8,
+    101,
+    1.5,
+    5.5
+   ],
+   "file": "rafter.81.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "dc.panel",
+   "kind": "fixture",
+   "layer": "services",
+   "vol": 189,
+   "box": [
+    1.5,
+    88.8,
+    62,
+    3,
+    9,
+    7
+   ],
+   "file": "dc.panel.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "light.1",
+   "kind": "fixture",
+   "layer": "services",
+   "vol": 37.5,
+   "box": [
+    50.5,
+    16.8,
+    105.3,
+    5,
+    5,
+    1.5
+   ],
+   "file": "light.1.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "light.4",
+   "kind": "fixture",
+   "layer": "services",
+   "vol": 37.5,
+   "box": [
+    50.5,
+    128.8,
+    105.3,
+    5,
+    5,
+    1.5
+   ],
+   "file": "light.4.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "lpg.reg",
+   "kind": "fixture",
+   "layer": "services",
+   "vol": 125,
+   "box": [
+    50.5,
+    -16,
+    34.5,
+    5,
+    5,
+    5
+   ],
+   "file": "lpg.reg.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "outlet.2",
+   "kind": "fixture",
+   "layer": "services",
+   "vol": 24,
+   "box": [
+    96.8,
+    144.8,
+    35.8,
+    1.5,
+    4,
+    4
+   ],
+   "file": "outlet.2.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "hanger.grey.out",
+   "kind": "hanger",
+   "layer": "services",
+   "vol": 22.5,
+   "box": [
+    50,
+    22,
+    13.8,
+    3,
+    3,
+    2.5
+   ],
+   "file": "hanger.grey.out.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "pv.1",
+   "kind": "panel",
+   "layer": "services",
+   "vol": 3840,
+   "box": [
+    26,
+    70,
+    118.3,
+    40,
+    64,
+    1.5
+   ],
+   "file": "pv.1.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "grey.out",
+   "kind": "source",
+   "layer": "services",
+   "vol": 27,
+   "box": [
+    50,
+    22,
+    11,
+    3,
+    3,
+    3
+   ],
+   "file": "grey.out.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "trap.shower.pan",
+   "kind": "trap",
+   "layer": "services",
+   "vol": 75.9375,
+   "box": [
+    80,
+    24.8,
+    12.8,
+    3.8,
+    4.5,
+    4.5
+   ],
+   "file": "trap.shower.pan.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "vent.stack",
+   "kind": "vent",
+   "layer": "services",
+   "vol": 8,
+   "box": [
+    99.3,
+    104,
+    28.8,
+    2,
+    2,
+    2
+   ],
+   "file": "vent.stack.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "gable.N.2",
+   "kind": "sheathing",
+   "layer": "walls",
+   "vol": 11.8359375,
+   "box": [
+    31.6,
+    240.3,
+    106.9,
+    12.6,
+    0.5,
+    1.9
+   ],
+   "file": "gable.N.2.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "gable.N.5",
+   "kind": "sheathing",
+   "layer": "walls",
+   "vol": 26.0390625,
+   "box": [
+    69.4,
+    240.3,
+    108.1,
+    12.6,
+    0.5,
+    4.1
+   ],
+   "file": "gable.N.5.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "gable.S.1",
+   "kind": "sheathing",
+   "layer": "walls",
+   "vol": 7.1015625,
+   "box": [
+    18.9,
+    -0.3,
+    106.6,
+    12.6,
+    0.5,
+    1.1
+   ],
+   "file": "gable.S.1.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "gable.S.4",
+   "kind": "sheathing",
+   "layer": "walls",
+   "vol": 21.3046875,
+   "box": [
+    56.8,
+    -0.3,
+    107.7,
+    12.6,
+    0.5,
+    3.4
+   ],
+   "file": "gable.S.4.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "gable.S.7",
+   "kind": "sheathing",
+   "layer": "walls",
+   "vol": 35.5078125,
+   "box": [
+    94.7,
+    -0.3,
+    108.8,
+    12.6,
+    0.5,
+    5.6
+   ],
+   "file": "gable.S.7.png",
+   "origin": "render",
+   "framing": "close-up"
+  },
+  {
+   "id": "shell.S",
+   "kind": "sheathing",
+   "layer": "walls",
+   "vol": 4557.625,
+   "box": [
+    50.5,
+    -0.3,
+    60.9,
+    101,
+    0.5,
+    90.3
+   ],
+   "file": "shell.S.png",
+   "origin": "render",
+   "framing": "close-up"
+  }
+ ],
+ "cols": 8,
+ "tile": 200
+}

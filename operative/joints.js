@@ -86,14 +86,80 @@ export const SCHEDULE = [
   { a: 'hanger',    b: 'fixture',   type: 'strap', size: 'strap', count: 2, how: 'strapped' },
   { a: 'hanger',    b: 'panel',     type: 'bolt',  size: '1/4-20', count: 2, how: 'bolted' },
   { a: 'source',    b: 'joist',     type: 'strap', size: 'pipe hanger', count: 2, how: 'hung under the floor' },
-  { a: 'panel',     b: 'sheathing', type: 'screw', size: '#10', spacing: 12, how: 'through the ribs' }
+  { a: 'panel',     b: 'sheathing', type: 'screw', size: '#10', spacing: 12, how: 'through the ribs' },
+
+  // Interior furniture bears on other interior furniture constantly — a counter on
+  // a cabinet, a mattress on a bed, a tank on a platform. In a house none of that
+  // needs a fastener. In a trailer all of it does, and the absence of a row is
+  // not the same as a decision that nothing is needed.
+  { a: 'fixture',   b: 'fixture',   type: 'screw', size: '#8 x 2', count: 4,
+    how: 'fastened because it travels', note: 'catch-all: nothing rides loose' },
+  { a: 'source',    b: 'fixture',   type: 'strap', size: 'steel', count: 2, how: 'strapped to what it sits in' },
+  { a: 'fixture',   b: 'source',    type: 'strap', size: 'steel', count: 2, how: 'strapped' },
+  // The flue: found by shaking it. A 4 in double-wall flue hung inside a boxed
+  // chase, and the chase itself, were held by containment and nothing else.
+  { a: 'flue',      b: 'chase',     type: 'screw', size: '#10 x 1.5', count: 4, how: 'through the chase into the collar' },
+  { a: 'chase',     b: 'sheathing', type: 'screw', size: '#8 x 2', spacing: 16, how: 'to the wall' },
+  { a: 'source',    b: 'panel',     type: 'screw', size: '#10 x 1.5', count: 4, how: 'flashed and screwed to the roof' },
+  { a: 'source',    b: 'sheathing', type: 'screw', size: '#10 x 1.5', count: 4, how: 'to the skin' },
+  // Flashing. IRC R905.2.8.5 nails a drip edge at 12 in o.c.; at 2 g coming off a
+  // bump a 20 ft length of it wants more than the generic four screws it was
+  // getting, which the shake test noticed at 1.03x.
+  { a: 'flashing',  b: 'panel',     type: 'nail', size: '10d nail', spacing: 10, how: 'along the edge' },
+  { a: 'flashing',  b: 'sheathing', type: 'nail', size: '10d nail', spacing: 10, how: 'into the skin' },
+  { a: 'flashing',  b: 'rafter',    type: 'nail', size: '10d nail', spacing: 10, how: 'into the tails' },
+  { a: 'flashing',  b: 'plate',     type: 'nail', size: '10d nail', spacing: 10, how: 'into the plate' },
+  { a: 'flashing',  b: 'run',       type: 'strap', size: 'steel', count: 2, how: 'storm collar' }
 ];
 
 const key = (a, b) => [a, b].sort().join('|');
 
+/**
+ * What a thing counts as, for the purposes of a rule.
+ *
+ * This model has two naming systems and they disagree. `kind` is the structural
+ * class the geometry engine cares about — everything in the interior is `fixture`.
+ * `meta.role` is what the thing actually is: cabinet, bed, counter, fridge. The
+ * schedule below is written in roles, because a framer says "screw the cabinet to
+ * the studs", not "screw the fixture to the fixture".
+ *
+ * Every rule written against `kind` alone has silently missed. The NEC working
+ * clearance never fired on a single panel. The fastening schedule skipped the
+ * entire interior: fourteen fixture/fixture contacts including an 836 lb water
+ * tank sitting loose in the bed platform, found only when something finally tried
+ * to shake the trailer. A miss is silent, which is what makes it expensive.
+ *
+ * So there is one function, and everything asks it.
+ */
+export function sortOf(e) {
+  if (!e) return null;
+  const role = e.meta && e.meta.role;
+  if (role && ROLES.has(role)) return role;
+  return e.kind;
+}
+
+/** Roles that name a real thing a rule can be written about. */
+export const ROLES = new Set([
+  'cabinet', 'bed', 'bench', 'counter', 'table', 'leg', 'mattress', 'partition',
+  'chase', 'panel', 'controller', 'inverter', 'battery', 'regulator', 'pump',
+  'heater', 'fridge', 'cooktop', 'sink', 'lav', 'wc', 'shower', 'light',
+  'outlet', 'fan', 'flue', 'water source', 'waste source'
+]);
+
 /** The schedule entry for a pair of kinds, in either order. */
 export function scheduleFor(kindA, kindB) {
   return SCHEDULE.find(s => (s.a === kindA && s.b === kindB) || (s.a === kindB && s.b === kindA)) || null;
+}
+
+/**
+ * The schedule row for two actual elements. Tries what they are before what class
+ * they belong to, so `fixture`/`fixture` becomes `fridge`/`cabinet` and finds the
+ * row that was written for it.
+ */
+export function scheduleForPair(A, B) {
+  const a = sortOf(A), b = sortOf(B);
+  return scheduleFor(a, b) || scheduleFor(A.kind, b) || scheduleFor(a, B.kind) ||
+         scheduleFor(A.kind, B.kind) || null;
 }
 
 /** How many fasteners a given contact requires, given its size. */

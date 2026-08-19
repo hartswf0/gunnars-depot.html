@@ -6,8 +6,11 @@
 // to choose the next move.
 import { separation, overlapVolume, aabb, containsFully } from './poly.js';
 import { referenceConditions } from './reference.js';
-import { scheduleFor, required, joinKey } from './joints.js';
+import { scheduleFor, required, joinKey, scheduleForPair, sortOf } from './joints.js';
 import { floorUnder, mountsFor, workspaceOf, intrusion, blockage, daylightOf, CLEARANCE } from './gravity.js';
+import { shake } from './loads.js';
+import { rain, MIN_SLOPE, MIN_OVERHANG } from './weather.js';
+import { daylight, artificial, GLAZING_FRACTION, MIN_FC, TARGET_FC } from './light.js';
 
 export const SEVERITY = { blocking: 3, serious: 2, open: 1, note: 0 };
 
@@ -117,6 +120,11 @@ export function checkAll(world) {
           [guest.id, host.id], { depth: +sep.depth.toFixed(2) }, null));
         continue;
       }
+      // Flashing is sheet metal, not a solid. An apron goes under the roofing on
+      // the upslope side and under whatever is bolted through it, which is the
+      // entire point of an apron; reported as interpenetration, every flashing
+      // the loop installed immediately opened an overlap and was walked back.
+      if (a.kind === 'flashing' || b.kind === 'flashing') continue;
       const vol = overlapVolume(polys.get(a.id), polys.get(b.id));
       if (vol < 0.5) continue;
       out.push(cond('OVERLAP', SEVERITY.blocking,
@@ -396,6 +404,81 @@ export function checkAll(world) {
       null));
   }
 
+  // 7d-ter. the road, and the weather.
+  //
+  // 436 fasteners existed for a while before anything ever *loaded* one. A
+  // schedule you never check is a schedule you are trusting, which is the same
+  // mistake as the support check that skipped services. A house is shaken by wind
+  // once in its life; a trailer is shaken every mile.
+  for (const f of shake(world, undefined, graph).failures) {
+    out.push(cond('SHAKE_FAILURE', SEVERITY.serious,
+      `${f.id} carries ${f.carries} lb; in a ${f.label} that is ${f.demand} lb against ` +
+      `${f.capacity === 0 ? 'nothing holding it down' : `${f.capacity} lb of fastener`} (${f.ratio}x)`,
+      [f.id, ...f.sample], { carries: f.carries, demand: f.demand, capacity: f.capacity,
+        ratio: f.ratio, case: f.case, joints: f.joints, basis: f.basis },
+      { op: f.joints ? 'refasten' : 'nailOff', args: f.joints ? { id: f.id } : {} }));
+  }
+
+  // Rain is the cheapest physics there is: it falls, it runs downhill, and every
+  // place it stops or gets in is somewhere the building fails slowly instead of
+  // all at once. This roof was dead flat for the whole life of the project and no
+  // check ever mentioned it, because no check was ever about water.
+  const wet = rain(world);
+  if (wet.drip && wet.drip.slope < MIN_SLOPE - 1e-6) {
+    out.push(cond('PONDING', SEVERITY.serious,
+      `${wet.drip.roof} falls ${wet.drip.slope.toFixed(2)} in per foot; below ${MIN_SLOPE} the water sits on it`,
+      [wet.drip.roof], { slope: wet.drip.slope, minimum: MIN_SLOPE, basis: 'IRC R905.10.1' },
+      { op: 'pitch', args: {} }));
+  }
+  if (wet.drip && typeof wet.drip.overhang === 'number' && wet.drip.overhang < MIN_OVERHANG &&
+      !world.all({ kind: 'flashing' }).some(f => f.meta.role === 'drip edge')) {
+    out.push(cond('NO_DRIP_EDGE', SEVERITY.open,
+      `the roof projects ${wet.drip.overhang.toFixed(2)} in past ${wet.drip.over || 'the wall'}; ` +
+      `everything that lands on it runs down the cladding`,
+      [wet.drip.roof, wet.drip.over].filter(Boolean),
+      { overhang: wet.drip.overhang, minimum: MIN_OVERHANG, basis: 'IRC R905.2.8.5' }, null));
+  }
+  for (const p of wet.penetrations) {
+    if (p.flashed) continue;
+    out.push(cond('UNFLASHED', SEVERITY.serious,
+      `${p.id} comes through ${p.through} with no flashing; that is a hole in the only surface keeping water out`,
+      [p.id, p.through], { through: p.through, basis: 'IRC R903.2' },
+      { op: 'flash', args: { id: p.id, through: p.through } }));
+  }
+
+  // 7d-quater. can you see in here?
+  //
+  // Six pucks and five headed openings, and until there was a check about light
+  // nothing in the model knew whether any of it reached the floor. The power
+  // budget had passed all along, because 18 W is easy on a battery — the
+  // electrical system had been optimised against a constraint that rewarded
+  // being dim.
+  const day = daylight(world);
+  if (day && day.floorArea > 20) {
+    if (day.glazingFraction < GLAZING_FRACTION - 1e-6) {
+      out.push(cond('NO_DAYLIGHT', SEVERITY.serious,
+        `${day.glazingArea} sq ft of glazing for ${day.floorArea} sq ft of floor is ` +
+        `${(day.glazingFraction * 100).toFixed(1)}%; habitable space wants ${GLAZING_FRACTION * 100}%`,
+        [], { glazing: day.glazingArea, floor: day.floorArea, needs: day.needs,
+              fraction: day.glazingFraction, basis: 'IRC R303.1' }, null));
+    }
+    if (day.dark > day.points * 0.25) {
+      out.push(cond('NO_VIEW_OUT', SEVERITY.open,
+        `${day.dark} of ${day.points} floor samples cannot see a window from where a person sits`,
+        [], { dark: day.dark, points: day.points, at: day.darkest }, null));
+    }
+  }
+  const night = artificial(world);
+  if (night && night.lamps && night.average < MIN_FC - 1e-6) {
+    out.push(cond('UNLIT', SEVERITY.serious,
+      `${night.lamps} lamps totalling ${night.watts} W average ${night.average} foot-candles; ` +
+      `${MIN_FC} is the floor and ${night.target} is habitable — it wants about ${night.wattsNeeded} W`,
+      night.darkest.length ? [] : [], { watts: night.watts, average: night.average,
+        target: night.target, needs: night.wattsNeeded, darkest: night.darkest.slice(0, 3),
+        basis: 'lumen method, CU 0.5, LLF 0.9' },
+      { op: 'relamp', args: {} }));
+  }
+
   // 7e. what is touching is not joined until it is nailed
   const unjoined = [];
   const seenContact = new Set();
@@ -407,7 +490,7 @@ export function checkAll(world) {
       seenContact.add(k);
       const A = world.get(id), B = world.get(u.id);
       if (!A || !B) continue;
-      const rule = scheduleFor(A.kind, B.kind);
+      const rule = scheduleForPair(A, B);
       if (!rule) continue;
       unjoined.push({ a: id, b: u.id, rule });
     }

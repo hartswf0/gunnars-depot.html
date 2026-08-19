@@ -31,7 +31,18 @@ export const SHELL = Object.freeze({
   // in a 5.5 in joist leaves exactly one legal height — and a drain has to fall.
   // 2x6 gives 0.00 in of vertical freedom; 2x8 gives 1.75 in, and the run needs 1.25 in.
   // The waste system rewrote the floor structure.
-  joistSection: '2x8', deckTop: 15.75
+  joistSection: '2x8', deckTop: 15.75,
+
+  // The roof was dead flat and nobody asked. Rain does not care what the checks
+  // look for: at 0 in per foot the water sits on it, and with 0.5 in of projection
+  // whatever runs off lands on the cladding. IRC R905.10.1 wants 1/4 in per foot
+  // minimum; 6 in across 101 gives 0.71.
+  //
+  // The fall goes across the width because that is where it fits, and the eave
+  // goes along the length because that is the only direction the road allows one:
+  // 102 in overall is the towing limit and the skin is already at 102. So the low
+  // side gets a drip edge instead of an overhang, and the model says why.
+  roofRise: 6, eaveX: 0, eaveY: 8
 });
 
 // Zones down the length, read off the plan every sheet shares.
@@ -207,6 +218,8 @@ export function services(w, log = []) {
   // --- sources and plant ---------------------------------------------------
   log.push(step(w, 'source', { id: 'tank.fresh', system: 'water', at: [42, 202, D + 8.5],
     size: [44, 24, 15], layer: 'interior', hostedBy: 'bed.base' }, '65 gal is 15,015 cu in; 15 in of platform makes that 44 x 24'));
+  // A tank is water in a shell. Weighed as a solid it came out at 4,492 lb.
+  w.get('tank.fresh').meta.gallons = 65;
   log.push(step(w, 'fixture', { id: 'pump', kind: 'pump', system: 'water', at: [70, 196, D + 5],
     size: [8, 8, 8], layer: 'interior', material: 'steel', hostedBy: 'bed.base' }, '12 V on-demand pump'));
   log.push(step(w, 'fixture', { id: 'heater', kind: 'heater', system: 'water', at: [94.5, 118, 50],
@@ -333,6 +346,7 @@ export function propane(w, log = []) {
   const TONGUE_TOP = 8.0;
   log.push(step(w, 'source', { id: 'lpg.bottle', system: 'propane', at: [50.5, -16, TONGUE_TOP + 12],
     size: [24, 14, 24], layer: 'services' }, '20 lb bottle standing on the tongue platform'));
+  w.get('lpg.bottle').meta.lb = 37;      // a 20 lb bottle full weighs 37; as solid steel it weighed 2,287
   log.push(step(w, 'fixture', { id: 'lpg.reg', kind: 'regulator', system: 'propane',
     at: [50.5, -16, TONGUE_TOP + 24 + 2.5],
     size: [5, 5, 5], layer: 'services', material: 'steel' }, 'two-stage regulator on the bottle'));
@@ -345,7 +359,7 @@ export function propane(w, log = []) {
     path: [[86, 100, D - 4], [94.5, 112, D - 4], [94.5, 112, 42]] }, 'and to the water heater'));
   // A horizontal concentric vent through the side wall protrudes past the skin and
   // put the trailer at 104.3 in overall — wider than the road allows. It goes up.
-  const roofTop = w.walls.E.wallTop + 12;
+  const roofTop = (w.get('roof.cover') || {}).hi ? w.get('roof.cover').hi[2] : w.walls.E.wallTop + 12;
   log.push(step(w, 'fixture', { id: 'flue.heater', kind: 'flue', system: 'flue',
     at: [94.5, 121, 63], size: [4, 4, 4], layer: 'services', material: 'steel', hostedBy: 'chase.flue' },
     'flue take-off above the heater — exhaust is not gas supply, so it is its own system'));
@@ -383,8 +397,12 @@ export function electrical(w, log = []) {
   // hanging in the air: the panels 1.3 in above the roof they are bolted to, the
   // pucks 3 in below the rafters, the outlets a quarter inch off the studs.
   // Nothing in the model asked what held them, so nothing in the model held them.
-  const RAFTER_SOFFIT = 106;                      // rafters bear at 106.0 and rise to 111.5
-  const ROOF_TOP = 112.5;                         // top of roof.cover — the PV bolts to this
+  // Read off the roof that was actually built. Written as constants, they were
+  // right until the roof was pitched, and then the PV panels were bolted to a
+  // plane 6 in below the one they were sitting on — eight overlaps with the rafters.
+  const cover = w.get('roof.cover');
+  const RAFTER_SOFFIT = Math.min(...w.all({ kind: 'rafter' }).map(r => r.lo[2]));
+  const ROOF_TOP = cover ? cover.hi[2] : 112.5;
   const RAFTER_Y = [0.75, 16.75, 32.75, 48.75, 64.75, 80.75, 96.75, 112.75,
                     128.75, 144.75, 160.75, 176.75, 192.75, 208.75, 224.75, 239.25];
   const WALL_FACE = { W: 3.5, E: 97.5, S: 3.5, N: 236.5 };   // inside face of the studs

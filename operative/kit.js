@@ -16,6 +16,10 @@ export const KIT = Object.freeze({
   plateSection: '2x4', studSpacing: 16,
   wallTop: 76.0,
   rafterSection: '2x6', rafterSpacing: 16, roofRise: 0, eave: 3.0,   // the seed roof is dead flat on purpose; the reference has an opinion about that
+  // An overhang across the width and an overhang along the length are not the same
+  // decision. The road caps the width at 102 in, so a side eave is illegal on a
+  // trailer and a drip edge has to do its job; the length has no such limit.
+  eaveX: null, eaveY: null,
   wheelInboard: false, railInset: 6,
   sheathing: 0.5
 });
@@ -37,6 +41,8 @@ export function layout(runStart, runEnd, spacing, thickness) {
  * 6x12 utility shell or the 8'-6" x 20'-0" envelope the reference sheets specify.
  * The 6x12 remains the default; nothing that already worked changes.
  */
+export const MIN_EAVE = 2;   // in — below this, water is running on the wall
+
 export function seedTrailer(world = new World(), spec = {}) {
   const K = { ...KIT, ...spec };
   const [jT, jD] = S(K.joistSection);
@@ -256,7 +262,9 @@ export function seedTrailer(world = new World(), spec = {}) {
   // Sheared members: the rafter is a parallelepiped, not a block. Its low end
   // bears on the west top plate, its high end on the east.
   const rise = K.roofRise;
-  const rafterWidth = K.width + 2 * K.eave;
+  const eaveX = K.eaveX === null || K.eaveX === undefined ? K.eave : K.eaveX;
+  const eaveY = K.eaveY === null || K.eaveY === undefined ? K.eave : K.eaveY;
+  const rafterWidth = K.width + 2 * eaveX;
   const rafterRise = rise * (rafterWidth / K.width);
   const rafterZ = K.wallTop + rD / 2;
   for (const y of layout(0, K.length, K.rafterSpacing, rT)) {
@@ -265,8 +273,68 @@ export function seedTrailer(world = new World(), spec = {}) {
           shear: { axis: 'x', rise: rafterRise },
           meta: { spanAxis: 'x', clearSpan: K.width - 2 * pD, rise, role: 'shed rafter' } });
   }
+  // Where the road forbids an overhang, the detail has to do the work an overhang
+  // would have done. This is not decoration: with 0.5 in of projection every gallon
+  // that lands on the roof runs down the cladding and into the deck-to-wall joint.
+  if (rise && eaveX < MIN_EAVE) {
+    const lowX = rafterRise < 0 ? K.width : 0;
+    // Inside the envelope, not past it. Projecting the 0.75 in a drip edge would
+    // normally have put the trailer at 103.3 in overall — wider than the road —
+    // which is the same constraint that forbade the eave in the first place. So it
+    // is flush with the skin and turns *down* over it instead of out past it.
+    const skin = lowX ? K.width + 0.5 : -0.5;              // outer face of the cladding
+    const inward = lowX ? -1 : 1;
+    // The cover is sheared, so its underside at the low edge is not its centre.
+    const coverBottomAtLowEdge = rafterZ + rise / 2 + rD / 2 - Math.abs(rafterRise) / 2;
+    // From the face of the cladding to the end of the rafter tail, and no further:
+    // an inch and a half of it ran back inside the roof and clashed with all
+    // sixteen rafters. A drip edge is a folded sheet over the fascia.
+    const x0 = skin, x1 = lowX;
+    add({ id: 'drip.low', kind: 'flashing', layer: 'roof', material: 'steel',
+          box: box([(x0 + x1) / 2, K.length / 2, coverBottomAtLowEdge - 2],
+                   [Math.abs(x1 - x0), K.length + 2 * eaveY, 4]),
+          meta: { role: 'drip edge', seals: 'roof.cover', turnsDown: 4,
+                  why: 'the towing width forbids an eave, so the flashing does its job' } });
+  }
+  // ---- closing the top of the wall ------------------------------------------
+  // The wall skin stops at the top plate and the roof starts at the underside of
+  // the rafters, so a pitched roof leaves a band of open air right round the
+  // building — 6 in on the high side, ramping on the ends, filled only by rafters
+  // at 16 in centres. Every check passed. None of them was ever about the
+  // envelope being *closed*, and the only reason anyone noticed is that a
+  // three-quarter photograph showed daylight under the roof.
+  const soffit = (x) => rafterZ + rise / 2 + rafterRise * ((x - K.width / 2) / rafterWidth) - rD / 2;
+  for (const w of walls) {
+    const t = K.sheathing;
+    const along = w.axis === 'y';                       // W and E run in y, facing x
+    if (along) {
+      // A side wall meets the roof at one height, so one panel closes it.
+      const h = soffit(w.at) - K.wallTop;
+      if (h < 0.5) continue;
+      add({ id: `gable.${w.id}`, kind: 'sheathing', layer: 'walls', material: 'siding',
+            box: box([w.at + w.normal[0] * (pD / 2 + t / 2), K.length / 2, K.wallTop + h / 2],
+                     [t, K.length, h]),
+            meta: { wall: w.id, role: 'infill between the top plate and the roof' } });
+      continue;
+    }
+    // An end wall under a shed roof is a triangle, and a sheared box is a
+    // parallelogram — drawn as one, its low corner dropped 3 in below the top
+    // plate and straight through the wall skin. It gets framed the way it is
+    // actually framed: stepped strips, each one as tall as the roof is above it.
+    const strips = 8;
+    for (let i = 0; i < strips; i++) {
+      const x0 = (K.width / strips) * i, x1 = (K.width / strips) * (i + 1);
+      const h = soffit((x0 + x1) / 2) - K.wallTop;
+      if (h < 0.5) continue;
+      add({ id: `gable.${w.id}.${i}`, kind: 'sheathing', layer: 'walls', material: 'siding',
+            box: box([(x0 + x1) / 2, w.at + w.normal[1] * (pD / 2 + t / 2), K.wallTop + h / 2],
+                     [x1 - x0, t, h]),
+            meta: { wall: w.id, role: 'stepped infill up to the roof', step: i } });
+    }
+  }
+
   add({ id: 'roof.cover', kind: 'panel', layer: 'roof', material: 'corrugated_metal',
-        box: box([K.width / 2, K.length / 2, rafterZ + rise / 2 + rD / 2 + 0.5], [rafterWidth, K.length + 2 * K.eave, 1.0]),
+        box: box([K.width / 2, K.length / 2, rafterZ + rise / 2 + rD / 2 + 0.5], [rafterWidth, K.length + 2 * eaveY, 1.0]),
         shear: { axis: 'x', rise: rafterRise },
         meta: { role: 'roof cover', slope: `${rise}:${K.width}` } });
 

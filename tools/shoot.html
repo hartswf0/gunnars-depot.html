@@ -13,6 +13,14 @@ import { build } from '../operative/ingold.js';
 import { VIEWS, place, byId } from '../operative/views.js';
 
 const view = new View(document.getElementById('c'));
+// The View runs an animation loop that calls controls.update() every frame, and
+// OrbitControls damps the camera back toward its own remembered target — so
+// between placing the camera and taking the picture, the camera moved. On a wide
+// view the drift is invisible; on a close-up the subject left the frame entirely
+// and forty-six tiles came back byte-identical while looking plausible. A camera
+// that quietly disagrees with where you put it is worse than one that fails.
+view.controls.enabled = false;
+view.controls.update = () => {};
 const { world, loop } = build();
 view.sync(world);
 view.resize();
@@ -49,6 +57,85 @@ function look(id) {
   view.render();
   return { id: v.id, label: v.label, eye: p.eye, target: p.target };
 }
+/**
+ * The fly's eye. A named view shows you the building; it does not show you the
+ * *parts*. This frames one element at a time, tight, with everything it touches
+ * still visible around it — so a single sheet of ninety small pictures can be
+ * looked at all at once instead of ninety separate looks.
+ */
+window.closeUp = (id, angle) => {
+  const el = world.get(id);
+  if (!el) return null;
+  view.controls.enabled = false;
+  const lo = el.lo, hi = el.hi;
+  const c = [0, 1, 2].map(i => (lo[i] + hi[i]) / 2);
+  const span = Math.max(...[0, 1, 2].map(i => hi[i] - lo[i]));
+  // Pull back far enough to keep the neighbours in frame. A part photographed
+  // alone tells you nothing about whether it is attached to anything.
+  const dist = Math.max(span * 1.9, 22);
+  const a = (angle === undefined ? 0.9 : angle);
+  const dir = [Math.cos(a) * 0.75, -Math.sin(a) * 0.75, 0.5];
+  view.camera.fov = 40; view.camera.near = 0.5;
+  view.camera.updateProjectionMatrix();
+  view.camera.position.set(c[0] + dir[0] * dist, c[1] + dir[1] * dist, c[2] + dir[2] * dist);
+  view.camera.up.set(0, 0, 1);
+  view.camera.lookAt(c[0], c[1], c[2]);
+  view.camera.updateMatrixWorld(true);
+  // The subject is painted, not merely opaque. At full opacity against neighbours
+  // at 16% it was still unfindable in a 200 px tile — a 1.5 in stud is four pixels
+  // wide and the same brown as everything else. It gets a colour nothing else in
+  // the model has.
+  if (!window._paint) window._paint = new Map();
+  for (const [mid, m] of view.meshes) {
+    if (!window._paint.has(mid)) window._paint.set(mid, m.material.color.getHex());
+    m.visible = true;
+    m.material.transparent = true;
+    const subject = mid === id;
+    m.material.opacity = subject ? 1 : 0.10;
+    m.material.color.setHex(subject ? 0x38f2c8 : window._paint.get(mid));
+    if (m.material.emissive) m.material.emissive.setHex(subject ? 0x0b3a30 : 0x000000);
+    // A ghost at 10% opacity still writes depth, so on nineteen of the first
+    // forty-six tiles the subject was hidden behind something you could see
+    // straight through. Ghosts do not occlude.
+    // Fifteen ghosts at 10% between the camera and the subject leave 21% of it
+    // showing, which against a dark background is nothing. The subject draws last
+    // and ignores depth: this is a diagnostic tile, and the one thing it has to do
+    // is show you where the part is.
+    m.material.depthWrite = subject;
+    m.material.depthTest = subject ? false : true;
+    m.renderOrder = subject ? 999 : 0;
+  }
+  // The cyan opening outlines are drawn in their own group and were not dimmed,
+  // so on half the tiles the loudest thing in frame was a window that was not
+  // the subject.
+  if (view.openingGroup) view.openingGroup.visible = false;
+
+  // And a wireframe cage around it, drawn last, ignoring depth. Painting the
+  // subject's own faces was not enough: through fifteen ghosts at 10% opacity a
+  // solid green panel came back invisible on a fifth of the tiles, and a tile
+  // where you cannot find the subject is worse than no tile, because it looks
+  // like an answer. A cage cannot be washed out.
+  if (!window._cage) {
+    window._cage = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)),
+      new THREE.LineBasicMaterial({ color: 0x38f2c8, depthTest: false, transparent: false }));
+    window._cage.renderOrder = 1000;
+    view.scene.add(window._cage);
+  }
+  const cage = window._cage;
+  cage.visible = true;
+  cage.matrixAutoUpdate = false;
+  cage.matrix.copy(view.matrixFor(el));
+  // With matrixAutoUpdate off, assigning .matrix does not mark the world matrix
+  // stale, so the cage stayed a 1 in box at the origin and every tile came back
+  // looking exactly like the one before it. Nothing errored. It just did nothing.
+  cage.matrixWorldNeedsUpdate = true;
+  cage.updateMatrixWorld(true);
+  view.render();
+  return { id, kind: el.kind, layer: el.layer,
+           box: [...el.box.p.map(n => +n.toFixed(1)), ...el.box.s.map(n => +n.toFixed(1))] };
+};
+
 window.probe = (id) => {
   look(id);
   const rc = new THREE.Raycaster();
@@ -61,5 +148,6 @@ window.probe = (id) => {
 window.shoot = { look, world, loop, VIEWS: VIEWS.map(v => ({ id: v.id, label: v.label, kind: v.kind })),
   stats: { members: world.elements.size, joints: world.joints.size,
            open: world.conditions.map(c => ({ code: c.code, message: c.message })), state: loop.state } };
+window.__meshes = view.meshes; window.__cam = view.camera; window.__v = view;
 window.ready = true;
 </script>
