@@ -1,0 +1,47 @@
+{
+  "schema": "final-house-corpus-v1",
+  "unit": "inch",
+  "stage": {"width": 72, "length": 144, "height": 84},
+  "assetPolicy": {
+    "sourcePreference": "dae",
+    "productionRuntimeTarget": "glb",
+    "offlineFallback": "stl"
+  },
+  "seeds": [
+    {
+      "id": "wright-usonian",
+      "name": "Wright / Usonian Trailer",
+      "folder": "houses/wright-usonian",
+      "philosophy": "Low, horizontal, warm, integrated built-ins, compressed dignity."
+    },
+    {
+      "id": "shigeru-ban",
+      "name": "Shigeru Ban Shelter Trailer",
+      "folder": "houses/shigeru-ban",
+      "philosophy": "Lightweight, modular, replaceable, emergency shelter logic."
+    },
+    {
+      "id": "lacaton-vassal",
+      "name": "Lacaton & Vassal Economy Trailer",
+      "folder": "houses/lacaton-vassal",
+      "philosophy": "Maximum usable space with minimum money and unfinished honesty."
+    },
+    {
+      "id": "alexander-pattern",
+      "name": "Alexander Pattern Cabin Trailer",
+      "folder": "houses/alexander-pattern",
+      "philosophy": "Entrance transition, sleeping nook, thick storage edge, warm center."
+    },
+    {
+      "id": "contractor-reality",
+      "name": "Contractor Reality Trailer",
+      "folder": "houses/contractor-reality",
+      "philosophy": "Cheapest plausible build with off-the-shelf material logic."
+    }
+  ],
+  "output": {
+    "root": "subdivision",
+    "maxAdmitted": 24,
+    "required": ["model.glb", "house.json", "diagnostics.json", "README.md", "contact-sheet.png"]
+  }
+}
