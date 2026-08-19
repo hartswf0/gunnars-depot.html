@@ -94,6 +94,39 @@ export function seedTrailer(world = new World(), spec = {}) {
     });
   }
 
+  // ---- the tongue -----------------------------------------------------------
+  // A 20 lb propane bottle has sat on this trailer's tongue since the propane
+  // stage was written, and the tongue was not in the model. So the bottle hung in
+  // space; a repair that tried to catch it dragged it into the floor joists. A
+  // thing that is not there cannot hold anything up.
+  //
+  // Straight channel tongue rather than an A-frame: a member is a box or a box
+  // sheared in z, and shear cannot swing a rail inward in plan. An A-frame drawn
+  // as two boxes both reaching the centreline is two rails welded through each
+  // other, which is what the world reported the first time.
+  const tongueLen = 30, noseW = 4;
+  for (const x of railX) {
+    add({ id: `tongue.${x < K.width / 2 ? 'L' : 'R'}`, kind: 'chassis', layer: 'foundation',
+          material: 'steel', section: 'C5',
+          box: box([x, -tongueLen / 2, (railBot + railTop) / 2], [3, tongueLen, K.railDepth]),
+          meta: { role: 'tongue rail', spanAxis: 'y', joint: 'welded to the main rail' } });
+  }
+  // Between the webs, like every other crossmember here — cut through them and the
+  // world reports interpenetration, which is what it would be in steel.
+  const tongueInner = railX[0] + 1.5, tongueOuter = railX[1] - 1.5;
+  add({ id: 'tongue.nose', kind: 'chassis', layer: 'foundation', material: 'steel', section: 'C4',
+        box: box([(tongueInner + tongueOuter) / 2, -tongueLen + noseW / 2, (railBot + railTop) / 2],
+                 [tongueOuter - tongueInner, noseW, K.railDepth]),
+        meta: { role: 'nose crossmember', spanAxis: 'x', joint: 'welded both tongue rails' } });
+  add({ id: 'coupler', kind: 'chassis', layer: 'foundation', material: 'steel',
+        box: box([K.width / 2, -tongueLen + 2, railTop + 2], [5, 8, 4]),
+        meta: { role: '2-5/16 in coupler, sitting on the nose' } });
+  // The tray reaches both rails. Floating between them it was a shelf held by the
+  // same nothing that used to hold the bottle.
+  add({ id: 'tongue.plate', kind: 'chassis', layer: 'foundation', material: 'steel',
+        box: box([K.width / 2, -16, railTop + 0.125], [tongueOuter - tongueInner + 6, 16, 0.25]),
+        meta: { role: 'bottle tray across the tongue rails' } });
+
   // ---- wheel wells ----------------------------------------------------------
   // Not a styling choice. At 102 in overall the axles must sit inside the width,
   // and at 126 in overall height the floor cannot be lifted above a 26 in wheel

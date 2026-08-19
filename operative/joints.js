@@ -62,6 +62,30 @@ export const SCHEDULE = [
   { a: 'fixture',   b: 'bed',       type: 'strap', size: 'steel', count: 2, how: 'a battery must not move' },
   { a: 'source',    b: 'bed',       type: 'strap', size: 'steel', count: 2, how: 'a tank must not move' },
   { a: 'source',    b: 'deck',      type: 'strap', size: 'steel', count: 2, how: 'strapped down' },
+  { a: 'source',    b: 'chassis',   type: 'strap', size: 'steel', count: 2, how: 'bottle ring on the tongue plate' },
+  { a: 'fixture',   b: 'chassis',   type: 'screw', size: '#10 x 1', count: 2, how: 'to the frame' },
+  { a: 'fixture',   b: 'rafter',    type: 'screw', size: '#8 x 2', count: 2, how: 'up into the rafter' },
+  { a: 'fixture',   b: 'plate',     type: 'screw', size: '#8 x 2', count: 2, how: 'into the plate' },
+  { a: 'panel',     b: 'panel',     type: 'bolt',  size: '1/4-20', count: 4, how: 'PV feet through the roof rib' },
+  { a: 'vent',      b: 'stud',      type: 'strap', size: 'pipe clamp', spacing: 32, how: 'clipped to the framing' },
+  { a: 'vent',      b: 'sheathing', type: 'strap', size: 'pipe clamp', spacing: 32, how: 'clipped to the wall' },
+  { a: 'trap',      b: 'joist',     type: 'strap', size: 'pipe hanger', count: 2, how: 'hung under the floor' },
+  // A hanger bridges the gap between a pipe and the framing, so it has two ends
+  // and a schedule row for each of them.
+  { a: 'hanger',    b: 'joist',     type: 'screw', size: '#10 x 1.5', count: 2, how: 'into the joist' },
+  { a: 'hanger',    b: 'stud',      type: 'screw', size: '#10 x 1.5', count: 2, how: 'into the stud' },
+  { a: 'hanger',    b: 'plate',     type: 'screw', size: '#10 x 1.5', count: 2, how: 'into the plate' },
+  { a: 'hanger',    b: 'rafter',    type: 'screw', size: '#10 x 1.5', count: 2, how: 'into the rafter' },
+  { a: 'hanger',    b: 'blocking',  type: 'screw', size: '#10 x 1.5', count: 2, how: 'into the blocking' },
+  { a: 'hanger',    b: 'deck',      type: 'screw', size: '#10 x 1.5', count: 2, how: 'up through the floor' },
+  { a: 'hanger',    b: 'sheathing', type: 'screw', size: '#10 x 1.5', count: 2, how: 'into the sheathing' },
+  { a: 'hanger',    b: 'chassis',   type: 'bolt',  size: '1/4-20', count: 2, how: 'through the frame' },
+  { a: 'hanger',    b: 'vent',      type: 'strap', size: 'pipe clamp', count: 2, how: 'clamped' },
+  { a: 'hanger',    b: 'trap',      type: 'strap', size: 'pipe clamp', count: 2, how: 'clamped' },
+  { a: 'hanger',    b: 'source',    type: 'strap', size: 'pipe clamp', count: 2, how: 'clamped' },
+  { a: 'hanger',    b: 'fixture',   type: 'strap', size: 'strap', count: 2, how: 'strapped' },
+  { a: 'hanger',    b: 'panel',     type: 'bolt',  size: '1/4-20', count: 2, how: 'bolted' },
+  { a: 'source',    b: 'joist',     type: 'strap', size: 'pipe hanger', count: 2, how: 'hung under the floor' },
   { a: 'panel',     b: 'sheathing', type: 'screw', size: '#10', spacing: 12, how: 'through the ribs' }
 ];
 

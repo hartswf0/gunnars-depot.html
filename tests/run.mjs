@@ -32,15 +32,20 @@ const framed = () => { const w = seedTrailer(); commit(w, 'nailOff', {}); return
 group('the seed build stands up on its own');
 const stacked = seedTrailer();
 stacked.conditions = checkAll(stacked);
-check('81 members placed', stacked.elements.size === 81, `got ${stacked.elements.size}`);
+check('86 members placed', stacked.elements.size === 86, `got ${stacked.elements.size}`);
 // Stacked but not nailed, the four welded crossmembers and the four hung shell
 // panels carry nothing, and the world says so. This is not a bug to hide: it is
 // the difference between lumber on a deck and a frame.
 check('stacked lumber is not yet a frame',
   stacked.conditions.some(c => c.code === 'UNJOINED'), stacked.conditions.map(c => c.code).join(','));
+// FLOATING, not UNSUPPORTED: the check that used to exempt equipment now measures
+// how far each unheld thing would fall, and reports the fall.
+const stackedFloat = stacked.conditions.filter(c => c.code === 'FLOATING');
 check('what only hangs has no load path until it is fastened',
-  stacked.conditions.filter(c => c.code === 'UNSUPPORTED').length === 8,
-  stacked.conditions.filter(c => c.code === 'UNSUPPORTED').map(c => c.elements[0]).join(','));
+  stackedFloat.length >= 8, `${stackedFloat.length} floating`);
+check('and it says how far each one would fall',
+  stackedFloat.every(c => typeof c.measure.fall === 'number'),
+  JSON.stringify(stackedFloat[0] && stackedFloat[0].measure));
 const w0 = framed();
 w0.conditions = checkAll(w0);
 check('nailing it off settles it', w0.conditions.length === 0, w0.conditions.map(c => c.code).join(','));
@@ -51,7 +56,7 @@ check('crossmembers are welded, not seated', (g0.under.get('cross.48') || []).ev
 
 // ------------------------------------------- 2. instruction -> unforeseen condition
 group('an instruction meets a condition it did not ask for');
-const w = seedTrailer();
+const w = framed();
 const before = w.hash();
 const said = parse(w, 'cut a door in the south wall from 20 to 56');
 check('the sentence parses to an operation', said.op === 'cut' && said.args.wall === 'S');
@@ -122,7 +127,20 @@ check('rerouting did not orphan the fixture', !m.conditions.some(c => c.code ===
 check('the repair explains itself in field terms', /bay|under joists|centred/.test(fixed.note), fixed.note);
 const tie = commit(m, 'strap', { id: 'sole.W' });
 check('a steel tie answers the over-cut plate', tie.closed.some(c => c.code === 'PLATE_TIE_REQUIRED'));
-check('the service chain settles', m.conditions.length === 0, m.conditions.map(c => c.code).join(','));
+// A source and a sink dropped into a bare frame are held by nothing until someone
+// hangs them, which is now a condition rather than an exemption.
+const air = m.conditions.filter(c => c.code === 'FLOATING');
+check('the equipment is in the air until it is hung', air.length === 2, air.map(c => c.elements[0]).join(','));
+check('and the world proposes hanging it', air.every(c => c.repair && ['mount', 'blocking'].includes(c.repair.op)));
+const hung = commit(m, 'mountAll', {});
+check('hanging what can be hung leaves only what cannot',
+  m.conditions.length === 1 && m.conditions[0].code === 'FLOATING' && m.conditions[0].elements[0] === 'sink',
+  m.conditions.map(c => c.code).join(','));
+// The sink in this probe was dropped into the middle of a bare frame to test
+// routing. There is nothing within reach of it, and the honest answer is to say
+// so rather than to invent a bracket reaching two feet through the air.
+check('and it says plainly that there is nothing to hang it on',
+  /nothing within reach/.test(hung.note), hung.note);
 
 // ---------------------------------------------------------------- 7. the reference
 group('the drawing gets a say, and it changes a move');

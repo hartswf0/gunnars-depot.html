@@ -110,6 +110,19 @@ export class World {
           over.get(b.id).push({ id: a.id, area: 12, via: 'housed' });
           continue;
         }
+        // An asserted joint is a connection whether or not the geometry agrees.
+        // A 2x2 vent stack touching the sheathing makes exactly 4.0 sq in of
+        // face contact and failed the `> 4` candidate test, so mounting it
+        // changed nothing and the loop proposed the same mount forever. The
+        // contact test decides whether an *unjoined* pair is a candidate for a
+        // joint; it does not get to overrule someone saying "I screwed this on".
+        // A joint whose members are not touching is its own condition.
+        if (this.joints.has([a.id, b.id].sort().join('|'))) {
+          const area = Math.max(bearsOn(A, B), fastenedTo(A, B), 0.01);
+          under.get(a.id).push({ id: b.id, area, via: 'fasten' });
+          over.get(b.id).push({ id: a.id, area, via: 'fasten' });
+          continue;
+        }
         const bear = bearsOn(A, B);
         if (bear > 0.5) {
           under.get(a.id).push({ id: b.id, area: bear, via: 'bear' });

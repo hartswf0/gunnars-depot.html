@@ -327,12 +327,17 @@ export function venting(w, log = []) {
  */
 export function propane(w, log = []) {
   const D = w.datum.deckTop;
-  log.push(step(w, 'source', { id: 'lpg.bottle', system: 'propane', at: [50.5, -14, D - 2],
-    size: [24, 14, 24], layer: 'services' }, '20 lb bottle on the tongue, outside the shell'));
-  log.push(step(w, 'fixture', { id: 'lpg.reg', kind: 'regulator', system: 'propane', at: [50.5, -4, D + 6],
-    size: [5, 5, 5], layer: 'services', material: 'steel' }, 'two-stage regulator at the bottle'));
+  // The bottle stands on the tongue platform and the regulator stands on the
+  // bottle. Both used to be given round coordinates near the tongue, which put
+  // the bottle in mid-air and drove the regulator half an inch into the south skin.
+  const TONGUE_TOP = 8.0;
+  log.push(step(w, 'source', { id: 'lpg.bottle', system: 'propane', at: [50.5, -16, TONGUE_TOP + 12],
+    size: [24, 14, 24], layer: 'services' }, '20 lb bottle standing on the tongue platform'));
+  log.push(step(w, 'fixture', { id: 'lpg.reg', kind: 'regulator', system: 'propane',
+    at: [50.5, -16, TONGUE_TOP + 24 + 2.5],
+    size: [5, 5, 5], layer: 'services', material: 'steel' }, 'two-stage regulator on the bottle'));
   log.push(step(w, 'route', { system: 'propane', run: 'lpg.main', dia: 0.5,
-    path: [[50.5, -14, D - 2], [50.5, -4, D + 6], [50.5, 8, D - 4], [86, 8, D - 4], [86, 100, D - 4]] },
+    path: [[50.5, -16, TONGUE_TOP + 12], [50.5, -16, TONGUE_TOP + 26], [50.5, -4, D - 4], [50.5, 8, D - 4], [86, 8, D - 4], [86, 100, D - 4]] },
     'copper along the frame, outside the floor cavity'));
   log.push(step(w, 'route', { system: 'propane', run: 'lpg.cooktop', dia: 0.375,
     path: [[86, 100, D - 4], [86, 104, D + 21]] }, 'up to the burners'));
@@ -349,8 +354,11 @@ export function propane(w, log = []) {
     at: [94.5, 121, (60 + chaseTop) / 2], size: [6, 8, chaseTop - 60], material: 'plywood' },
     'boxed chase against the wall: a 4 in flue removes 114% of a 3.5 in top plate, so it cannot go up inside one'));
   Object.assign(w.get('chase.flue').meta, { hollow: true });
+  // The terminal sits on the roof it comes through. Two inches above it, it was
+  // a chimney cap floating over the trailer.
   log.push(step(w, 'source', { id: 'flue.out', system: 'flue', at: [94.5, 121, roofTop + 2], size: [5, 5, 4], layer: 'services' },
-    'the terminal above the roof'));
+    'the terminal, seated on the roof it comes through'));
+  w.get('flue.out').box.p[2] = (w.get('roof.cover') ? w.get('roof.cover').hi[2] : roofTop) + 2;
   log.push(step(w, 'route', { system: 'flue', run: 'flue.stack', dia: 4,
     path: [[94.5, 121, 63], [94.5, 121, roofTop]] },
     'up the chase and out of the roof, in the rafter bay — a side vent put the trailer at 104.3 in, wider than the road allows'));
@@ -370,15 +378,26 @@ export function electrical(w, log = []) {
     log.push(step(w, 'fixture', { id, kind, at, size, layer: meta.layer || 'services',
       system: 'power', material: meta.material || 'steel', hostedBy: meta.host }, why));
 
+  // Equipment is placed where its support is. Every one of these coordinates used
+  // to be a round number chosen for looks, and every one of them left the thing
+  // hanging in the air: the panels 1.3 in above the roof they are bolted to, the
+  // pucks 3 in below the rafters, the outlets a quarter inch off the studs.
+  // Nothing in the model asked what held them, so nothing in the model held them.
+  const RAFTER_SOFFIT = 106;                      // rafters bear at 106.0 and rise to 111.5
+  const ROOF_TOP = 112.5;                         // top of roof.cover — the PV bolts to this
+  const RAFTER_Y = [0.75, 16.75, 32.75, 48.75, 64.75, 80.75, 96.75, 112.75,
+                    128.75, 144.75, 160.75, 176.75, 192.75, 208.75, 224.75, 239.25];
+  const WALL_FACE = { W: 3.5, E: 97.5, S: 3.5, N: 236.5 };   // inside face of the studs
+
   // generation and storage
   for (const [i, x] of [26, 76].entries()) {
     log.push(step(w, 'place', { id: `pv.${i + 1}`, kind: 'panel', layer: 'services',
-      at: [x, 70, ROOF + 1.5], size: [40, 64, 1.5], material: 'polycarbonate' },
-      '200 W on the roof'));
+      at: [x, 70, ROOF_TOP + 0.75], size: [40, 64, 1.5], material: 'polycarbonate' },
+      '200 W bolted to the roof, not floating over it'));
     w.get(`pv.${i + 1}`).meta.pvWatts = 200;
     w.get(`pv.${i + 1}`).system = 'power';
   }
-  put('mppt', 'controller', [50.5, 234, 78], [8, 3, 10], {}, 'MPPT charge controller on the end wall');
+  put('mppt', 'controller', [84.3, WALL_FACE.N - 1.5, 78], [8, 3, 10], {}, 'MPPT charge controller, screwed to a stud on the end wall');
   for (const [i, x] of [22, 40].entries()) {
     log.push(step(w, 'source', { id: `battery.${i + 1}`, system: 'power', at: [x, 226, D + 8],
       size: [13, 7, 9], layer: 'interior', hostedBy: 'bed.base' }, '100 Ah LiFePO4'));
@@ -386,38 +405,51 @@ export function electrical(w, log = []) {
     w.get(`battery.${i + 1}`).meta.volts = 12;
   }
   put('inverter', 'inverter', [62, 226, D + 8], [12, 7, 8], { layer: 'interior', host: 'bed.base' }, '2 kW pure sine');
-  put('dc.panel', 'panel', [50.5, 234, 62], [9, 3, 7], {}, '12 V fuse block');
-  put('ac.panel', 'panel', [62, 234, 62], [9, 3, 7], {}, '120 V breakers');
+  put('dc.panel', 'panel', [20.3, WALL_FACE.N - 1.5, 62], [9, 3, 7], {}, '12 V fuse block on stud.N.20');
+  put('ac.panel', 'panel', [84.3, WALL_FACE.N - 1.5, 62], [9, 3, 7], {}, '120 V breakers on stud.N.84');
 
   // loads
-  const lightY = [24, 56, 88, 130, 168, 210];
+  // A puck screws to the underside of a rafter. It therefore lives under a rafter.
+  const lightY = [16.75, 48.75, 80.75, 128.75, 176.75, 208.75];
   lightY.forEach((y, i) => {
-    put(`light.${i + 1}`, 'light', [50.5, y, w.walls.W.topPlateBot - 1], [5, 5, 1.5], { material: 'paint' }, i ? '' : 'six DC pucks down the centre');
+    put(`light.${i + 1}`, 'light', [50.5, y, RAFTER_SOFFIT - 0.75], [5, 5, 1.5], { material: 'paint' },
+        i ? '' : 'six DC pucks up the centre, each on a rafter');
     Object.assign(w.get(`light.${i + 1}`).meta, { watts: 3, hoursPerDay: 4 });
   });
-  [[10, 96], [92, 140], [10, 200], [92, 60]].forEach(([x, y], i) => {
-    put(`outlet.${i + 1}`, 'outlet', [x < 50 ? 4.5 : 96.5, y, D + 20], [1.5, 4, 4], { material: 'paint' }, i ? '' : 'four AC outlets');
+  // A box is screwed to the side of a stud, so it sits at a stud, on the inside face.
+  // 64.75 is where the bathroom partition lands. An outlet on that stud is an
+  // outlet inside a wall — the world said so twice before these moved.
+  [['W', 48.75], ['E', 144.75], ['W', 192.75], ['E', 160.75]].forEach(([side, y], i) => {
+    const x = side === 'W' ? WALL_FACE.W + 0.75 : WALL_FACE.E - 0.75;
+    put(`outlet.${i + 1}`, 'outlet', [x, y, D + 20], [1.5, 4, 4], { material: 'paint' },
+        i ? '' : 'four AC outlets, each on a stud');
     Object.assign(w.get(`outlet.${i + 1}`).meta, { watts: 15, hoursPerDay: 4 });
   });
-  put('fan.bath', 'fan', [80, 10, w.walls.W.topPlateBot - 4], [10, 10, 4], { material: 'steel' }, 'extract over the shower');
+  put('fan.bath', 'fan', [80, 16.75, RAFTER_SOFFIT - 2], [10, 10, 4], { material: 'steel' }, 'extract over the shower, hung on rafter.17');
   Object.assign(w.get('fan.bath').meta, { watts: 15, hoursPerDay: 3 });
   Object.assign(w.get('fridge').meta, { watts: 45, hoursPerDay: 8 });
   Object.assign(w.get('pump').meta, { watts: 60, hoursPerDay: 0.5 });
 
+  // Hang it before you wire it. Placing every fixture, routing to where it was,
+  // and only then discovering it was never fastened means each mount pulls the
+  // conductor off its own fixture. Six lights fell 85 in in the model for months
+  // because nothing in this file ever asked what held them.
+  log.push(step(w, 'mountAll', {}, 'hang the equipment before pulling wire to it'));
+
   // wiring — deliberately gauged the way it would be guessed, so the drop can answer
   const R = (run, path, dia, amps, awg, why, volts) =>
     log.push(step(w, 'route', { system: 'power', run, path, dia, amps, awg, volts: volts || 12 }, why));
-  R('pv.string', [[26, 70, ROOF + 1], [76, 70, ROOF + 1], [76, 230, ROOF + 1], [50.5, 234, 78]], 0.5, 17, '10', 'string across both panels, then down to the controller');
-  R('mppt.bank', [[50.5, 234, 78], [40, 226, D + 8]], 0.6, 30, '8', 'controller to the bank');
+  R('pv.string', [[26, 70, ROOF_TOP], [76, 70, ROOF_TOP], [76, 230, ROOF_TOP], [84.3, 234, 78]], 0.5, 17, '10', 'string across both panels, then down to the controller');
+  R('mppt.bank', [[84.3, 234, 78], [40, 226, D + 8]], 0.6, 30, '8', 'controller to the bank');
   R('bank.inverter', [[40, 226, D + 8], [62, 226, D + 8]], 1.0, 167, '8', 'bank to the inverter');
-  R('bank.dc', [[40, 226, D + 8], [50.5, 234, 62]], 0.6, 40, '8', 'bank to the fuse block');
-  R('inv.ac', [[62, 226, D + 8], [62, 234, 62]], 0.5, 17, '12', 'inverter to the breakers', 120);
-  R('dc.lights', [[50.5, 234, 62], [50.5, 210, 100], [50.5, 24, 100]], 0.3, 1.5, '18', 'one run down the centre for the pucks');
-  R('dc.fridge', [[50.5, 234, 62], [86, 120, 100], [86, 104, D + 8]], 0.3, 3.8, '14', 'fridge circuit');
-  R('dc.pumpfeed', [[50.5, 234, 62], [70, 196, D + 5]], 0.3, 5, '14', 'pump circuit');
-  R('dc.fan', [[50.5, 234, 62], [80, 20, 100], [80, 10, 98]], 0.3, 1.3, '18', 'bath extract');
-  R('ac.outlets', [[62, 234, 62], [4.5, 220, D + 20], [4.5, 96, D + 20]], 0.3, 3, '14', 'outlet ring west, at socket height', 120);
-  R('ac.outlets.e', [[62, 234, 62], [96.5, 220, D + 20], [96.5, 60, D + 20]], 0.3, 3, '14', 'and east', 120);
+  R('bank.dc', [[40, 226, D + 8], [20.3, 234, 62]], 0.6, 40, '8', 'bank to the fuse block');
+  R('inv.ac', [[62, 226, D + 8], [84.3, 234, 62]], 0.5, 17, '12', 'inverter to the breakers', 120);
+  R('dc.lights', [[20.3, 234, 62], [50.5, 208.75, 104], [50.5, 16.75, 104]], 0.3, 1.5, '18', 'one run down the centre for the pucks');
+  R('dc.fridge', [[20.3, 234, 62], [86, 120, 100], [86, 104, D + 8]], 0.3, 3.8, '14', 'fridge circuit');
+  R('dc.pumpfeed', [[20.3, 234, 62], [70, 196, D + 5]], 0.3, 5, '14', 'pump circuit');
+  R('dc.fan', [[20.3, 234, 62], [80, 30, 100], [80, 16.75, 104]], 0.3, 1.3, '18', 'bath extract');
+  R('ac.outlets', [[84.3, 234, 62], [4.25, 192.75, D + 20], [4.25, 48.75, D + 20]], 0.3, 3, '14', 'outlet ring west, at socket height', 120);
+  R('ac.outlets.e', [[84.3, 234, 62], [96.75, 160.75, D + 20], [96.75, 144.75, D + 20]], 0.3, 3, '14', 'and east', 120);
   return log;
 }
 

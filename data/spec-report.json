@@ -20,12 +20,12 @@
   },
   {
    "of": "height",
-   "got": 122,
+   "got": 116.5,
    "want": 126,
    "unit": "in",
    "note": "under the sheet: width was the binding constraint, not height",
    "meets": true,
-   "delta": -4
+   "delta": -9.5
   },
   {
    "of": "sleeping",
@@ -75,7 +75,7 @@
   },
   {
    "system": "propane",
-   "parts": 9,
+   "parts": 10,
    "devices": 2,
    "connected": 2
   },
@@ -94,13 +94,13 @@
   "pvDailyWh": 1200,
   "loads": 13
  },
- "members": 289,
+ "members": 298,
  "open": 0,
- "joints": 400,
+ "joints": 432,
  "loop": {
   "state": "SETTLED",
-  "steps": 18,
-  "seconds": 5.4,
+  "steps": 22,
+  "seconds": 5.8,
   "walkedBack": 0,
   "moves": [
    {
@@ -108,9 +108,9 @@
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 314 joints; 84 contacts have no schedule entry",
+    "note": "nailed off 321 joints; 84 contacts have no schedule entry",
     "kept": true,
-    "before": 22,
+    "before": 27,
     "after": 6
    },
    {
@@ -148,7 +148,7 @@
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 14 joints; 246 contacts have no schedule entry",
+    "note": "nailed off 15 joints; 244 contacts have no schedule entry",
     "kept": true,
     "before": 10,
     "after": 9
@@ -161,50 +161,90 @@
     "note": "stage services",
     "kept": true,
     "before": 9,
-    "after": 17
+    "after": 18
    },
    {
     "step": 7,
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 4 joints; 252 contacts have no schedule entry",
+    "note": "nailed off 4 joints; 250 contacts have no schedule entry",
     "kept": true,
-    "before": 17,
-    "after": 13
+    "before": 18,
+    "after": 14
    },
    {
     "step": 8,
-    "answering": "REQUIREMENT_FAILED",
-    "brief": true,
-    "move": "stage",
-    "note": "stage venting",
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "grey.out hung from deck.fore on a 2.5 in hanger — it stays where it is",
     "kept": true,
-    "before": 13,
-    "after": 14
+    "before": 14,
+    "after": 13
    },
    {
     "step": 9,
     "answering": "REQUIREMENT_FAILED",
     "brief": true,
     "move": "stage",
-    "note": "stage propane",
+    "note": "stage venting",
     "kept": true,
-    "before": 14,
-    "after": 14
+    "before": 13,
+    "after": 15
    },
    {
     "step": 10,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "trap.shower.pan hung from deck.fore (deck)",
+    "kept": true,
+    "before": 15,
+    "after": 14
+   },
+   {
+    "step": 11,
+    "answering": "REQUIREMENT_FAILED",
+    "brief": true,
+    "move": "stage",
+    "note": "stage propane",
+    "kept": true,
+    "before": 14,
+    "after": 15
+   },
+   {
+    "step": 12,
+    "answering": "UNJOINED",
+    "brief": false,
+    "move": "nailOff",
+    "note": "nailed off 1 joint; 267 contacts have no schedule entry",
+    "kept": true,
+    "before": 15,
+    "after": 14
+   },
+   {
+    "step": 13,
     "answering": "REQUIREMENT_FAILED",
     "brief": true,
     "move": "stage",
     "note": "stage electrical",
     "kept": true,
     "before": 14,
+    "after": 8
+   },
+   {
+    "step": 14,
+    "answering": "UNJOINED",
+    "brief": false,
+    "move": "nailOff",
+    "note": "nailed off 2 joints; 270 contacts have no schedule entry",
+    "kept": true,
+    "before": 8,
     "after": 7
    },
    {
-    "step": 11,
+    "step": 15,
     "answering": "UNDERSIZED_CONDUCTOR",
     "brief": false,
     "move": "regauge",
@@ -214,7 +254,7 @@
     "after": 6
    },
    {
-    "step": 12,
+    "step": 16,
     "answering": "EDGE_CLEARANCE",
     "brief": false,
     "move": "reroute",
@@ -224,17 +264,17 @@
     "after": 5
    },
    {
-    "step": 13,
+    "step": 17,
     "answering": "UNVENTED_TRAP",
     "brief": false,
     "move": "vent",
-    "note": "1.5 in vent at trap.shower.pan, stack up through the roof",
+    "note": "1.5 in vent at trap.shower.pan, stack up through the roof, hung from shell.E on a 1.0 in hanger — it stays where it is",
     "kept": true,
     "before": 5,
     "after": 4
    },
    {
-    "step": 14,
+    "step": 18,
     "answering": "VOLTAGE_DROP",
     "brief": false,
     "move": "regauge",
@@ -244,7 +284,7 @@
     "after": 3
    },
    {
-    "step": 15,
+    "step": 19,
     "answering": "VOLTAGE_DROP",
     "brief": false,
     "move": "regauge",
@@ -254,7 +294,7 @@
     "after": 2
    },
    {
-    "step": 16,
+    "step": 20,
     "answering": "PLATE_TIE_REQUIRED",
     "brief": false,
     "move": "strap",
@@ -264,7 +304,7 @@
     "after": 1
    },
    {
-    "step": 17,
+    "step": 21,
     "answering": "PLATE_TIE_REQUIRED",
     "brief": false,
     "move": "strap",

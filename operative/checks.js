@@ -7,6 +7,7 @@
 import { separation, overlapVolume, aabb, containsFully } from './poly.js';
 import { referenceConditions } from './reference.js';
 import { scheduleFor, required, joinKey } from './joints.js';
+import { floorUnder, mountsFor, workspaceOf, intrusion, daylightOf, CLEARANCE } from './gravity.js';
 
 export const SEVERITY = { blocking: 3, serious: 2, open: 1, note: 0 };
 
@@ -128,14 +129,26 @@ export function checkAll(world) {
     }
   }
 
-  // 2. every solid needs a load path to the ground.
-  // Service equipment is strapped to framing rather than stacked, so it is asked
-  // for continuity (check 6) instead of for a gravity path.
+  // 2. every solid needs a load path to the ground — services included.
+  //
+  // This check used to skip `layer === 'services'`, on the reasoning that
+  // equipment is strapped to framing rather than stacked. That exempted exactly
+  // the things that were floating: six ceiling lights 85 in up, two distribution
+  // panels, a charge controller, four outlets — 23 solids held by nothing, and
+  // the world never said a word, because it had been told not to look.
+  //
+  // A light is not stacked. It is screwed to a rafter. That is a joint, and the
+  // answer is to mount it, not to excuse it.
   for (const e of solids) {
-    if (e.layer === 'services') continue;
     if (graph.seen.has(e.id)) continue;
-    out.push(cond('UNSUPPORTED', SEVERITY.blocking,
-      `${e.id} carries no load path to the ground`, [e.id], { z: +e.lo[2].toFixed(2) }, null));
+    const fall = +(e.lo[2] - floorUnder(world, e, solids)).toFixed(1);
+    const near = mountsFor(world, e);
+    out.push(cond('FLOATING', SEVERITY.blocking,
+      `${e.id} is held by nothing; switch gravity on and it falls ${fall} in`,
+      [e.id], { fall, z: +e.lo[2].toFixed(2),
+                within: near.slice(0, 3).map(m => `${m.id} at ${m.gap} in`) },
+      near.length ? { op: 'mount', args: { id: e.id, to: near[0].id } }
+                  : { op: 'blocking', args: { id: e.id } }));
   }
 
   // 3. spans

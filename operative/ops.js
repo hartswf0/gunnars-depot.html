@@ -8,6 +8,7 @@ import { box } from './geom.js';
 import { poly, segmentPoly, aabb } from './poly.js';
 import { checkAll, SPAN_TABLE, BORE } from './checks.js';
 import { scheduleFor, required, joinKey } from './joints.js';
+import { mountsFor, REACH } from './gravity.js';
 
 const key = (c) => `${c.code}:${c.elements.join('|')}`;
 
@@ -172,6 +173,14 @@ const memberDepth = (el) => (el.section && SECTIONS[el.section]) ? SECTIONS[el.s
   : Math.min(...el.box.s);
 
 // ------------------------------------------------------------------ the vocabulary
+/** Is this element a point on some service run? Then its position is a decision. */
+function onARun(world, e) {
+  for (const r of Object.values(world.runs || {}))
+    for (const pt of r.path)
+      if (Math.abs(pt[0] - e.box.p[0]) < 2 && Math.abs(pt[1] - e.box.p[1]) < 2 && Math.abs(pt[2] - e.box.p[2]) < 2) return true;
+  return false;
+}
+
 export const OPS = {
 
   /** Cut an opening in a wall. Studs in the way are interrupted, and that is the point. */
@@ -672,7 +681,14 @@ export const OPS = {
       ? [[anchor.box.p[0], anchor.box.p[1], anchor.box.p[2]], [x, y, anchor.box.p[2]], [x, y, bot], [x, y, top]]
       : [[x, y, bot], [x, y, top]];
     const out = OPS.route(world, { system: 'waste', run: `stack.${vid}`, dia: size, path });
-    return { changed: [vid, ...(out.changed || [])], note: `${size} in vent at ${near}, stack up through the roof` };
+    // Clip it to the framing on the way up. Installed and left loose, the new vent
+    // was itself FLOATING — a blocking condition traded for a serious one — so the
+    // loop walked the whole repair back and the trap stayed unvented. An op that
+    // puts a part in the building fastens the part it puts in.
+    const m = OPS.mount(world, { id: vid });
+    return { changed: [vid, ...(out.changed || [])],
+      note: `${size} in vent at ${near}, stack up through the roof` +
+            (m.ok === false ? `; nothing in reach to clip it to` : `, ${m.note.replace(/^\S+ /, '')}`) };
   },
 
   /** Put a heavier conductor on a circuit that could not deliver its load. */
@@ -736,6 +752,182 @@ export const OPS = {
 
   /** A measurement worth keeping in the journal, which changes no geometry. */
   note(world, { text }) { return { changed: [], note: text }; },
+
+  /**
+   * Mount a fixture on the thing that will hold it: bring it into contact along
+   * one axis, then screw it off. A light hanging 1 in below a rafter is not
+   * screwed to the rafter — it is near it. Nothing is connected because it is
+   * close.
+   *
+   * The move is deliberately small. If making contact would take more than
+   * `REACH`, this refuses: that is not mounting, it is relocating, and moving a
+   * fixture across a room is a decision the world should be asked for rather
+   * than one a repair performs quietly. The first version had no such limit and
+   * dragged a propane bottle off the tongue and into the floor joists, opening
+   * five overlaps to close one FLOATING.
+   */
+  mount(world, { id, to }) {
+    const e = world.get(id);
+    if (!e) return { ok: false, note: `no element "${id}"` };
+    const near = mountsFor(world, e);
+    let host = to && world.get(to);
+    if (!host) {
+      if (!near.length) return { ok: false, note: `${id} has nothing within reach to mount to` };
+      host = world.get(near[0].id);
+    }
+    // Which face holds it? Something sitting on a thing rests; something under a
+    // thing hangs; anything else is screwed to a vertical face.
+    const sep = (i) => Math.max(host.lo[i] - e.hi[i], e.lo[i] - host.hi[i]);
+    const over  = host.hi[2] <= e.lo[2] + 0.01;             // host is below -> e rests on it
+    const under = host.lo[2] >= e.hi[2] - 0.01;             // host is above -> e hangs from it
+    let axis, delta;
+    if (over)       { axis = 2; delta = host.hi[2] - e.lo[2]; }
+    else if (under) { axis = 2; delta = host.lo[2] - e.hi[2]; }
+    else {
+      axis = [0, 1].reduce((m, i) => (sep(i) > sep(m) ? i : m), 0);
+      const d = sep(axis);
+      if (d <= 0.01) { axis = -1; delta = 0; }              // already in contact
+      else delta = host.lo[axis] - e.hi[axis] > e.lo[axis] - host.hi[axis]
+                 ? host.lo[axis] - e.hi[axis] : host.hi[axis] - e.lo[axis];
+    }
+    if (Math.abs(delta) > REACH)
+      return { ok: false, note: `${id} is ${Math.abs(delta).toFixed(1)} in from ${host.id}; ` +
+        `mounting it would be relocating it. Place it where its support is, or add support where it is.` };
+    // Some things must not be moved to reach their support. The grey water outlet
+    // is a point on a drain that falls 1.25 in across the trailer — the floor was
+    // deepened to 2x8 to make that fall legal — and shoving it 2.5 in up to touch
+    // the deck tilted the main backwards through four joists. A pipe gets a
+    // hanger; the pipe stays where the fall put it.
+    if (Math.abs(delta) > 0.01 && onARun(world, e))
+      return OPS.hanger(world, { id, to: host.id });
+    let moved = 0;
+    if (axis >= 0 && Math.abs(delta) > 0.001) { e.box.p[axis] += delta; moved = +delta.toFixed(2); }
+    // A fixture that moves takes its wiring with it. Leave the run behind and the
+    // next lint correctly reports the fixture as orphaned.
+    let rerouted = 0;
+    for (const [rid, r] of Object.entries(world.runs || {})) {
+      for (const pt of r.path) {
+        if (Math.abs(pt[0] - (e.box.p[0] - (axis === 0 ? delta : 0))) < 2 &&
+            Math.abs(pt[1] - (e.box.p[1] - (axis === 1 ? delta : 0))) < 2 &&
+            Math.abs(pt[2] - (e.box.p[2] - (axis === 2 ? delta : 0))) < 2) {
+          pt[axis] += delta; rerouted++;
+        }
+      }
+      if (rerouted) OPS.route(world, { ...r, run: rid });
+    }
+    const j = OPS.join(world, { a: id, b: host.id });
+    e.trace.push({ t: world.clock + 1, kind: 'mounted',
+      note: `mounted on ${host.id}${moved ? `, brought ${Math.abs(moved)} in to reach it` : ''}` });
+    return { changed: [id, host.id],
+      note: `${id} ${over ? 'set on' : under ? 'hung from' : 'screwed to'} ${host.id} (${host.kind})` +
+            (moved ? `, moved ${Math.abs(moved)} in to make contact` : '') +
+            (rerouted ? `, ${rerouted} run point followed it` : '') };
+  },
+
+  /**
+   * A strap, hanger or bracket that bridges the gap between a thing and what
+   * holds it, rather than moving the thing. What a plumber reaches for when the
+   * pipe is where it has to be and the joist is three inches away.
+   */
+  hanger(world, { id, to }) {
+    const e = world.get(id), host = world.get(to);
+    if (!e || !host) return { ok: false, note: `need both ${id} and ${to}` };
+    const hid = `hanger.${id}`;
+    if (world.get(hid)) return { ok: false, note: `${hid} already exists` };
+    // spans from the host's near face to the element, across the widest gap
+    const p = [0, 1, 2].map(i => 0), sz = [0, 1, 2].map(i => 0);
+    let axis = 0, best = -Infinity;
+    for (let i = 0; i < 3; i++) {
+      const d = Math.max(host.lo[i] - e.hi[i], e.lo[i] - host.hi[i]);
+      if (d > best) { best = d; axis = i; }
+    }
+    for (let i = 0; i < 3; i++) {
+      if (i === axis) {
+        const a = Math.min(host.hi[i], e.hi[i]), b = Math.max(host.lo[i], e.lo[i]);
+        p[i] = (Math.min(a, b) + Math.max(a, b)) / 2;
+        sz[i] = Math.abs(b - a);          // exactly the gap: it touches both, occupies neither
+      } else {
+        // exactly where the two already agree. Padded out to a minimum width it
+        // grew past both of them and clipped the deck next door.
+        const a = Math.max(e.lo[i], host.lo[i]), b = Math.min(e.hi[i], host.hi[i]);
+        if (b - a > 0.25) { p[i] = (a + b) / 2; sz[i] = b - a; }
+        else { p[i] = e.box.p[i]; sz[i] = Math.min(e.hi[i] - e.lo[i], host.hi[i] - host.lo[i]); }
+      }
+    }
+    world.add(new Element({ id: hid, kind: 'hanger', layer: 'services', material: 'steel',
+      box: box(p, sz), meta: { role: 'hanger', hangs: id, from: host.id } }));
+    // No counts here: the schedule says how many, the same as for everything else.
+    // Asserting "1 pipe hanger" by hand made the joint UNDER_NAILED against its own
+    // rule, which scored worse than the unvented trap and got the vent walked back.
+    OPS.join(world, { a: hid, b: host.id });
+    OPS.join(world, { a: id, b: hid });
+    e.trace.push({ t: world.clock + 1, kind: 'hung', note: `hung from ${host.id} on ${hid}, without moving` });
+    return { changed: [hid, id, host.id],
+      note: `${id} hung from ${host.id} on a ${best.toFixed(1)} in hanger — it stays where it is` };
+  },
+
+  /**
+   * Hang everything that is hanging in the air — the equipment equivalent of
+   * `nailOff`, and run for the same reason: a tradesman mounts a box before
+   * pulling wire to it, not after. Run afterwards instead, every mount drags its
+   * conductor off the fixture and the world reports an orphan it just created.
+   */
+  mountAll(world, { only } = {}) {
+    const g = world.grounded();
+    let made = 0, stuck = [];
+    const changed = [];
+    for (const e of world.solids()) {
+      if (g.seen.has(e.id)) continue;
+      if (only && e.layer !== only) continue;
+      const near = mountsFor(world, e);
+      const r = near.length ? OPS.mount(world, { id: e.id, to: near[0].id })
+                            : { ok: false, note: 'nothing within reach' };
+      if (r.ok === false) { stuck.push(`${e.id} (${r.note.replace(/\.$/, '')})`); continue; }
+      made++; changed.push(...r.changed);
+    }
+    return { changed, note: `mounted ${made}` +
+      (stuck.length ? `; ${stuck.length} still in the air: ${stuck.slice(0, 2).join(', ')}` : '') };
+  },
+
+  /**
+   * Add blocking for something that has nothing to screw to — what an electrician
+   * does when the box lands in a bay: a 2x4 flat between the two nearest members,
+   * and the fixture goes on that. It refuses when the framing is out of reach,
+   * because blocking spanning four feet to catch a stray object is not blocking.
+   */
+  blocking(world, { id, between }) {
+    const e = world.get(id);
+    if (!e) return { ok: false, note: `no element "${id}"` };
+    const c = [0, 1, 2].map(i => (e.lo[i] + e.hi[i]) / 2);
+    const dist = (o) => Math.hypot(...[0, 1, 2].map(i => Math.max(o.lo[i] - e.hi[i], e.lo[i] - o.hi[i], 0)));
+    const scored = world.solids()
+      .filter(o => ['stud', 'rafter', 'joist'].includes(o.kind))
+      .map(o => ({ o, d: dist(o) })).sort((a, b) => a.d - b.d);
+    if (!scored.length) return { ok: false, note: 'no framing to block between' };
+    if (scored[0].d > REACH * 2)
+      return { ok: false, note: `the nearest framing is ${scored[0].d.toFixed(1)} in from ${id}; ` +
+        `it is not in a bay, it is in the air. It needs a place in the building, not a block.` };
+    const first = scored[0].o;
+    const thin = [0, 1, 2].reduce((m, i) => (first.hi[i] - first.lo[i]) < (first.hi[m] - first.lo[m]) ? i : m, 0);
+    const mate = scored.slice(1).find(x => x.o.kind === first.kind &&
+      Math.abs(((x.o.lo[thin] + x.o.hi[thin]) / 2) - ((first.lo[thin] + first.hi[thin]) / 2)) > 1);
+    if (!mate) return { ok: false, note: `nothing to span to beside ${first.id}` };
+    const a = Math.min(first.hi[thin], mate.o.hi[thin]), b = Math.max(first.lo[thin], mate.o.lo[thin]);
+    const p = c.slice(), sz = [1.5, 1.5, 1.5];
+    p[thin] = (a + b) / 2; sz[thin] = Math.abs(b - a);
+    const depthAxis = first.kind === 'stud' ? [0, 1].find(i => i !== thin) : 2;
+    sz[depthAxis] = 3.5; p[depthAxis] = (first.lo[depthAxis] + first.hi[depthAxis]) / 2;
+    const bid = `blocking.${id}`;
+    if (world.get(bid)) return { ok: false, note: `${bid} already exists` };
+    world.add(new Element({ id: bid, kind: 'blocking', layer: 'frame', material: 'wood',
+      section: '2x4', box: box(p, sz),
+      meta: { role: `blocking for ${id}`, between: [first.id, mate.o.id] } }));
+    OPS.join(world, { a: bid, b: first.id });
+    OPS.join(world, { a: bid, b: mate.o.id });
+    const m = OPS.mount(world, { id, to: bid });
+    return { changed: [bid, id, first.id, mate.o.id],
+      note: `2x4 blocking between ${first.id} and ${mate.o.id}; ${m.ok === false ? m.note : m.note}` };
+  },
 
   place(world, { id, kind, layer, at, size, material, section, shear }) {
     if (world.get(id)) return { ok: false, note: `${id} already exists` };
