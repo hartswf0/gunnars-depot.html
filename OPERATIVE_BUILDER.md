@@ -1148,3 +1148,91 @@ Every one of these was a colony confidently reporting a building that was fine:
 
 The pattern is the one this whole repository keeps finding: **the instrument
 reads the building through an assumption, and the assumption is the bug.**
+
+
+## Did the ants make the model better?
+
+`node tools/prove-ants.mjs`. The colony's own score is not admissible as evidence
+for the colony, so nothing below comes from it. Both worlds are measured with the
+same stick — the current tree's instruments applied to a build from each commit —
+and the contact audit is written inside the harness so that neither tree's idea of
+contact gets to grade itself.
+
+```
+measure                          BEFORE    AFTER   change
+--------------------------------------------------------------
+joints                              558      585   +27
+scheduled contacts                  589      589   same
+  left unfastened                    28        0   -28
+  edge-only, unnailable              49       49   same
+road-shake failures                   3        0   -3
+worst shake case              gable.E 2.29x        —
+members not held up                   0        0   same
+roof penetrations / unflashed      4 / 0    4 / 0   same
+weight, lb                         7218     7227   +9
+rays escaping (2048/lamp)           124      124   same
+CT enclosed cells at 1 in             0        0   same
+```
+
+Two rows moved. The rest did not, and the rest matters as much.
+
+### The chain
+
+1. The colony walks **contact**. `nailOff` walked the **support graph**, and so did
+   the UNJOINED check — so the check could only ever report joints the operation
+   could never make. One assumption shared by an operation and its own inspector
+   is invisible from inside the building.
+2. Reading face adjacency in one place (`World.contacts()`) makes 27 joints that
+   the IRC schedule already required, and takes scheduled-but-unfastened contacts
+   from 28 to 0.
+3. Among those 28 was `gable.E` to `roof.cover`: a 24.6 lb gable panel resting on
+   the roof, fastened to nothing.
+4. The shake test could not report that either, because of this line:
+
+   ```js
+   if (!joints.length && bearing && c.mode === 'shear') capacity = demand * 1.5;
+   ```
+
+   Every unfastened member that happened to be resting on something was handed
+   exactly half again the capacity it needed, in every case, whatever it weighed.
+   The test was **structurally incapable of failing an unfastened part** — the same
+   shape as the services exemption that once hid twenty-three floating fixtures.
+5. What actually resists a panic stop for a part that is merely set down is
+   friction: `MU_BEARING` times its own weight. With that in place the earlier
+   trailer fails three FMCSA 393.102(a) cases and the current one fails none:
+
+   ```
+   gable.E  panic stop     carries 24.6 lb   demand 20 lb vs capacity 9 lb   2.29x over
+   gable.E  hard reverse   carries 24.6 lb   demand 12 lb vs capacity 9 lb   1.43x over
+   gable.E  swerve         carries 24.6 lb   demand 12 lb vs capacity 9 lb   1.43x over
+   ```
+
+A 25 lb panel leaving the roof of a trailer at highway speed is the whole of it.
+Not dramatic; specific, and now impossible to reach again, because the exemption
+that hid it is gone.
+
+### What the ants did not do
+
+They did not make the trailer weathertight. **124 of 825,344 rays still escape** at
+2048 rays per lamp, and the 1 in CT still floods straight through — the same leak,
+the same size, before and after. Nothing about a fastener closes a hole. The ants
+also cost nine pounds, which is the extra sheathing area from lapping the sole
+plate, and that is a real price for a real shear path.
+
+And the one condition still standing came from tightening an instrument rather
+than the building: **17 pairs where the gable sheathing sits on the top plate tied
+to nothing but the roof above it.** Reported flat, that check fired on 49 pairs and
+32 of them were fine, so it now asks whether the pair is tied together within two
+joints and carries its own specification: *it cannot tell a member that should have
+lapped from one that is meant to abut.*
+
+### What this is actually evidence of
+
+Not that a colony of ants is a better inspector than a rule. The rules found more,
+faster, and cited a code section for every one of them. What the colony did was
+walk a relation nobody had written a rule against, and everything downstream — the
+27 joints, the friction exemption, the shear path, the flashing that walked itself
+back — followed from one accusation no existing instrument was shaped to make.
+
+The value of a weak sensor that goes where nobody sent it is not its accuracy. It
+is that it is not wrong in the same way as everything else.

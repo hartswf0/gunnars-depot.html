@@ -174,6 +174,13 @@ export function tributary(world, g = world.grounded()) {
   return { tributary: out, mass, total: +[...mass.values()].reduce((a, b) => a + b, 0).toFixed(0) };
 }
 
+/**
+ * Sliding friction for a member that is set down and not fastened. Wood on wood
+ * and steel on wood both sit near this; it is deliberately not generous, because
+ * the alternative reading of an unfastened part is that it is held by nothing.
+ */
+export const MU_BEARING = 0.35;
+
 /** The road, as accelerations. Every one of these is a case the trailer must survive. */
 export const ROAD = [
   { id: 'stop',    label: 'panic stop',   g: [0, -0.8, 0], mode: 'shear', basis: 'FMCSA 393.102(a)' },
@@ -209,7 +216,19 @@ export function shake(world, cases = ROAD, g = world.grounded()) {
         const cap = capacityOf(j);
         capacity += (j.count || 2) * (c.mode === 'pull' ? cap.pull : cap.shear);
       }
-      if (!joints.length && bearing && c.mode === 'shear') capacity = demand * 1.5;  // friction and bearing, roughly
+      // Friction is not a fastener.
+      //
+      // This read `capacity = demand * 1.5` — every unfastened member that
+      // happened to be resting on something was handed exactly half again the
+      // capacity it needed, in every case, whatever it weighed. The test was
+      // structurally incapable of failing an unfastened part, which is the same
+      // shape as the services exemption that hid twenty-three floating fixtures.
+      //
+      // What actually resists a panic stop for a part that is merely set down is
+      // friction: mu times its own weight. At 0.8 g the demand beats mu on any
+      // real surface, which is why cargo gets strapped and not merely set down.
+      // Downward cases are already skipped above — the road holds those.
+      if (!joints.length && bearing && c.mode === 'shear') capacity = MU_BEARING * t.carried;
       // A quarter-pound trap with no fastener is a real omission, but it is
       // UNJOINED's business, not the shake test's. Reporting it here as an
       // infinite overload buries the 836 lb tank in a list of P-traps.

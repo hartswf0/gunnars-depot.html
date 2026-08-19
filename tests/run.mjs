@@ -1045,6 +1045,112 @@ check('a bare mesh can be crawled too', meshColony.stats().steps > 200,
 check('and with no world it never claims a pair should have been fastened',
   !meshColony.rumours().some(f => f.kind === 'UNJOINED'));
 
+
+// ------------------------------------------- 31. friction is not a fastener
+group('an unfastened part that is merely set down');
+const LDS = await import('../operative/loads.js');
+check('mu is stated, not implied', LDS.MU_BEARING > 0.2 && LDS.MU_BEARING < 0.6, `${LDS.MU_BEARING}`);
+// Take a real member that bears on something and is nailed to it, cut its
+// fasteners, and see what the test credits it with. Synthesising a crate is worse:
+// dropped in the middle of a fitted-out trailer it landed on nothing at all and
+// failed for a stronger reason than friction, which would have proved nothing.
+const frictionW = copyOf(BUILT);
+const fgrd = frictionW.grounded();
+const restsOn = frictionW.solids().find(e => {
+  if (e.lo[2] <= 0.6) return false;
+  const downs = (fgrd.under.get(e.id) || []).filter(u => u.via !== 'touch');
+  if (!downs.some(u => u.via === 'bear')) return false;
+  if (!downs.some(u => frictionW.joints.has(JN.joinKey(e.id, u.id)))) return false;
+  return (LDS.tributary(frictionW, fgrd).tributary.get(e.id) || { carried: 0 }).carried > 40;
+});
+check('there is a nailed member resting on something to test with', !!restsOn,
+  restsOn ? restsOn.id : 'none found');
+if (restsOn) {
+  const before31 = LDS.shake(frictionW).failures.filter(f => f.id === restsOn.id).length;
+  for (const u of (fgrd.under.get(restsOn.id) || [])) frictionW.joints.delete(JN.joinKey(restsOn.id, u.id));
+  const after31 = LDS.shake(frictionW).failures.filter(f => f.id === restsOn.id);
+  check('unnailed, it slides in a panic stop', after31.some(f => f.case === 'stop') && before31 === 0,
+    `${before31} failures nailed, ${after31.length} unnailed (${restsOn.id})`);
+  const stop = after31.find(f => f.case === 'stop');
+  check('and the capacity it is credited with is mu times its own weight, not half again what it needs',
+    stop && Math.abs(stop.capacity - LDS.MU_BEARING * stop.carries) < 1.5,
+    stop ? `capacity ${stop.capacity} vs mu*W ${(LDS.MU_BEARING * stop.carries).toFixed(0)}` : 'no stop failure');
+}
+
+// ------------------------------------------- 32. contact is not the load path
+group('what must be nailed to what');
+const FACES = BUILT.contacts({ minFace: 0 });
+check('the world can enumerate its own face contacts', FACES.length > 400, `${FACES.length} contacts`);
+check('and each carries the face it meets across',
+  FACES.every(c => typeof c.face === 'number' && c.face >= 0));
+// The load path uses a different relation on purpose: it rejects any contact it
+// cannot resolve exactly. That difference is what hid twenty-eight joints.
+const grd32 = BUILT.grounded();
+let inLoadPath = 0;
+for (const c of FACES) if ((grd32.under.get(c.a) || []).some(u => u.id === c.b)) inLoadPath++;
+check('the load path knows about fewer contacts than exist',
+  inLoadPath < FACES.length, `${inLoadPath} of ${FACES.length} appear in the support graph`);
+check('nailing off leaves no scheduled face contact unfastened', (() => {
+  const w = copyOf(BUILT);
+  commit(w, 'nailOff', {});
+  return w.contacts({ minFace: 1 }).every(c =>
+    !JN.scheduleForPair(w.get(c.a), w.get(c.b)) || w.joints.has(JN.joinKey(c.a, c.b)));
+})());
+
+// ------------------------------------------- 33. the colony says what it found
+group('the colony speaks');
+const VDX = await import('../operative/verdict.js');
+const walked = colonise(copyOf(BUILT), { ticks: 400 });
+const meant33 = VDX.expectations(BUILT);
+check('holes that are meant are read off the building', meant33.length >= 5, `${meant33.length} regions`);
+check('and a wheel well is one of them', meant33.some(r => r.why === VDX.MEANT.WELL));
+check('a gap inside a wheel well is EXPECTED, not a defect', (() => {
+  const cap = BUILT.all({ kind: 'wellcap' })[0];
+  return VDX.classify({ kind: 'GAP', ants: 4, hits: 9, near: [cap.id], detail: { toward: [-1, 0, 0] },
+    at: [(cap.lo[0] + cap.hi[0]) / 2, (cap.lo[1] + cap.hi[1]) / 2, cap.lo[2] - 6] }, meant33).verdict
+    === VDX.VERDICT.EXPECTED;
+})());
+check('a hole in the middle of a wall is not',
+  VDX.classify({ kind: 'GAP', ants: 4, hits: 9, near: ['stud.W.65'], detail: { toward: [-1, 0, 0] },
+    at: [4, 60, 60] }, meant33).verdict === VDX.VERDICT.UNEXPECTED);
+check('UNRULED is UNKNOWN, which is not a pass',
+  VDX.classify({ kind: 'UNRULED', ants: 3, hits: 4, near: ['a'], at: [50, 50, 50] }, meant33).verdict
+    === VDX.VERDICT.UNKNOWN);
+
+const scored = VDX.suckOf(walked, BUILT);
+check('the score is the worst place, never the average',
+  scored.places.length < 2 ||
+  (scored.score === scored.places[0].score &&
+   scored.score >= scored.places.reduce((a, p) => a + p.score, 0) / scored.places.length),
+  `worst ${scored.score} over ${scored.places.length} places`);
+check('suspicion cannot score like a defect',
+  scored.places.filter(p => p.finding.verdict === VDX.VERDICT.UNKNOWN).every(p => p.score <= 20));
+check('and what was meant is counted, not silently dropped',
+  scored.counts.EXPECTED + scored.counts.UNEXPECTED + scored.counts.UNKNOWN === scored.judged.length);
+
+const spokenText = VDX.accuse(walked, BUILT);
+check("it speaks in the critic's format", /^SUCK SCORE: \d+/.test(spokenText.text));
+check('it does not propose a fix, name an operation, or praise anything',
+  !/\b(should|could|try|fix|op:|OPS\.|good|nice|well done)\b/i.test(
+    spokenText.text.split('WHAT THIS READING IS WORTH')[0]),
+  spokenText.text.slice(0, 100));
+check('every reading carries the setting it was taken at',
+  /WHAT THIS READING IS WORTH/.test(spokenText.text) && /\d+ ants, \d+ rays/.test(spokenText.text));
+check('and it admits what it is blind to', spokenText.resolution.blind.length >= 1,
+  `${spokenText.resolution.blind.length} admissions`);
+check('a low score moves the sensor rather than settling',
+  VDX.nextProbe({ score: 3, hard: 0, meaning: 'x' }, { blind: [] }).mode === 'MOVE THE SENSOR');
+check('and names which move', !!VDX.nextProbe({ score: 3, hard: 0, meaning: 'x' }, { blind: [] }).say);
+check('a hard finding builds again whatever the score',
+  VDX.nextProbe({ score: 0, hard: 2, meaning: 'x' }, { blind: [] }).mode === 'BUILD AGAIN');
+check('a colony run too briefly is told so',
+  VDX.resolution(walked, { ticks: 50 }).blind.length > VDX.resolution(walked, { ticks: 900 }).blind.length);
+check('the linters simply join the accusation', (() => {
+  const j = VDX.joinAccusation('the roof is wrong', [{ code: 'X', message: 'y' }], spokenText);
+  return /WHAT SUCKS VISUALLY/.test(j) && /WHAT SUCKS DETERMINISTICALLY/.test(j) &&
+         /WHAT SUCKS STIGMERGICALLY/.test(j);
+})());
+
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
