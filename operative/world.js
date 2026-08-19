@@ -49,6 +49,7 @@ export class World {
     this.elements = new Map();
     this.history = [];        // xenography: every consequential move
     this.conditions = [];     // current unresolved conditions
+    this.joints = new Map();  // asserted connections: what is actually nailed to what
     this.invariants = [];     // rules promoted at runtime
     this.reference = null;    // { id, profile } once a reference is bound
     this.clock = 0;
@@ -115,10 +116,14 @@ export class World {
           over.get(b.id).push({ id: a.id, area: bear, via: 'bear' });
           continue;
         }
+        // Fastening is asserted, not inferred. Two faces touching is a *candidate*
+        // for a joint; only a joint makes it a connection. Before this, 687 pairs
+        // counted as "fastened" because they happened to be adjacent.
         const fast = fastenedTo(A, B);
         if (fast > 4) {
-          under.get(a.id).push({ id: b.id, area: fast, via: 'fasten' });
-          over.get(b.id).push({ id: a.id, area: fast, via: 'fasten' });
+          const joined = this.joints.has([a.id, b.id].sort().join('|'));
+          under.get(a.id).push({ id: b.id, area: fast, via: joined ? 'fasten' : 'touch' });
+          over.get(b.id).push({ id: a.id, area: fast, via: joined ? 'fasten' : 'touch' });
         }
       }
     }
@@ -138,7 +143,7 @@ export class World {
     }
     while (qa.length) {
       const id = qa.pop();
-      for (const up of over.get(id) || []) if (!seen.has(up.id)) { seen.add(up.id); qa.push(up.id); }
+      for (const up of over.get(id) || []) if (up.via !== 'touch' && !seen.has(up.id)) { seen.add(up.id); qa.push(up.id); }
     }
     return { seen, bearing, under, over };
   }
@@ -168,6 +173,7 @@ export class World {
   toJSON() {
     return {
       unit: this.unit, clock: this.clock, hash: this.hash(),
+      joints: [...this.joints.values()],
       elements: this.all().map(e => ({
         id: e.id, kind: e.kind, layer: e.layer, box: e.box, shear: e.shear, material: e.material,
         system: e.system, section: e.section, meta: e.meta, trace: e.trace

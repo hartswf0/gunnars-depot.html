@@ -95,5 +95,185 @@
   "loads": 13
  },
  "members": 289,
- "open": 0
+ "open": 0,
+ "joints": 400,
+ "loop": {
+  "state": "SETTLED",
+  "steps": 18,
+  "seconds": 5.4,
+  "walkedBack": 0,
+  "moves": [
+   {
+    "step": 1,
+    "answering": "UNJOINED",
+    "brief": false,
+    "move": "nailOff",
+    "note": "nailed off 314 joints; 84 contacts have no schedule entry",
+    "kept": true,
+    "before": 22,
+    "after": 6
+   },
+   {
+    "step": 2,
+    "answering": "REQUIREMENT_FAILED",
+    "brief": true,
+    "move": "stage",
+    "note": "stage openings",
+    "kept": true,
+    "before": 6,
+    "after": 6
+   },
+   {
+    "step": 3,
+    "answering": "UNJOINED",
+    "brief": false,
+    "move": "nailOff",
+    "note": "nailed off 66 joints; 212 contacts have no schedule entry",
+    "kept": true,
+    "before": 6,
+    "after": 5
+   },
+   {
+    "step": 4,
+    "answering": "REQUIREMENT_FAILED",
+    "brief": true,
+    "move": "stage",
+    "note": "stage interior",
+    "kept": true,
+    "before": 5,
+    "after": 10
+   },
+   {
+    "step": 5,
+    "answering": "UNJOINED",
+    "brief": false,
+    "move": "nailOff",
+    "note": "nailed off 14 joints; 246 contacts have no schedule entry",
+    "kept": true,
+    "before": 10,
+    "after": 9
+   },
+   {
+    "step": 6,
+    "answering": "REQUIREMENT_FAILED",
+    "brief": true,
+    "move": "stage",
+    "note": "stage services",
+    "kept": true,
+    "before": 9,
+    "after": 17
+   },
+   {
+    "step": 7,
+    "answering": "UNJOINED",
+    "brief": false,
+    "move": "nailOff",
+    "note": "nailed off 4 joints; 252 contacts have no schedule entry",
+    "kept": true,
+    "before": 17,
+    "after": 13
+   },
+   {
+    "step": 8,
+    "answering": "REQUIREMENT_FAILED",
+    "brief": true,
+    "move": "stage",
+    "note": "stage venting",
+    "kept": true,
+    "before": 13,
+    "after": 14
+   },
+   {
+    "step": 9,
+    "answering": "REQUIREMENT_FAILED",
+    "brief": true,
+    "move": "stage",
+    "note": "stage propane",
+    "kept": true,
+    "before": 14,
+    "after": 14
+   },
+   {
+    "step": 10,
+    "answering": "REQUIREMENT_FAILED",
+    "brief": true,
+    "move": "stage",
+    "note": "stage electrical",
+    "kept": true,
+    "before": 14,
+    "after": 7
+   },
+   {
+    "step": 11,
+    "answering": "UNDERSIZED_CONDUCTOR",
+    "brief": false,
+    "move": "regauge",
+    "note": "bank.inverter: 8 AWG -> 2/0 AWG",
+    "kept": true,
+    "before": 7,
+    "after": 6
+   },
+   {
+    "step": 12,
+    "answering": "EDGE_CLEARANCE",
+    "brief": false,
+    "move": "reroute",
+    "note": "run lpg.heater rerouted: centred in joist.113 on y; centred in fridge on y",
+    "kept": true,
+    "before": 6,
+    "after": 5
+   },
+   {
+    "step": 13,
+    "answering": "UNVENTED_TRAP",
+    "brief": false,
+    "move": "vent",
+    "note": "1.5 in vent at trap.shower.pan, stack up through the roof",
+    "kept": true,
+    "before": 5,
+    "after": 4
+   },
+   {
+    "step": 14,
+    "answering": "VOLTAGE_DROP",
+    "brief": false,
+    "move": "regauge",
+    "note": "pv.string: 10 AWG -> 6 AWG",
+    "kept": true,
+    "before": 4,
+    "after": 3
+   },
+   {
+    "step": 15,
+    "answering": "VOLTAGE_DROP",
+    "brief": false,
+    "move": "regauge",
+    "note": "dc.lights: 18 AWG -> 16 AWG",
+    "kept": true,
+    "before": 3,
+    "after": 2
+   },
+   {
+    "step": 16,
+    "answering": "PLATE_TIE_REQUIRED",
+    "brief": false,
+    "move": "strap",
+    "note": "strap.top1.E: 12 in steel tie across the cut plate, screwed off",
+    "kept": true,
+    "before": 2,
+    "after": 1
+   },
+   {
+    "step": 17,
+    "answering": "PLATE_TIE_REQUIRED",
+    "brief": false,
+    "move": "strap",
+    "note": "strap.top2.E: 12 in steel tie across the cut plate, screwed off",
+    "kept": true,
+    "before": 1,
+    "after": 0
+   }
+  ],
+  "open": []
+ }
 }

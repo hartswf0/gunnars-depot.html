@@ -36,6 +36,8 @@
   .no { color: #c33; } .yes { color: #171; }
   td small { color: #888; }
   h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; margin: 2.5rem 0 .4rem; }
+  .note { color: #666; font-size: .82rem; margin: .2rem 0 0; }
+  tr.back td { color: #999; }
 </style>
 </head>
 <body>
@@ -45,6 +47,10 @@
 <h2>What was asked for, and what got built</h2>
 <table id="spec"><tbody></tbody></table>
 <table id="sys"><tbody></tbody></table>
+
+<h2>How the builder decided</h2>
+<p class="note" id="loopsub"></p>
+<table id="loop"><tbody></tbody></table>
 
 <h2>The process</h2>
 <nav>
@@ -93,6 +99,29 @@ if (spec) {
   s2.appendChild(tr);
 }
 
+// The builder's own loop, as it ran. Not a summary of the moves — the moves,
+// including the two it tried and walked back, which is the only place you can
+// see it choosing rather than following a script.
+if (spec && spec.loop) {
+  const L = spec.loop;
+  $('#loopsub').textContent =
+    `${L.steps} decisions in ${L.seconds}s — ${L.moves.filter(m => m.brief).length} answering the brief, ` +
+    `${L.moves.filter(m => !m.brief).length} answering what the last move opened` +
+    (L.walkedBack ? `, ${L.walkedBack} walked back` : '') +
+    `. Ended ${L.state.toLowerCase()}${L.open.length ? ` with ${L.open.length} acknowledged` : ' with nothing outstanding'}.`;
+  const lt = $('#loop').querySelector('tbody');
+  lt.innerHTML = '<tr><th>#</th><th>answering</th><th>move</th><th>open before→after</th></tr>';
+  for (const m of L.moves) {
+    const tr = document.createElement('tr');
+    if (!m.kept) tr.className = 'back';
+    tr.innerHTML = `<td class="n">${m.step}</td>` +
+      `<td>${m.brief ? '<small>brief</small> ' : ''}${esc(m.answering || '')}</td>` +
+      `<td>${esc(m.move)}<br><small>${esc(m.note || '')}</small></td>` +
+      `<td class="n">${m.before}→${m.after}${m.kept ? '' : ' <small>walked back</small>'}</td>`;
+    lt.appendChild(tr);
+  }
+}
+
 const chapterAt = new Map(rec.chapters.map(ch => [ch.at, ch]));
 let mode = 'key';
 
@@ -126,7 +155,8 @@ function render() {
   $('#bAll').setAttribute('aria-pressed', String(mode === 'all'));
   $('#bShots').setAttribute('aria-pressed', String(mode === 'shots'));
 }
-const esc = (s) => String(s).replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
+// hoisted: the loop table above renders at module top level, before this line
+function esc(s) { return String(s).replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
 $('#bKey').onclick = () => { mode = 'key'; render(); };
 $('#bAll').onclick = () => { mode = 'all'; render(); };
 $('#bShots').onclick = () => { mode = 'shots'; render(); };

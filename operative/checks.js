@@ -6,6 +6,7 @@
 // to choose the next move.
 import { separation, overlapVolume, aabb, containsFully } from './poly.js';
 import { referenceConditions } from './reference.js';
+import { scheduleFor, required, joinKey } from './joints.js';
 
 export const SEVERITY = { blocking: 3, serious: 2, open: 1, note: 0 };
 
@@ -352,6 +353,39 @@ export function checkAll(world) {
               shortfall: +(wh - Math.min(usable, pv)).toFixed(0),
               loads: loads.map(e => `${e.id} ${e.meta.watts}W x ${e.meta.hoursPerDay}h`) }, null));
     }
+  }
+
+  // 7e. what is touching is not joined until it is nailed
+  const unjoined = [];
+  const seenContact = new Set();
+  for (const [id, ups] of graph.under) {
+    for (const u of ups) {
+      const k = joinKey(id, u.id);
+      if (world.joints.has(k)) continue;
+      if (seenContact.has(k)) continue;   // the graph records both directions; a contact is one contact
+      seenContact.add(k);
+      const A = world.get(id), B = world.get(u.id);
+      if (!A || !B) continue;
+      const rule = scheduleFor(A.kind, B.kind);
+      if (!rule) continue;
+      unjoined.push({ a: id, b: u.id, rule });
+    }
+  }
+  if (unjoined.length) {
+    const sample = unjoined.slice(0, 3).map(u => `${u.a}/${u.b}`).join(', ');
+    out.push(cond('UNJOINED', SEVERITY.blocking,
+      `${unjoined.length} contact${unjoined.length === 1 ? ' is' : 's are'} touching but not nailed (${sample}${unjoined.length > 3 ? ', …' : ''})`,
+      unjoined.slice(0, 8).flatMap(u => [u.a, u.b]),
+      { count: unjoined.length, basis: 'IRC R602.3(1)' },
+      { op: 'nailOff', args: {} }));
+  }
+  // and a joint below its schedule is not a joint either
+  for (const j of world.joints.values()) {
+    if (j.count >= j.required) continue;
+    out.push(cond('UNDER_NAILED', SEVERITY.serious,
+      `${j.a} to ${j.b}: ${j.count} ${j.size} where the schedule wants ${j.required} (${j.schedule})`,
+      [j.a, j.b], { has: j.count, wants: j.required, size: j.size, basis: 'IRC R602.3(1)' },
+      { op: 'join', args: { a: j.a, b: j.b, count: j.required } }));
   }
 
   // 8. the drawing gets a say

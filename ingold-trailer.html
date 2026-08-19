@@ -141,7 +141,7 @@ $('#viewport').addEventListener('pointerup', (e) => {
 // --- build it, then play the making back
 setTimeout(() => {
   const t0 = performance.now();
-  const { world } = build();
+  const { world, loop } = build();
   finished = world;
   const secs = ((performance.now() - t0) / 1000).toFixed(1);
 
@@ -161,10 +161,16 @@ setTimeout(() => {
   }
   view.frame(world);            // frame once, on the finished trailer, so the film holds still
   $('#scrub').max = String(frames.length - 1);
-  $('#state').className = 'settled';
-  $('#state').textContent = `settled · ${world.elements.size} members`;
-  say(`${world.elements.size} members, nothing outstanding`,
-      `built in ${secs}s across ${recs.length} moves — press play to watch it happen`);
+  const settled = loop.state === 'SETTLED' && loop.open.length === 0;
+  $('#state').className = settled ? 'settled' : 'building';
+  $('#state').textContent = `${loop.state.toLowerCase()} · ${world.elements.size} members`;
+  // The loop's own count, not the journal's: moves it tried and walked back leave
+  // no trace in the building, and the honest number says how many it took.
+  const walked = loop.trace.filter(t => t.kept === false).length;
+  say(`${world.elements.size} members, ${world.joints.size} joints, ` +
+      (loop.open.length ? `${loop.open.length} still open` : 'nothing outstanding'),
+      `${loop.steps} decisions in ${secs}s` + (walked ? `, ${walked} walked back` : '') +
+      ` — press play to watch it happen`);
   show(0);
   window.trailer = { world, frames, show };
   setTimeout(play, 700);

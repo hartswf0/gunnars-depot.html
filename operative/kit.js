@@ -111,8 +111,11 @@ export function seedTrailer(world = new World(), spec = {}) {
 
   // ---- foundation: floor joists + deck ----
   for (const y of layout(0, K.length, K.joistSpacing, jT)) {
-    // over the axles a joist stops at the rails; elsewhere it runs the full width
-    const x0 = inWell(y) ? railInner : 0, x1 = inWell(y) ? railOuter : K.width;
+    // Over the axles a joist stops at the rails — but it has to land *on* them, not
+    // beside them. Trimmed to the inner face it bore on nothing, and seventeen
+    // members above it were left hanging.
+    const railOut = K.railInset - 1.5, railFar = K.width - K.railInset + 1.5;
+    const x0 = inWell(y) ? railOut : 0, x1 = inWell(y) ? railFar : K.width;
     add({ id: `joist.${y.toFixed(0)}`, kind: 'joist', layer: 'foundation', material: 'treated_wood',
           section: K.joistSection, box: box([(x0 + x1) / 2, y, joistBot + jD / 2], [x1 - x0, jT, jD]),
           meta: { spanAxis: 'x', clearSpan: 60, trimmed: inWell(y) } });
@@ -127,7 +130,10 @@ export function seedTrailer(world = new World(), spec = {}) {
       box: box([(ax0 + ax1) / 2, (ay0 + ay1) / 2, deckBot + K.deckThick / 2], [ax1 - ax0, ay1 - ay0, K.deckThick]),
       meta: { role: 'floor sheathing' } });
     panel('deck.fore', 0, K.width, 0, y0);
-    panel('deck.axle', railInner, railOuter, y0, y1);      // narrow between the wells
+    // The deck stops at the wells' inboard faces. Run out to the rails (where the
+    // trimmed joists end) and it occupies the same 0.75 in as the well boards —
+    // six overlaps, reported the moment the joists were widened to bear.
+    panel('deck.axle', railInner, railOuter, y0, y1);
     panel('deck.aft', 0, K.width, y1, K.length);
     for (const w of wells) {
       const cx = (w.x0 + w.x1) / 2, cy = (y0 + y1) / 2;

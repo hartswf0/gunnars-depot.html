@@ -14,6 +14,7 @@
 import { World } from './world.js';
 import { seedTrailer } from './kit.js';
 import { commit } from './ops.js';
+import { run as runLoop } from './loop.js';
 import { planPath } from './language.js';
 import { SECTIONS } from './world.js';
 import { BORE } from './checks.js';
@@ -420,16 +421,42 @@ export function electrical(w, log = []) {
   return log;
 }
 
-/** The whole making, in order, on one world. */
-export function build() {
+/**
+ * The brief, kept alive during execution. Each line is a thing that was asked for;
+ * while it is unmet the world reports REQUIREMENT_FAILED and the loop answers it.
+ * This is what makes the trailer get built rather than get scripted.
+ */
+export const BRIEF = [
+  { id: 'openings', hard: true, stage: 'openings', want: 'a way in and daylight',
+    met: (w) => w.all({ kind: 'opening' }).length >= 5 && w.all({ kind: 'header' }).length >= 5 },
+  { id: 'rooms', hard: true, stage: 'interior', want: 'a bath, a galley, somewhere to sit and somewhere to sleep',
+    met: (w) => ['wc', 'sink', 'bed.base', 'table'].every(id => w.get(id)) },
+  { id: 'water', hard: true, stage: 'services', want: '65 gal of water, hot and cold, and a way out for the grey',
+    met: (w) => !!w.get('tank.fresh') && !!w.get('heater') && !!w.get('grey.out') },
+  { id: 'venting', hard: true, stage: 'venting', want: 'traps and vents, so the drains work and the room does not smell',
+    met: (w) => w.all({ kind: 'trap' }).length >= 3 && w.all({ kind: 'vent' }).length >= 1 },
+  { id: 'gas', hard: true, stage: 'propane', want: 'gas to cook and to heat the water',
+    met: (w) => !!w.get('lpg.bottle') && !!w.get('flue.heater') },
+  { id: 'power', hard: true, stage: 'electrical', want: 'off-grid power: array, bank, and something to run',
+    met: (w) => !!w.get('mppt') && !!w.get('battery.1') && w.all().filter(e => e.meta.watts).length >= 8 },
+  { id: 'fastening', hard: true, stage: 'nail', want: 'the whole of it nailed together',
+    met: (w) => w.joints.size > 300 }
+];
+
+/** The stages the loop can call when a requirement is unmet. */
+export const STAGES = {
+  openings, interior, services, venting, propane, electrical,
+  nail: (w, log) => { log.push(commit(w, 'nailOff', {}, 'REQUIREMENT_FAILED')); return log; }
+};
+
+/**
+ * The whole making. Not a list of calls in a fixed order any more: a seed, a brief,
+ * and a loop that reads what the world says and answers the difference that makes
+ * the most difference, until nothing is asking for anything.
+ */
+export function build({ budget = 60 } = {}) {
   const w = shell();
   const log = [];
-  openings(w, log);
-  interior(w, log);
-  services(w, log);
-  venting(w, log);
-  propane(w, log);
-  electrical(w, log);
-  repair(w, log);
-  return { world: w, log };
+  const result = runLoop(w, { brief: BRIEF, stages: STAGES, budget, log });
+  return { world: w, log, loop: result };
 }

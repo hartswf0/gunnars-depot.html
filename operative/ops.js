@@ -7,12 +7,16 @@ import { Element, SECTIONS } from './world.js';
 import { box } from './geom.js';
 import { poly, segmentPoly, aabb } from './poly.js';
 import { checkAll, SPAN_TABLE, BORE } from './checks.js';
+import { scheduleFor, required, joinKey } from './joints.js';
 
 const key = (c) => `${c.code}:${c.elements.join('|')}`;
 
 /** Deep snapshot of the mutable world, so any move can be walked back. */
 function snapshot(world) {
   return {
+    // joints are state too; undo used to leave them behind, so a walked-back world
+    // kept 398 connections to members that no longer existed
+    joints: [...world.joints.entries()].map(([k, v]) => [k, { ...v }]),
     elements: world.all().map(e => JSON.parse(JSON.stringify({
       id: e.id, kind: e.kind, layer: e.layer, box: e.box, shear: e.shear, material: e.material,
       system: e.system, section: e.section, meta: e.meta, ports: e.ports, trace: e.trace
@@ -22,6 +26,26 @@ function snapshot(world) {
 function restore(world, snap) {
   world.elements.clear();
   for (const e of snap.elements) world.add(new Element(e));
+  if (snap.joints) { world.joints.clear(); for (const [k, v] of snap.joints) world.joints.set(k, v); }
+  world._lintHash = null;
+}
+
+/**
+ * Walk back everything committed since `mark`, in one move. The loop used to call
+ * undo() in a while-loop, which walks back the *last* snapshot-bearing record each
+ * time — and when one had no snapshot it spun, and when several did it went far
+ * past where it was asked to stop, leaving the shell and no building.
+ */
+export function rollbackTo(world, mark) {
+  if (world.history.length <= mark) return { ok: true, note: 'nothing to walk back' };
+  const first = world.history[mark];
+  if (!first || !first.snapshot) return { ok: false, note: 'no snapshot at that point' };
+  restore(world, first.snapshot);
+  const dropped = world.history.length - mark;
+  world.history.length = mark;
+  world.conditions = checkAll(world);
+  world._lintHash = world.hash();
+  return { ok: true, note: `walked back ${dropped} move${dropped === 1 ? '' : 's'}`, dropped };
 }
 
 /**
@@ -46,9 +70,11 @@ export function commitChain(world, steps, cause = null) {
   if (!steps.length) return { ok: false, note: 'nothing to run' };
   for (const s of steps) if (!OPS[s.op]) return { ok: false, note: `no operation named "${s.op}"` };
 
-  const before = checkAll(world);
-  const beforeKeys = new Set(before.map(key));
+  // The after-state of the last commit is the before-state of this one. Re-linting
+  // it cost a full pass per operation — about half of all the time the build spent.
   const beforeHash = world.hash();
+  const before = (world._lintHash === beforeHash && world.conditions) ? world.conditions : checkAll(world);
+  const beforeKeys = new Set(before.map(key));
   const snap = snapshot(world);
 
   const notes = [], changed = [];
@@ -67,6 +93,7 @@ export function commitChain(world, steps, cause = null) {
   const opened = after.filter(c => !beforeKeys.has(key(c)));
   const closed = before.filter(c => !afterKeys.has(key(c)));
   world.conditions = after;
+  world._lintHash = world.hash();
 
   const report = {
     ok: true, op: steps.map(s => s.op).join('+'), args: steps.length === 1 ? steps[0].args : steps,
@@ -88,13 +115,14 @@ export function commitChain(world, steps, cause = null) {
 }
 
 /** Walk the world back to just before journal entry t. */
-export function undo(world, t) {
+export function undo(world, t, { relint = true } = {}) {
   for (let i = world.history.length - 1; i >= 0; i--) {
     const rec = world.history[i];
     if (rec.snapshot && (t === undefined || rec.t === t)) {
       restore(world, rec.snapshot);
       world.history.splice(i, 1);
-      world.conditions = checkAll(world);
+      // walking back twenty entries used to re-lint twenty times
+      if (relint) world.conditions = checkAll(world);
       world.record({ kind: 'undo', note: `walked back ${rec.op || rec.kind} (t=${rec.t})`, elements: [] });
       return { ok: true, note: `walked back ${rec.op || rec.kind}`, hash: world.hash() };
     }
@@ -114,6 +142,13 @@ function wallBox(w, u0, u1, z0, z1, thickness) {
   return box(p, s);
 }
 const uOf = (el, w) => el.box.p[along(w)];
+
+/** How long the two members actually run together, for spacing-based schedules. */
+function contactLength(A, B) {
+  const a = { lo: A.lo, hi: A.hi }, b = { lo: B.lo, hi: B.hi };
+  const ov = [0, 1, 2].map(i => Math.min(a.hi[i], b.hi[i]) - Math.max(a.lo[i], b.lo[i]));
+  return Math.max(...ov.filter(v => v > 0), 0);
+}
 
 /**
  * The top of whatever the wall bears on at station `u`. Over a wheel well that is
@@ -469,7 +504,11 @@ export const OPS = {
     world.add(new Element({ id: sid, kind: 'strap', layer: 'frame', material: 'steel', box: box(p, s),
       meta: { ties: id, role: 'steel tie', wall: m.meta.wall } }));
     m.meta.tied = true;
-    return { changed: [sid, id], note: `${sid}: 12 in steel tie across the cut plate` };
+    // Screwing the tie on *is* the joint. Left for a later nail-off pass the strap
+    // stood there touching the plate, unjoined and carrying nothing — the repair
+    // scored worse than the condition it repaired and the loop walked it back.
+    OPS.join(world, { a: sid, b: id });
+    return { changed: [sid, id], note: `${sid}: 12 in steel tie across the cut plate, screwed off` };
   },
 
   /**
@@ -646,6 +685,54 @@ export const OPS = {
     for (const r of world.all({ kind: 'run' })) if (r.meta.run === run) { r.meta.awg = awg; changed.push(r.id); }
     return { changed, note: `${run}: ${was} AWG -> ${awg} AWG` };
   },
+
+  /**
+   * Nail two members together. An act, not an observation: before this existed the
+   * model inferred "fastened" from adjacency and 687 pairs were connected by nothing.
+   */
+  join(world, { a, b, count, type, size, how }) {
+    const A = world.get(a), B = world.get(b);
+    if (!A || !B) return { ok: false, note: `need both ${a} and ${b}` };
+    const rule = scheduleFor(A.kind, B.kind);
+    const len = contactLength(A, B);
+    const need = rule ? required(rule, len) : 2;
+    const j = {
+      a, b, type: type || (rule ? rule.type : 'nail'), size: size || (rule ? rule.size : '16d'),
+      count: count || need, how: how || (rule ? rule.how : 'face nail'),
+      required: need, schedule: rule ? rule.note || `${rule.a}/${rule.b}` : 'no schedule entry',
+      contact: +len.toFixed(1), t: world.clock + 1
+    };
+    world.joints.set(joinKey(a, b), j);
+    A.trace.push({ t: j.t, kind: 'joined', note: `${j.count} ${j.size} ${j.type} to ${b} (${j.how})` });
+    B.trace.push({ t: j.t, kind: 'joined', note: `${j.count} ${j.size} ${j.type} to ${a} (${j.how})` });
+    return { changed: [a, b], note: `${a} + ${b}: ${j.count} ${j.size} ${j.type}, ${j.how}` };
+  },
+
+  /**
+   * Nail off everything the schedule covers — what a framer actually does, in one
+   * pass, rather than one joint at a time.
+   */
+  nailOff(world, { only } = {}) {
+    const g = world.grounded();
+    let made = 0, skipped = 0;
+    const changed = [];
+    for (const [id, ups] of g.under) {
+      for (const u of ups) {
+        const A = world.get(id), B = world.get(u.id);
+        if (!A || !B) continue;
+        if (world.joints.has(joinKey(id, u.id))) continue;
+        const rule = scheduleFor(A.kind, B.kind);
+        if (!rule) { skipped++; continue; }
+        if (only && ![A.kind, B.kind].includes(only)) continue;
+        const r = OPS.join(world, { a: id, b: u.id });
+        if (r.changed) { made++; changed.push(...r.changed); }
+      }
+    }
+    return { changed: [...new Set(changed)], note: `nailed off ${made} joint${made === 1 ? '' : 's'}${skipped ? `; ${skipped} contacts have no schedule entry` : ''}` };
+  },
+
+  /** A placeholder the loop replaces: a requirement's stage is run by the caller. */
+  stage(world, { name }) { return { changed: [], note: `stage ${name}` }; },
 
   /** A measurement worth keeping in the journal, which changes no geometry. */
   note(world, { text }) { return { changed: [], note: text }; },

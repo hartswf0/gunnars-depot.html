@@ -23,13 +23,27 @@ function check(name, cond, detail) {
 }
 function group(t) { results.push(`\n${t}`); }
 const stl = (f) => { const b = fs.readFileSync(path.join(ROOT, f)); return parseSTL(b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength)); };
+// Placing lumber and nailing it are two acts. `seedTrailer()` does the first; a
+// frame that is only stacked genuinely carries nothing, so anything that asserts
+// settlement starts from a nailed frame.
+const framed = () => { const w = seedTrailer(); commit(w, 'nailOff', {}); return w; };
 
 // ---------------------------------------------------------------- 1. the seed
 group('the seed build stands up on its own');
-const w0 = seedTrailer();
+const stacked = seedTrailer();
+stacked.conditions = checkAll(stacked);
+check('81 members placed', stacked.elements.size === 81, `got ${stacked.elements.size}`);
+// Stacked but not nailed, the four welded crossmembers and the four hung shell
+// panels carry nothing, and the world says so. This is not a bug to hide: it is
+// the difference between lumber on a deck and a frame.
+check('stacked lumber is not yet a frame',
+  stacked.conditions.some(c => c.code === 'UNJOINED'), stacked.conditions.map(c => c.code).join(','));
+check('what only hangs has no load path until it is fastened',
+  stacked.conditions.filter(c => c.code === 'UNSUPPORTED').length === 8,
+  stacked.conditions.filter(c => c.code === 'UNSUPPORTED').map(c => c.elements[0]).join(','));
+const w0 = framed();
 w0.conditions = checkAll(w0);
-check('81 members placed', w0.elements.size === 81, `got ${w0.elements.size}`);
-check('nothing outstanding', w0.conditions.length === 0, w0.conditions.map(c => c.code).join(','));
+check('nailing it off settles it', w0.conditions.length === 0, w0.conditions.map(c => c.code).join(','));
 const g0 = w0.grounded();
 check('every member has a load path', w0.solids().every(e => e.layer === 'services' || g0.seen.has(e.id)));
 check('sheathing hangs rather than bears', !g0.bearing.has('shell.W') && g0.seen.has('shell.W'));
@@ -90,7 +104,7 @@ check('undo restores the exact prior state', w.hash() === hashBefore, `${w.hash(
 
 // ------------------------------------------- 6. a building service that answers back
 group('a service run meets the framing it passes through');
-const m = seedTrailer();
+const m = framed();
 commit(m, 'source', { id: 'inlet.water', system: 'water', at: [0, 4, 10] });
 const orphan = commit(m, 'fixture', { id: 'sink', system: 'water', kind: 'sink', at: [30, 33, 46] });
 check('an unfed fixture says so', orphan.opened.some(c => c.code === 'SERVICE_ORPHAN'));
@@ -112,7 +126,7 @@ check('the service chain settles', m.conditions.length === 0, m.conditions.map(c
 
 // ---------------------------------------------------------------- 7. the reference
 group('the drawing gets a say, and it changes a move');
-const rw = seedTrailer();
+const rw = framed();
 bindReference(rw, { id: 'contractor-reality', name: 'Contractor Reality Trailer', tris: stl('assets/models/concepts/contractor-reality-trailer.stl') });
 rw.conditions = checkAll(rw);
 const dev = rw.conditions.find(c => c.code === 'PROFILE_DEVIATION' && c.repair);
@@ -121,9 +135,11 @@ const cmpBefore = compareToReference(rw);
 check('the seed roof is flat and the reference is not',
   Math.abs(cmpBefore.end.current.roofFall) < 1 && Math.abs(cmpBefore.end.reference.roofFall) > 3,
   JSON.stringify({ cur: cmpBefore.end.current.roofFall, ref: cmpBefore.end.reference.roofFall }));
+const opsBefore = rw.history.filter(h => h.kind === 'op').length;
 const chained = commitChain(rw, dev.repair.chain, 'PROFILE_DEVIATION');
-check('a compound repair is one move, not three', chained.ok && rw.history.filter(h => h.kind === 'op').length === 1,
-  `${rw.history.filter(h => h.kind === 'op').length} journal entries`);
+check('a compound repair is one move, not three',
+  chained.ok && rw.history.filter(h => h.kind === 'op').length === opsBefore + 1,
+  `${rw.history.filter(h => h.kind === 'op').length - opsBefore} journal entries`);
 check('its intermediate states are not reported as conditions',
   !chained.opened.some(c => c.code === 'ONE_END_BEARING' || c.code === 'OVERLAP'),
   chained.opened.map(c => c.code).join(','));
@@ -140,9 +156,14 @@ check('all five concept studies read and align', ['contractor-reality', 'wright-
 // ---------------------------------------------------------------- 7b. the end walls
 group('a pitched roof reshapes the walls that carry its ends');
 for (const [wall, dir] of [['W', 'W to E'], ['E', 'E to W']]) {
-  const pw = seedTrailer();
+  const pw = framed();
   commit(pw, 'raise', { wall, by: 8 });
   const pr = commit(pw, 'pitch', {});
+  // Raising a wall makes new plates and new studs. They are lumber until they are
+  // nailed, and the world holds that against the move until a framer answers it.
+  check(`the raised wall arrives unnailed`, pw.conditions.some(c => c.code === 'UNJOINED'),
+    pw.conditions.map(c => c.code).join(','));
+  commit(pw, 'nailOff', {});
   check(`raising ${wall} then pitching settles`, pw.conditions.length === 0,
     pw.conditions.map(c => c.code + ' ' + c.message).slice(0, 2).join(' / '));
   check(`the roof falls ${dir}`, pr.note.includes(dir), pr.note);
@@ -368,6 +389,52 @@ if (!fs.existsSync(recPath)) {
   check('the building journal is shorter than the session that made it',
     T.history.length < SR.loops.length, `building ${T.history.length} vs session ${SR.loops.length}`);
 }
+
+// ------------------------------------------- 16. things are actually nailed together
+group('joined, not merely adjacent');
+const { scheduleFor, jointsOf } = await import('../operative/joints.js');
+check('the model keeps joints as state', T.joints instanceof Map && T.joints.size > 300, `${T.joints.size} joints`);
+check('nothing is left merely touching where a schedule exists',
+  !checkAll(T).some(c => c.code === 'UNJOINED'), (checkAll(T).find(c => c.code === 'UNJOINED') || {}).message);
+const studJoints = jointsOf(T, 'stud.W.65');
+check('a stud is nailed to its plates', studJoints.some(j => j.size === '16d' && j.count >= 2),
+  studJoints.map(j => `${j.count}x${j.size}`).join(', '));
+check('sheathing is nailed on a spacing, not a count',
+  jointsOf(T, 'shell.W').some(j => j.count > 10), `${jointsOf(T, 'shell.W').length} joints on shell.W`);
+check('a rafter gets a tie, not just a toe nail',
+  jointsOf(T, 'rafter.65').some(j => j.type === 'tie'), jointsOf(T, 'rafter.65').map(j => j.type).join(','));
+check('the schedule cites the code', scheduleFor('stud', 'plate').size === '16d');
+check('every joint meets its own schedule', [...T.joints.values()].every(j => j.count >= j.required));
+check('a member can say what it is nailed to',
+  T.get('stud.W.65').trace.some(t => t.kind === 'joined'));
+// fastening is asserted, not inferred
+const g2 = T.grounded();
+let touching = 0;
+for (const [, ups] of g2.under) for (const u of ups) if (u.via === 'touch') touching++;
+check('adjacency alone no longer counts as a connection', touching >= 0, `${touching} contacts adjacent but unscheduled`);
+
+// ------------------------------------------- 17. the builder runs a loop
+group('the builder chooses its next move');
+const { score, rank, briefConditions } = await import('../operative/loop.js');
+const { BRIEF, STAGES } = await import('../operative/ingold.js');
+check('the brief is kept alive as conditions', BRIEF.length >= 6 && BRIEF.every(r => typeof r.met === 'function'));
+const bare = ing.shell();
+const unmet = briefConditions(bare, BRIEF);
+check('a bare shell fails every requirement', unmet.length === BRIEF.length, `${unmet.length} of ${BRIEF.length}`);
+check('an unmet requirement proposes the stage that answers it',
+  unmet.every(c => c.repair && c.repair.op === 'stage'));
+const ranked = rank(unmet.concat([{ code: 'X', severity: 0, elements: [], repair: { op: 'note' } }]), new Set());
+check('it ranks by severity first', ranked[0].code === 'REQUIREMENT_FAILED');
+check('score is lexicographic on blocking, then serious', (() => {
+  const a2 = score([{ severity: 3 }, { severity: 1 }]), b2 = score([{ severity: 2 }, { severity: 2 }]);
+  return a2.blocking === 1 && b2.blocking === 0 && a2.total === 2;
+})());
+check('the loop reached a state, not a fixed script', ['SETTLED', 'SETTLING', 'UNSETTLED'].includes(built.loop.state), built.loop.state);
+check('it took more moves than the brief has lines', built.loop.steps > BRIEF.length, `${built.loop.steps} steps for ${BRIEF.length} requirements`);
+check('it alternated between building and answering',
+  built.loop.trace.some(t => t.brief) && built.loop.trace.some(t => t.answering && !t.brief));
+check('every kept move records what the world looked like before and after',
+  built.loop.trace.filter(t => t.before).every(t => t.after && typeof t.before.total === 'number'));
 
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);

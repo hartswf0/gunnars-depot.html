@@ -14,7 +14,7 @@ Open `operative-builder.html` from GitHub Pages or any local static server
 Everything else runs offline: `three` (r185, MIT) is vendored under
 `vendor/three/`, and the reference studies are read from this repository.
 
-Run the receipts with `node tests/run.mjs` (161 assertions, no dependencies).
+Run the receipts with `node tests/run.mjs` (183 assertions, no dependencies).
 
 The trailer is a working MEP model, not decorated geometry: **289 members**, five
 connected systems, and every device on its system's graph.
@@ -33,11 +33,13 @@ chase. Conductors are sized against **both** ampacity (NEC 310.16) and 3% voltag
 drop; traps against trap-arm limits (IPC 909.1).
 
 **`ingold-trailer.html` is the building this was for.** The environment above is the
-means; the trailer is the result. 226 members on the reference sheets' 8'-6" x
-20'-0" envelope: bath, galley, dinette, bed, five headed openings, and water,
-waste and off-grid power as connected systems. It settles with nothing
-outstanding, and the page replays its own construction — 51 moves, with what the
-building answered at each one.
+means; the trailer is the result. 289 members and 400 joints on the reference
+sheets' 8'-6" x 20'-0" envelope: bath, galley, dinette, bed, five headed
+openings, and water, waste and off-grid power as connected systems. Nobody
+scripted it — the builder ran the loop for 18 decisions and settled with nothing
+outstanding, and the page replays its own construction move by move, with what
+the building answered at each one. `making-of.html` shows the 18 decisions as a
+table and the session that produced them as a plain transcript.
 
 ---
 
@@ -57,6 +59,8 @@ operative/
   checks.js      the deterministic conditions — where the world pushes back
   probe.js       what-would-happen-if: local consequence, member voices, ghosts
   ops.js         the operative vocabulary; every move reversible and journalled
+  joints.js      the fastening schedule — what actually holds two members together
+  loop.js        the builder's own loop: rank, choose, preview, act, verify, walk back
   reference.js   STL silhouette extraction and comparison against the concepts
   language.js    sentences become operations
   invariants.js  rules promoted at runtime after repeated failure
@@ -75,6 +79,37 @@ instruction → operation → world changes → conditions open and close → hi
 
 `SETTLED` is the resting state, not `DONE`. It means only: no known consequential
 failure demands another move. Any disturbance reopens it.
+
+### The builder runs it too
+
+`loop.js` is the same loop with nobody typing. The brief is kept alive as
+conditions — each line of it is a `REQUIREMENT_FAILED` that proposes the stage
+which would answer it — so the builder ranks *build this* and *fix that* against
+each other on one list and picks the next move from the top of it:
+
+```
+ORIENT   read the world (reuse the last lint if the hash has not moved)
+FIND     rank open conditions: severity first, then how much they touch
+CHOOSE   take the repair the top condition proposes
+PREVIEW  score before
+ACT      commit the repair, or run the stage
+VERIFY   score after
+         worse? walk back to the mark — unless the move answers the brief,
+         because building the interior *should* open conditions
+RECORD   what changed, what encounter caused it, before and after
+REORIENT next pass
+```
+
+The Ingold trailer takes **18 decisions** to settle: 6 answering the brief, 11
+answering what the previous move opened, in an order nothing scripted. It nails
+off, builds a stage, discovers that stage's contacts are unnailed, nails off
+again — four times — then spends the tail resizing a conductor that would have
+melted, rerouting a bore too near a stud edge, venting a trap, and tying two
+over-cut plates. That order is not in any file. It falls out of the ranking.
+
+A move that scores worse is walked back with `rollbackTo(world, mark)` — an
+exact, bounded restore, because the first version undid past its own mark and
+took the building with it.
 
 ## What answers back
 
@@ -95,10 +130,35 @@ Deterministic, measured, and each citing its basis:
 | `SERVICE_ORPHAN` | a fixture or run with no continuous path to a source |
 | `ENVELOPE` | past the road-legal towing envelope |
 | `PROFILE_DEVIATION` | the silhouette disagrees with the bound concept study |
+| `UNJOINED` | two members are touching where the schedule requires fasteners, and there are none |
+| `UNDER_NAILED` | a joint exists but carries fewer fasteners than its schedule row requires |
 
 The support graph distinguishes **bearing** (gravity, seated) from **fastening**
 (nailed, welded, lagged), because construction does. Sheathing hangs; a
 crossmember is welded to a rail web; neither is carrying the building.
+
+## Nothing is connected until it is nailed
+
+For a long time the model had 973 relationships and not one joint. Two members
+were "fastened" because their faces happened to touch — an inference drawn from
+geometry, never an act of construction.
+
+A joint is now **asserted**, not inferred. `world.joints` is state: these two
+members, this many of these fasteners, and the schedule row that requires them.
+`joints.js` carries IRC Table R602.3(1), the fastening schedule a framer works
+to — two 16d end nails stud-to-plate, 8d at 6 in on sheathing edges, a hurricane
+tie rather than a toe nail rafter-to-plate — plus the rows a trailer needs and a
+house does not, because furniture that sits still in a house travels at 65 mph
+here.
+
+Adjacency without a joint is a `touch` edge, and `touch` does not ground
+anything. So a bare `seedTrailer()` is now *lumber*: four welded crossmembers
+and four hung shell panels report no load path, and one `UNJOINED` names 206
+contacts. `nailOff` makes it a frame. Placing and nailing are two acts, and the
+tests assert both.
+
+The 20-footer settles at **289 members and 400 joints**, every one of them
+carrying a count, a size, a method and the schedule row it answers to.
 
 ## The building service
 
@@ -269,24 +329,27 @@ already models. Vents and flues became runs.
 
 ## Two journals, at two scales
 
-The trailer keeps a journal of the 51 moves that built it. The session that built
+The trailer keeps a journal of the 103 moves that built it. The session that built
 the trailer kept one too — Claude Code writes every tool call and result to
 `~/.claude/projects/<project>/<session>.jsonl` — but it lives outside the
 repository and dies with the container.
 
-`tools/session-record.mjs` lifts it in. `data/session-record.json` holds **180
+`tools/session-record.mjs` lifts it in. `data/session-record.json` holds **216
 loops**: what was said before each one, what actually ran, what actually came
 back, and the screenshots, in order, with the instructions kept as chapters.
 `making-of.html` replays it.
 
 ```
-act     71    patching the code
-verify  50    checking whether the last patch worked
+act     91    patching the code
+verify  59    checking whether the last patch worked
 orient  20    reading the repository or the state
-probe   17    the smallest experiment that could reveal something
-observe 12    looking at a rendered screenshot
-record   3    commits pushed
+probe   20    the smallest experiment that could reveal something
+observe 14    looking at a rendered screenshot
+record    4   commits pushed
 ```
+
+Two loops, not one: 216 loops of a session to make a builder that then takes 18
+of its own.
 
 Why this is not optional: the correspondence claim — *an instruction acted, the
 world answered, the answer changed what happened next* — was only verifiable at
