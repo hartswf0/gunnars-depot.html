@@ -1340,6 +1340,57 @@ const hitList = FG.collides(BUILT, stood);
 check('putting him in the aisle names what he walks into, if anything',
   Array.isArray(hitList), `${hitList.length} at 50,90`);
 
+// ------------------------------------------- 37. everybody, doing something
+group('a body at each station');
+const EB = await import('../operative/everybody.js');
+
+// The two bodies have to agree or neither is evidence.
+const S37 = 39.3701 * EB.scaleFor(72);
+const fig37 = FG.figure(72);
+const bind37 = Object.fromEntries(EB.RIG.map(r => [r[0], r[2]]));
+check('the rig scales to the same man figure.js describes',
+  Math.abs(bind37.hips[1] * S37 - fig37.hip) < 2 &&
+  Math.abs(bind37.leftLowerLeg[1] * S37 - fig37.knee) < 2,
+  `hip ${(bind37.hips[1]*S37).toFixed(1)} vs ${fig37.hip}, knee ${(bind37.leftLowerLeg[1]*S37).toFixed(1)} vs ${fig37.knee}`);
+check('and stands six feet tall when it is asked to',
+  Math.abs((1.665 + 0.105) * S37 - 72) < 0.5);
+
+const fk37 = EB.solve(EB.ACTIVITIES['STANDING IN THE DOOR'].pose);
+const std = EB.place(fk37, { stature: 72, at: [50, 100], floor: 16 });
+check('forward kinematics puts the head above the hips above the feet',
+  std.bone.head[2] > std.bone.hips[2] && std.bone.hips[2] > std.bone.leftFoot[2]);
+check('and the feet on the floor it was given',
+  Math.abs(Math.min(...std.segments.map(g => Math.min(g.a[2], g.b[2]) - g.r)) - 16) < 0.5);
+check('a pose that bends a joint actually moves the limb', (() => {
+  const bent = EB.place(EB.solve({ leftUpperArm: [0, 0, -80] }), { stature: 72, at: [0, 0], floor: 0 });
+  const tpose = EB.place(EB.solve({}), { stature: 72, at: [0, 0], floor: 0 });
+  return Math.abs(bent.bone.leftHand[2] - tpose.bone.leftHand[2]) > 10;
+})());
+
+const acts = EB.everybody(BUILT);
+check('every activity places a body somewhere', acts.length >= 10 && acts.every(a => a.body));
+check('and none of them stands the figure inside the thing it is using',
+  acts.every(a => !a.collisions.some(h => h.id === a.at)),
+  acts.filter(a => a.collisions.some(h => h.id === a.at)).map(a => a.activity).join(', '));
+check('standing on the floor is not counted as hitting the floor',
+  !acts.some(a => a.collisions.some(h => /^deck\./.test(h.id) && /Foot|LowerLeg/.test(h.bone))));
+
+// The findings.
+const at = (n) => acts.find(a => a.activity === n);
+check('he cannot reach the galley sink: it is at his knees',
+  at('AT THE SINK').work.off > 20,
+  `hand lands ${at('AT THE SINK').work.off} in above the rim`);
+check('nor the worktop', at('AT THE WORKTOP').work.off > 20);
+check('he can sit on the toilet, and his knees are in the vanity',
+  at('ON THE TOILET').work.ok && at('ON THE TOILET').collisions.some(h => h.id === 'lav.cab'));
+check('he fits in the bed', at('IN BED').clash === 0);
+check('and in the shower, standing up', at('SHOWERING').clash === 0 && at('SHOWERING').work.ok);
+check('and can stand in the doorway without wearing the door',
+  at('STANDING IN THE DOOR').clash === 0);
+check('the study says which activities the building refuses',
+  acts.filter(a => (a.work && !a.work.ok) || a.clash > 0).length >= 4,
+  acts.filter(a => (a.work && !a.work.ok) || a.clash > 0).map(a => a.activity).join('; '));
+
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

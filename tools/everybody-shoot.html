@@ -1,0 +1,93 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>everybody at work</title>
+<style>html,body{margin:0;background:#0d1117}canvas{display:block;width:100vw;height:100vh}</style>
+<canvas id="c"></canvas>
+<script type="importmap">
+{"imports":{"three":"../vendor/three/three.module.min.js","three/addons/":"../vendor/three/addons/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { View } from '../operative/view.js';
+import { build } from '../operative/ingold.js';
+import * as EB from '../operative/everybody.js';
+
+const view = new View(document.getElementById('c'));
+view.controls.enabled = false;
+view.controls.update = () => {};
+const { world } = build({ budget: 200 });
+view.sync(world);
+view.resize();
+
+const people = new THREE.Group();
+view.scene.add(people);
+const SKIN = new THREE.MeshStandardMaterial({ color: 0x19e6c8, roughness: .55, metalness: .05 });
+const CLASH = new THREE.MeshStandardMaterial({ color: 0xff2e2e, roughness: .5 });
+
+function show(name) {
+  people.clear();
+  const r = EB.attempt(world, name);
+  if (!r || !r.body) return null;
+  const bad = new Set(r.collisions.map(h => h.bone));
+  for (const g of r.body.segments) {
+    const a = new THREE.Vector3(...g.a), b = new THREE.Vector3(...g.b);
+    const len = a.distanceTo(b);
+    const m = new THREE.Mesh(new THREE.CapsuleGeometry(g.r, len, 4, 10),
+      bad.has(g.bone) ? CLASH : SKIN);
+    m.position.copy(a).add(b).multiplyScalar(0.5);
+    if (len > 1e-4) m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0),
+      b.clone().sub(a).normalize());
+    people.add(m);
+  }
+  // Frame the station, not the face. The first pass put the camera 56 in from the
+  // head at head height, which is inside whatever wall the person is facing: you
+  // got a mannequin filling the frame and no sink, no counter, no room.
+  const head = new THREE.Vector3(...r.body.bone.head);
+  const hips = new THREE.Vector3(...r.body.bone.hips);
+  const el = world.get(r.at);
+  const fx = el ? new THREE.Vector3((el.lo[0]+el.hi[0])/2, (el.lo[1]+el.hi[1])/2, (el.lo[2]+el.hi[2])/2) : hips;
+  // look between the person and the thing they are using
+  const target = hips.clone().add(fx).multiplyScalar(0.5);
+  target.z = (hips.z + head.z) / 2;
+  // stand the camera off the long axis of the trailer, high, outside the body
+  const away = hips.clone().sub(fx).setZ(0);
+  if (away.length() < 2) away.set(0, -1, 0);
+  away.normalize();
+  const side = new THREE.Vector3(-away.y, away.x, 0);
+  const dist = 104;
+  view.camera.fov = 40; view.camera.near = 2;
+  view.camera.position.copy(target)
+    .add(away.clone().multiplyScalar(dist * 0.62))
+    .add(side.multiplyScalar(dist * 0.72));
+  view.camera.position.z = target.z + 42;
+  view.camera.up.set(0, 0, 1);
+  view.camera.lookAt(target);
+  view.camera.updateProjectionMatrix();
+  view.camera.updateMatrixWorld(true);
+  // Take the envelope off so the room reads: skin, tape, roof and the partition
+  // you would otherwise be looking through. The frame stays, ghosted.
+  const OFF = new Set(['sheathing', 'tape', 'flashing', 'glazing', 'leaf']);
+  const GHOST = new Set(['stud', 'plate', 'rafter', 'joist', 'cripple', 'king', 'jack', 'blocking', 'header']);
+  const camv = view.camera.position;
+  for (const [id, mesh] of view.meshes) {
+    const e = world.get(id);
+    if (!e) continue;
+    let hide = OFF.has(e.kind) || e.layer === 'roof';
+    // a partition between the camera and the subject is in the way
+    if (e.kind === 'partition') {
+      const c2 = new THREE.Vector3((e.lo[0]+e.hi[0])/2, (e.lo[1]+e.hi[1])/2, 0);
+      const t2 = target.clone().setZ(0), c3 = camv.clone().setZ(0);
+      if (c2.distanceTo(c3) < t2.distanceTo(c3)) hide = true;
+    }
+    mesh.visible = !hide;
+    mesh.material.transparent = true;
+    mesh.material.opacity = GHOST.has(e.kind) ? 0.22 : 1;
+  }
+  view.render();
+  return { activity: r.activity, at: r.at, headTop: r.headTop, work: r.work,
+           clash: r.clash, collisions: r.collisions, ok: r.ok };
+}
+window.show = show;
+window.NAMES = EB.ACTIVITY_NAMES;
+window.ready = true;
+</script>
