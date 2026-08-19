@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { poly } from './poly.js';
+import { draw as drawFlat, hasWebGL } from './flat.js';
 
 THREE.Object3D.DEFAULT_UP.set(0, 0, 1);   // the model is Z-up, in inches
 
@@ -25,10 +26,59 @@ export const SEVERITY_COLOR = { 3: 0xef4444, 2: 0xf97316, 1: 0xfacc15 };
 export class View {
   constructor(canvas) {
     this.canvas = canvas;
-    // preserveDrawingBuffer so the frame can be read back after it is drawn. The
-    // critic loop photographs the canvas; without this the buffer is already
-    // cleared by the time toDataURL runs and every picture comes back black.
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, preserveDrawingBuffer: true });
+    // A browser that cannot give us a GL context throws here, and the throw used
+    // to be uncaught — which killed the whole module, so a locked-down or
+    // sandboxed machine got a completely blank page: no punch list, no findings,
+    // no controls, no message. Every measurement in this project runs perfectly
+    // well without a GPU. Losing the drawing is a shame; losing the page is a bug.
+    this.ok = hasWebGL();
+    if (this.ok) {
+      try {
+        // preserveDrawingBuffer so the frame can be read back after it is drawn. The
+        // critic loop photographs the canvas; without this the buffer is already
+        // cleared by the time toDataURL runs and every picture comes back black.
+        this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, preserveDrawingBuffer: true });
+      } catch (e) { this.ok = false; this.glError = e && e.message; }
+    }
+    if (!this.ok) return this.flatten(canvas);
+    return this.build(canvas);
+  }
+
+  /**
+   * No GPU. Draw the same building on a 2D context instead, and keep the whole
+   * of the rest of the object's surface so nothing calling into it explodes.
+   */
+  flatten(canvas) {
+    this.flat = true;
+    this.ctx = canvas.getContext('2d');
+    this.world = null;
+    this.flatView = 'iso';
+    this.meshes = new Map();
+    this.hidden = new Set();
+    this.pulse = new Map();
+    this.selected = null;
+    this.ghosts = [];
+    this.xray = true;
+    this.tintByLayer = false;
+    // Everything a caller might reach for on a real View, made harmless.
+    this.scene = { add() {}, remove() {}, background: null, fog: null, children: [] };
+    const g = () => ({ add() {}, remove() {}, clear() {}, children: [] });
+    this.elementGroup = g(); this.serviceGroup = g(); this.markerGroup = g();
+    this.refGroup = g(); this.ghostGroup = g(); this.linkGroup = g();
+    this.camera = { position: { set() {}, toArray: () => [0, 0, 0] }, up: { set() {} },
+                    lookAt() {}, updateProjectionMatrix() {}, updateMatrixWorld() {}, fov: 45, aspect: 1, near: 1, far: 4000 };
+    this.controls = { update() {}, target: { set() {} }, enableDamping: false, enabled: false,
+                      addEventListener() {}, dispose() {} };
+    this.renderer = { render: () => this.render(), setSize() {}, setPixelRatio() {},
+                      domElement: canvas, dispose() {} };
+    this.resize();
+    return this;
+  }
+
+  /** Which drawing the flat renderer shows. Ignored when there is a GPU. */
+  setFlatView(id) { this.flatView = id; if (this.flat) this.render(); }
+
+  build(canvas) {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0d1014);
@@ -79,11 +129,19 @@ export class View {
     this.clock = new THREE.Clock();
     this.resize();
     addEventListener('resize', () => this.resize());
+    return this;
   }
 
   resize() {
     const w = this.canvas.clientWidth || innerWidth;
     const h = this.canvas.clientHeight || innerHeight;
+    if (this.flat) {
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      this.canvas.width = Math.max(1, Math.round(w * dpr));
+      this.canvas.height = Math.max(1, Math.round(h * dpr));
+      this.render();
+      return;
+    }
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
@@ -97,8 +155,45 @@ export class View {
     return m;
   }
 
+  /** The drawing, and a line saying why it is a drawing. */
+  renderFlat() {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const W = this.canvas.width, H = this.canvas.height;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#0d1014';
+    ctx.fillRect(0, 0, W, H);
+    if (!this.world) return;
+    const hide = new Set([...this.hidden]);
+    if (this.xray) hide.add('sheathing');
+    this.flatMap = drawFlat(ctx, this.world, {
+      view: this.flatView, width: W, height: H, background: '#0d1014',
+      hide: hide.size ? hide : null
+    });
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    ctx.save();
+    ctx.scale(dpr, dpr);
+    ctx.font = '500 10px ui-monospace, monospace';
+    ctx.fillStyle = '#7c8894';
+    ctx.fillText(`${(this.flatMap && this.flatMap.view) || 'ISOMETRIC'} — drawn without a GPU; this browser gave no WebGL context`,
+      10, H / dpr - 10);
+    ctx.restore();
+  }
+
+  /** Put a mark on the drawing in world coordinates. Returns false with a GPU. */
+  markFlat(at, colour = '#ef4444', r = 4) {
+    if (!this.flat || !this.flatMap) return false;
+    const [x, y] = this.flatMap.toPx(at);
+    const ctx = this.ctx;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = colour; ctx.fill();
+    return true;
+  }
+
   /** Rebuild the scene from world state. Cheap enough at this scale to be honest rather than clever. */
   sync(world) {
+    if (this.flat) { this.world = world; this.render(); return; }
     const seen = new Set();
     while (this.openingGroup && this.openingGroup.children.length) {
       const c = this.openingGroup.children.pop();
@@ -366,6 +461,7 @@ export class View {
   }
 
   render() {
+    if (this.flat) return this.renderFlat();
     const t = performance.now();
     for (const [id, p] of this.pulse) {
       const mesh = this.meshes.get(id);
