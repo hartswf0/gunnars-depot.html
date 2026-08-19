@@ -1323,3 +1323,78 @@ opening cut, and more than 20 sq ft of floor. Asked of a bare seed frame it
 reported `NO_EGRESS` and `LOW_HEADROOM` at severity 3 and buried four structural
 tests in noise. A stack of lumber is not a failed dwelling; it is an unfinished
 one.
+
+
+## The body the building is for
+
+`operative/figure.js`. Every habitability number until now was an area or a
+corridor width, and those are the easy half. The hard half needs something to
+measure against: is the sink at the right height, do your knees go under the
+table, does the conduit hang where a head goes.
+
+**The model needed is not a character mesh.** A downloaded GLB of a person is a
+shape with no joints you can query and no provenance for its dimensions — you
+cannot ask it where its elbow is, and if you could you would not know whose elbow
+it was. What is needed is an anthropometric manikin: segment lengths derived from
+stature by published proportion, named landmarks, reach envelopes. Then every
+ergonomic question is arithmetic against a person whose measurements are cited.
+
+Proportions from Drillis & Contini (1966) — the standard segment fractions of
+stature used throughout biomechanics. Reach envelopes from NASA-STD-3000 vol. I
+§3.3. Working heights per Grandjean, elbow-relative.
+
+A six foot man, in inches from the floor:
+
+```
+eye 67.4   shoulder 58.9   elbow 45.4   hip 38.2   knee 20.5
+shoulders 18.6 wide (22.6 moving)   body 12.5 deep
+seated: 37.4 above the seat, knees out 24.0, popliteal 18.0
+reach: forward 31.7   overhead 84.2
+```
+
+And what he therefore needs:
+
+```
+counter  41    seat     18    kneeGap   25
+sinkRim  43    table    27    kneeDepth 24
+shelf    59    headroom 75
+```
+
+### What he found, immediately
+
+```
+                as built    wants
+galley sink       20 in     43     too low by 23
+bathroom basin    19 in     43     too low by 24
+worktop           22 in     41     too low by 19
+galley carcass    21 in     41     too low by 20
+bench seat        15 in     18     too low
+table top         16 in     27     too low
+knee gap          −1 in      7     the table underside is BELOW the bench top
+```
+
+**Every fit-out height in this trailer is roughly half what a body needs.** The
+worktop is at 22 in — knee height on a six foot man. The table top is an inch
+below the bench you would sit on, so there is nowhere for your thighs to go. The
+building passed structural checks the whole time, because nothing in the model
+knew how tall a person is.
+
+The one thing that does fit is the shell: he goes through the 36 in entry door and
+the 26 in bath doorway with room to move, and not past the dinette in any
+orientation — shoulders or sideways.
+
+### Why it is not fixed yet
+
+Setting the fit-out to real heights works — the table becomes sittable, seat 18,
+top 29, nine inches of thigh room — and then it takes the plumbing with it. Raising
+the galley carcass from 20.5 to its proper 34.5 in swallows the water heater, and
+the whole services stage scores worse and is **walked back wholesale**: routing
+reports fourteen successful runs during the build and the finished world contains
+zero. The loop would rather ship no plumbing than bad plumbing.
+
+That is the third time the same thing has happened — the tape seams, the aisle,
+and now this. **The loop converges to a state it will not revisit**, and no budget
+from 140 to 400 changes it. Fixing the heights properly means fixing that first,
+and it is not a thing to half-land. The heights are reverted; the instrument that
+found them is not, and the numbers above are asserted in the suite so they cannot
+quietly go away.

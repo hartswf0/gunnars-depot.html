@@ -77,12 +77,18 @@ export function plan(world, { step = 2, from = 6, to = 66 } = {}) {
     for (let j = a0[1]; j <= a1[1]; j++) for (let i = a0[0]; i <= a1[0]; i++)
       if (e.hi[2] > floorTop[at(i, j)]) floorTop[at(i, j)] = e.hi[2];
   }
-  // 2. the ceiling: the lowest thing overhead. Roof, rafter, ceiling, cabinet soffit.
+  // 2. the ceiling: the lowest thing you would hit with your head.
+  //
+  // "Overhead" was anything starting more than 24 in above the floor, which made a
+  // 36 in worktop the ceiling of the galley: raising the counters from 22 in to
+  // their proper height instantly reported 23 sq ft of the trailer as having under
+  // 78 in of headroom. A worktop is not a ceiling. Anything below the top of the
+  // body band is furniture you walk around, and `blocked` already has it.
   for (const e of solids) {
     const [a0, a1] = span(e);
     for (let j = a0[1]; j <= a1[1]; j++) for (let i = a0[0]; i <= a1[0]; i++) {
       const f = floorTop[at(i, j)];
-      if (!isFinite(f) || e.lo[2] < f + 24) continue;             // not overhead
+      if (!isFinite(f) || e.lo[2] < f + to) continue;             // not over your head
       if (e.lo[2] < ceil[at(i, j)]) ceil[at(i, j)] = e.lo[2];
     }
   }
@@ -95,7 +101,7 @@ export function plan(world, { step = 2, from = 6, to = 66 } = {}) {
   // the door open is still a room. You are inside when there is a floor under you
   // and a roof over you.
   for (let k = 0; k < cells; k++)
-    if (isFinite(floorTop[k]) && isFinite(ceil[k]) && ceil[k] - floorTop[k] >= 24) inside[k] = 1;
+    if (isFinite(floorTop[k]) && isFinite(ceil[k]) && ceil[k] - floorTop[k] >= to) inside[k] = 1;
   // 4. blocked: anything standing in the body band above the floor of that column.
   for (const e of solids) {
     const [a0, a1] = span(e);

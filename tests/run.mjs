@@ -1281,6 +1281,65 @@ check('a scoped accusation names the scope and counts the kinds',
 check('and it still does not propose a fix or name an operation',
   !/\b(should|could|try|fix|op:|OPS\.)\b/i.test(acc.text));
 
+// ------------------------------------------- 36. a six foot man in the room
+group('the body the building is for');
+const FG = await import('../operative/figure.js');
+const man = FG.figure(72);
+const H36 = FG.heights(man);
+const deck36 = BUILT.all().filter(e => e.meta.role === 'floor sheathing');
+const fz = Math.max(...deck36.map(e => e.hi[2]));
+
+check('a stature gives a whole body', man.eye > man.shoulder && man.shoulder > man.elbow &&
+  man.elbow > man.hip && man.hip > man.knee, `eye ${man.eye} shoulder ${man.shoulder} elbow ${man.elbow}`);
+check('and the proportions are cited, not invented',
+  Object.keys(FG.PROPORTION).length > 15 && FG.PROPORTION.popliteal === 0.25);
+check('a six foot man has his elbow at about 45 in',
+  Math.abs(man.elbow - 45) < 2, `${man.elbow} in`);
+check('and the underside of his knee at about 18',
+  Math.abs(man.popliteal - 18) < 1.5, `${man.popliteal} in`);
+check('so a seat wants 18 and a worktop wants about 41',
+  H36.seat.want === 18 && H36.counter.want >= 39 && H36.counter.want <= 43,
+  `seat ${H36.seat.want}, counter ${H36.counter.want}`);
+
+// The finding. These are the trailer as it stands, and they are the reason it is
+// uninhabitable — not a corridor width, a set of heights that are all about half
+// of what a body needs.
+const asBuilt = (id, kind) => { const e = BUILT.get(id); return e ? FG.worksAt(man, e, kind, fz) : null; };
+const sinkAt = asBuilt('sink', 'sinkRim');
+check('the galley sink is built at half the height a body needs',
+  sinkAt && sinkAt.is < 25 && !sinkAt.ok, sinkAt ? `${sinkAt.is} in, wants ${sinkAt.want}` : 'no sink');
+const topAt = asBuilt('top.galley', 'counter');
+check('and so is the worktop over it',
+  topAt && topAt.is < 25 && !topAt.ok, topAt ? `${topAt.is} in, wants ${topAt.want}` : 'no worktop');
+
+const sit = FG.sitsAt(man, BUILT.get('bench.W'), BUILT.get('table'), fz);
+check('the bench is too low to sit on', !sit.seatHeight.ok,
+  `${sit.seatHeight.is} in, wants ${sit.seatHeight.want}`);
+check('the table is too low to sit at', !sit.tableHeight.ok,
+  `${sit.tableHeight.is} in, wants ${sit.tableHeight.want}`);
+check('and the table underside is below the bench top, so his thighs do not go under it',
+  sit.kneeGap.is <= 0, `${sit.kneeGap.is} in of gap`);
+
+// Fit, which the corridor number cannot answer on its own.
+check('he fits through the entry door', FG.passes(man, 36).ok);
+check('and the bath doorway', FG.passes(man, 26).ok);
+check('and not past the dinette, shoulders or sideways', (() => {
+  const p = FG.passes(man, 4); return !p.ok && !p.sideways;
+})());
+check('shoulder breadth is what a doorway is measured against, with room to move',
+  man.shoulderBreadthWithSlack > man.shoulderBreadth &&
+  man.shoulderBreadthWithSlack - man.shoulderBreadth === 4);
+
+// The body occupies boxes, so a thing at head height is not the same as one at shin height.
+const stood = FG.place(man, { at: [50, 90], pose: 'stand', floor: fz });
+check('the body is legs, torso and head, not one block',
+  stood.length === 3 && stood[2].hi[2] - fz > 70, stood.map(b => b.part).join(', '));
+check('and standing on the floor he reaches the ceiling height a room needs',
+  Math.abs((stood[2].hi[2] - fz) - man.stature) < 0.5);
+const hitList = FG.collides(BUILT, stood);
+check('putting him in the aisle names what he walks into, if anything',
+  Array.isArray(hitList), `${hitList.length} at 50,90`);
+
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
