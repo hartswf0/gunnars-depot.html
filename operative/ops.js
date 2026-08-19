@@ -264,6 +264,18 @@ function onARun(world, e) {
   return false;
 }
 
+/** The middle of the building, for deciding which way is out. */
+function worldCentre(world) {
+  const s = world.solids();
+  if (!s.length) return [0, 0, 0];
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const e of s) for (let i = 0; i < 3; i++) {
+    if (e.lo[i] < lo[i]) lo[i] = e.lo[i];
+    if (e.hi[i] > hi[i]) hi[i] = e.hi[i];
+  }
+  return [0, 1, 2].map(i => (lo[i] + hi[i]) / 2);
+}
+
 export const OPS = {
 
   /** Cut an opening in a wall. Studs in the way are interrupted, and that is the point. */
@@ -900,6 +912,50 @@ export const OPS = {
   },
 
   /**
+   * Tape every seam in the skin that is a gap rather than a joint.
+   *
+   * `cut` splits a panel around an opening and leaves an eighth of an inch
+   * between the pieces — the expansion gap printed on every sheet of sheathing,
+   * which on site you tape. Nothing taped them, and at 2048 rays per lamp they
+   * were the building's largest leak: 65 of 124 escaping rays, in lines up to
+   * eleven feet long and a tenth of an inch wide, at exactly the head and sill
+   * of every window.
+   *
+   * The LEAK check has proposed `tape` as its repair the whole time and never
+   * fired, because its own sweep is coarse enough to miss an eighth-inch seam —
+   * it says so in its `resolution` field. A check that cannot see the thing it
+   * knows how to fix is not going to fix it.
+   */
+  tapeSeams(world, { gap = 0.25, only = null } = {}) {
+    const skin = world.all({ kind: 'sheathing' }).filter(e => !only || e.meta.wall === only);
+    const changed = [];
+    let made = 0, stale = 0;
+    // Tape placed by `cut` was correct for the wall `cut` saw, and then `raise`
+    // and `pitch` moved the panels out from under it — the seam ended up at
+    // z 67.8 with its tape sitting at 68.75, sealing nothing, in a build that
+    // otherwise reported one open condition. Seams get sealed against the final
+    // envelope or not at all, so this throws away what it laid last time.
+    for (const t of world.all({ kind: 'tape' })) {
+      const seals = t.meta.seals || [];
+      if (only && !seals.some(id => (world.get(id) || { meta: {} }).meta.wall === only)) continue;
+      world.remove(t.id); changed.push(t.id); stale++;
+    }
+    for (let i = 0; i < skin.length; i++) for (let j = i + 1; j < skin.length; j++) {
+      const a = skin[i], b = skin[j];
+      const d = [0, 1, 2].map(k => Math.max(a.lo[k] - b.hi[k], b.lo[k] - a.hi[k], 0));
+      const apart = Math.hypot(...d);
+      if (apart > gap || apart === 0) continue;      // touching is a joint, far apart is a wall
+      // Only a seam: they must share the plane of the skin and overlap along it.
+      const shared = [0, 1, 2].filter(k => Math.min(a.hi[k], b.hi[k]) - Math.max(a.lo[k], b.lo[k]) > 1);
+      if (shared.length < 1) continue;
+      const r = OPS.tape(world, { a: a.id, b: b.id });
+      if (r.changed) { made++; changed.push(...r.changed); }
+    }
+    return { changed: [...new Set(changed)],
+      note: `${made} seam${made === 1 ? '' : 's'} taped at up to ${gap} in${stale ? `; ${stale} stale strip${stale === 1 ? '' : 's'} lifted` : ''}` };
+  },
+
+  /**
    * Nail one new member to everything it landed on.
    *
    * The fourth instance of one bug. `mount` put a part in and left it floating;
@@ -1238,24 +1294,68 @@ export const OPS = {
    * assumption. The ray scanner found every one of these before anybody thought
    * to look for them.
    */
+  // How far a seam tape laps each panel, inches. Wide enough to be a tape and
+  // not a filler.
   tape(world, { a, b, at }) {
     const A = world.get(a), B = b ? world.get(b) : null;
     if (!A) return { ok: false, note: `no element "${a}"` };
     const tid = `tape.${a}${b ? `.${b}` : ''}`;
     if (world.get(tid)) return { ok: false, note: `${tid} already exists` };
-    // the seam is where the two panels almost meet; with one panel, the point given
-    const lo = [0, 1, 2].map(i => B ? Math.max(Math.min(A.hi[i], B.hi[i]), Math.min(A.lo[i], B.lo[i])) : (at ? at[i] - 2 : A.lo[i]));
-    const hi = [0, 1, 2].map(i => B ? Math.min(Math.max(A.hi[i], B.hi[i]), Math.max(A.lo[i], B.lo[i])) : (at ? at[i] + 2 : A.hi[i]));
+    // The seam runs the length of what the two panels share, and crosses the gap
+    // between them.
+    //
+    // This used to read `max(min(hi), min(lo))` .. `min(max(hi), max(lo))`, which
+    // describes the space between two panels laid side by side and inverts the
+    // moment one panel spans the other — exactly the case `cut` produces, where a
+    // full-height strip runs past a shorter one beside an opening. Both ends
+    // collapsed, a floor of 0.06 in kept the box legal, and a rule that widened
+    // "the thinnest remaining axis" to three inches turned an eleven foot seam
+    // into a three inch patch in the middle of it. Sixteen of those sealed six of
+    // sixty-five leaking rays and looked from the outside like tape.
+    // SKIN matches the 0.06 in floor that `sz` puts under every dimension. At 0.05 the
+    // floor inflated the box symmetrically about its own centre and put five
+    // thousandths of an inch of tape outside the sheathing on both flanks — which
+    // is 102.01 in overall and a trailer that is illegal to tow.
+    const LAP = 1.5, SKIN = 0.06;
+    const gapOf = (i) => Math.min(A.hi[i], B.hi[i]) - Math.max(A.lo[i], B.lo[i]);
+    let lo, hi;
+    if (B) {
+      // Three axes, three different jobs. The one they are apart on is the seam to
+      // bridge. Of the two they share, the thinner is the skin's own thickness and
+      // the other is the length of the seam.
+      const across = [0, 1, 2].reduce((m, i) => (gapOf(i) < gapOf(m) ? i : m), 0);
+      const rest = [0, 1, 2].filter(i => i !== across);
+      const thick = gapOf(rest[0]) < gapOf(rest[1]) ? rest[0] : rest[1];
+      // Tape goes IN the outer face of the skin, not through it and not proud of it.
+      //
+      // Lapped an inch and a half into the full thickness of both panels it read as
+      // twenty-eight interpenetrations at severity 3, which is correct: that is not
+      // a tape, it is a wedge driven into the wall. Moved outboard by six
+      // hundredths of an inch instead, it took the trailer to 102.1 in and broke
+      // the towing envelope — the same six hundredths, and the same mistake the
+      // first drip edge made at three quarters of an inch. This trailer is built to
+      // the legal width, so nothing may be added to the outside of it. Flush, in
+      // the outermost fiftieth of the panel, inside OVERLAP's own 0.06 in tolerance.
+      const mid = worldCentre(world);
+      const out = (A.lo[thick] + A.hi[thick]) / 2 > mid[thick] ? 1 : -1;
+      const face = out > 0 ? Math.max(A.hi[thick], B.hi[thick]) : Math.min(A.lo[thick], B.lo[thick]);
+      lo = [0, 1, 2].map(i => i === across ? Math.min(A.hi[i], B.hi[i]) - LAP
+                          : i === thick  ? (out > 0 ? face - SKIN : face)
+                          : Math.max(A.lo[i], B.lo[i]));
+      hi = [0, 1, 2].map(i => i === across ? Math.max(A.lo[i], B.lo[i]) + LAP
+                          : i === thick  ? (out > 0 ? face : face + SKIN)
+                          : Math.min(A.hi[i], B.hi[i]));
+    } else {
+      lo = [0, 1, 2].map(i => (at ? at[i] - 2 : A.lo[i]));
+      hi = [0, 1, 2].map(i => (at ? at[i] + 2 : A.hi[i]));
+    }
     const p = [0, 1, 2].map(i => (lo[i] + hi[i]) / 2);
     const sz = [0, 1, 2].map(i => Math.max(0.06, hi[i] - lo[i]));
-    // 3 in wide across the seam, on whichever axis the seam is thinnest
-    const thin = [0, 1, 2].reduce((m, i) => (sz[i] < sz[m] ? i : m), 0);
-    const face = [0, 1, 2].filter(i => i !== thin).sort((x, y) => sz[x] - sz[y])[0];
-    sz[face] = Math.max(sz[face], 3);
     world.add(new Element({ id: tid, kind: 'tape', layer: 'walls', material: 'paint',
       box: box(p, sz), meta: { role: 'sheathing seam tape', seals: [a, b].filter(Boolean) } }));
+    const along = sz.indexOf(Math.max(...sz));
     return { changed: [tid, a, b].filter(Boolean),
-      note: `${tid}: seam taped across ${sz[face].toFixed(0)} in` };
+      note: `${tid}: ${sz[along].toFixed(0)} in of seam taped` };
   },
 
   /**

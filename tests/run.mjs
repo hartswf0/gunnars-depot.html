@@ -491,7 +491,16 @@ const { BRIEF, STAGES } = await import('../operative/ingold.js');
 check('the brief is kept alive as conditions', BRIEF.length >= 6 && BRIEF.every(r => typeof r.met === 'function'));
 const bare = ing.shell();
 const unmet = briefConditions(bare, BRIEF);
-check('a bare shell fails every requirement', unmet.length === BRIEF.length, `${unmet.length} of ${BRIEF.length}`);
+// Every requirement that asks for something the shell has not got. `sealed` asks
+// for an *absence* — no untaped seam in the skin — and a shell with no openings
+// cut in it has no seams, so it is vacuously met. That is the right answer, not a
+// loophole: there is nothing there to leak.
+const vacuous = BRIEF.filter(r => r.met(bare)).map(r => r.id);
+check('a bare shell fails every requirement that asks for something',
+  unmet.length === BRIEF.length - vacuous.length,
+  `${unmet.length} of ${BRIEF.length}; vacuously met: ${vacuous.join(', ') || 'none'}`);
+check('and the ones it passes are the ones that ask for an absence',
+  vacuous.every(id => id === 'sealed'), vacuous.join(', '));
 check('an unmet requirement proposes the stage that answers it',
   unmet.every(c => c.repair && c.repair.op === 'stage'));
 const ranked = rank(unmet.concat([{ code: 'X', severity: 0, elements: [], repair: { op: 'note' } }]), new Set());

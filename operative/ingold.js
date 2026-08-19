@@ -509,13 +509,45 @@ export const BRIEF = [
   { id: 'power', hard: true, stage: 'electrical', want: 'off-grid power: array, bank, and something to run',
     met: (w) => !!w.get('mppt') && !!w.get('battery.1') && w.all().filter(e => e.meta.watts).length >= 8 },
   { id: 'fastening', hard: true, stage: 'nail', want: 'the whole of it nailed together',
-    met: (w) => w.joints.size > 300 }
+    met: (w) => w.joints.size > 300 },
+  { id: 'sealed', hard: true, stage: 'seal', want: 'the seams in the skin taped, so the wall is one surface',
+    met: (w) => unsealedSeams(w).length === 0 }
 ];
+
+/**
+ * Seams in the skin that nothing is sealing.
+ *
+ * A seam is two panels a fraction of an inch apart — the expansion gap `cut`
+ * leaves, which on site you tape. Sealing cannot be done when the gap is made,
+ * because `raise` and `pitch` move the panels afterwards and the tape stays where
+ * it was laid. So it is stated here as a condition of the finished building and
+ * the loop is left to satisfy it, which also means it re-seals itself whenever
+ * something later moves a wall.
+ */
+export function unsealedSeams(w) {
+  const skin = w.all({ kind: 'sheathing' });
+  const tapes = w.all({ kind: 'tape' });
+  const out = [];
+  for (let i = 0; i < skin.length; i++) for (let j = i + 1; j < skin.length; j++) {
+    const a = skin[i], b = skin[j];
+    const apart = Math.hypot(...[0, 1, 2].map(k => Math.max(a.lo[k] - b.hi[k], b.lo[k] - a.hi[k], 0)));
+    if (apart === 0 || apart > 0.25) continue;
+    const mid = [0, 1, 2].map(k => (Math.max(a.lo[k], b.lo[k]) + Math.min(a.hi[k], b.hi[k])) / 2);
+    if (!tapes.some(t => [0, 1, 2].every(k => mid[k] >= t.lo[k] - 0.1 && mid[k] <= t.hi[k] + 0.1)))
+      out.push([a.id, b.id]);
+  }
+  return out;
+}
 
 /** The stages the loop can call when a requirement is unmet. */
 export const STAGES = {
   openings, interior, services, venting, propane, electrical,
-  nail: (w, log) => { log.push(commit(w, 'nailOff', {}, 'REQUIREMENT_FAILED')); return log; }
+  // Nailing and sealing are the same stage because they are the same moment: the
+  // envelope is finished, and now it gets put together. Taping earlier does not
+  // work — `raise` and `pitch` move the panels afterwards and the tape stays where
+  // it was laid, which is a seal over nothing.
+  nail: (w, log) => { log.push(commit(w, 'nailOff', {}, 'REQUIREMENT_FAILED')); return log; },
+  seal: (w, log) => { log.push(commit(w, 'tapeSeams', {}, 'REQUIREMENT_FAILED')); return log; }
 };
 
 /**
