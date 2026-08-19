@@ -247,13 +247,23 @@ export function seedTrailer(world = new World(), spec = {}) {
   }
 
   // ---- walls: exterior sheathing, one panel per wall ----
+  // The bottom edge runs down past the sole plate to the underside of the deck.
+  //
+  // It used to start at the top of the sole plate, which put the sheathing
+  // *above* the plate and *outboard* of it — meeting it along a single line, with
+  // no overlapping face anywhere. Twenty panel-to-plate pairs that IRC R602.10
+  // covers had nothing to put a nail through, so the wall could not transfer
+  // shear to the floor at all, and no check in the project noticed for the entire
+  // life of the model. Lapping the plate is not a detail; it is what makes a
+  // sheathed wall a shear wall.
+  const shellBot = deckBot;
   for (const w of walls) {
     const t = K.sheathing;
     const outward = w.axis === 'y' ? 0 : 1;
     const p = outward === 0
-      ? [w.at + w.normal[0] * (pD / 2 + t / 2), K.length / 2, (plateBot + K.wallTop) / 2]
-      : [K.width / 2, w.at + w.normal[1] * (pD / 2 + t / 2), (plateBot + K.wallTop) / 2];
-    const s = outward === 0 ? [t, K.length, K.wallTop - plateBot] : [K.width, t, K.wallTop - plateBot];
+      ? [w.at + w.normal[0] * (pD / 2 + t / 2), K.length / 2, (shellBot + K.wallTop) / 2]
+      : [K.width / 2, w.at + w.normal[1] * (pD / 2 + t / 2), (shellBot + K.wallTop) / 2];
+    const s = outward === 0 ? [t, K.length, K.wallTop - shellBot] : [K.width, t, K.wallTop - shellBot];
     add({ id: `shell.${w.id}`, kind: 'sheathing', layer: 'walls', material: 'siding',
           box: box(p, s), meta: { wall: w.id, role: 'exterior shell' } });
   }

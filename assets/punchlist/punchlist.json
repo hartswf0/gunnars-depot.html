@@ -1,0 +1,128 @@
+{
+  "text": "SUCK SCORE: 40\n\nWHAT SUCKS:\n17 ants independently crossed an unfastened contact the schedule covers at table (30, 131.9, 29.5).\n3 ants independently crossed an unfastened contact the schedule covers at bed.base (15, 182.7, 15.8).\n13 ants independently crossed a contact no rule covers at deck.axle (59.2, 114.8, 15.8) — and nothing in the model has an opinion about whether that is allowed.\n7 ants independently crossed a contact no rule covers at deck.fore (47.4, 115.1, 15.8) — and nothing in the model has an opinion about whether that is allowed.\n7 ants independently crossed a contact no rule covers at bench.W (8.5, 120, 24.8) — and nothing in the model has an opinion about whether that is allowed.\n5 ants independently crossed a contact no rule covers at deck.aft (12, 182.8, 15.7) — and nothing in the model has an opinion about whether that is allowed.\n3 ants independently crossed a contact no rule covers at well.W.side (9.8, 115, 26.1) — and nothing in the model has an opinion about whether that is allowed.\n3 ants independently crossed a contact no rule covers at wheel.L1 (7.4, 115.8, 25) — and nothing in the model has an opinion about whether that is allowed.\n\n5 further findings fell where a hole was meant and are not counted.\n\nWHAT THIS READING IS WORTH:\n60 ants, 14 rays each every 1 step, 40 inch sight, 600 ticks.\nBLIND: two missing blocks in a thirty foot eave are invisible to this instrument at every setting it has — the full ray survey sees them\n\nNEXT: BUILD AGAIN — worst place scores 40 — substantial visible discrepancies",
+  "score": 40,
+  "counts": {
+    "EXPECTED": 5,
+    "UNEXPECTED": 5,
+    "UNKNOWN": 21
+  },
+  "places": [
+    {
+      "place": "table",
+      "score": 40,
+      "kind": "UNJOINED",
+      "verdict": "UNEXPECTED",
+      "ants": 17,
+      "at": [
+        30,
+        131.9,
+        29.5
+      ]
+    },
+    {
+      "place": "bed.base",
+      "score": 33,
+      "kind": "UNJOINED",
+      "verdict": "UNEXPECTED",
+      "ants": 3,
+      "at": [
+        15,
+        182.7,
+        15.8
+      ]
+    },
+    {
+      "place": "deck.axle",
+      "score": 20,
+      "kind": "UNRULED",
+      "verdict": "UNKNOWN",
+      "ants": 13,
+      "at": [
+        59.2,
+        114.8,
+        15.8
+      ]
+    },
+    {
+      "place": "deck.fore",
+      "score": 20,
+      "kind": "UNRULED",
+      "verdict": "UNKNOWN",
+      "ants": 7,
+      "at": [
+        47.4,
+        115.1,
+        15.8
+      ]
+    },
+    {
+      "place": "bench.W",
+      "score": 20,
+      "kind": "UNRULED",
+      "verdict": "UNKNOWN",
+      "ants": 7,
+      "at": [
+        8.5,
+        120,
+        24.8
+      ]
+    },
+    {
+      "place": "deck.aft",
+      "score": 19,
+      "kind": "UNRULED",
+      "verdict": "UNKNOWN",
+      "ants": 5,
+      "at": [
+        12,
+        182.8,
+        15.7
+      ]
+    },
+    {
+      "place": "well.W.side",
+      "score": 17,
+      "kind": "UNRULED",
+      "verdict": "UNKNOWN",
+      "ants": 3,
+      "at": [
+        9.8,
+        115,
+        26.1
+      ]
+    },
+    {
+      "place": "wheel.L1",
+      "score": 17,
+      "kind": "UNRULED",
+      "verdict": "UNKNOWN",
+      "ants": 3,
+      "at": [
+        7.4,
+        115.8,
+        25
+      ]
+    },
+    {
+      "place": "joist.177",
+      "score": 14,
+      "kind": "UNRULED",
+      "verdict": "UNKNOWN",
+      "ants": 2,
+      "at": [
+        24.9,
+        177.4,
+        15.7
+      ]
+    }
+  ],
+  "conditions": [
+    {
+      "code": "UNLAPPED",
+      "severity": 2,
+      "message": "17 pairs the schedule says to fasten meet edge to edge with no face to nail and no joint within two hops (top2.E/gable.E, top2.E/gable.S.7, top2.E/gable.N.7, …)"
+    }
+  ],
+  "joints": 585,
+  "members": 407
+}

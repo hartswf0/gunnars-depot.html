@@ -900,26 +900,68 @@ export const OPS = {
   },
 
   /**
+   * Nail one new member to everything it landed on.
+   *
+   * The fourth instance of one bug. `mount` put a part in and left it floating;
+   * `vent` put a stack in and left it floating; `strap` placed a tie and never
+   * joined it; and `flash` joined its apron to the roof and to the pipe while the
+   * apron also came down on two solar panels, which the schedule covers. Every
+   * time, the op that added the part reported success and a blocking condition
+   * appeared somewhere else, so the loop walked the whole move back and the
+   * building stayed broken in the original way instead.
+   *
+   * An op that puts a part in fastens it. This is that sentence, once.
+   */
+  nailTo(world, { id }) {
+    const e = world.get(id);
+    if (!e) return { ok: false, note: `no element "${id}"` };
+    const changed = [];
+    let made = 0, noFace = 0;
+    for (const c of world.contacts({ minFace: 0 })) {
+      if (c.a !== id && c.b !== id) continue;
+      const other = c.a === id ? c.b : c.a;
+      if (world.joints.has(joinKey(id, other))) continue;
+      const O = world.get(other);
+      if (!O || !scheduleForPair(e, O)) continue;
+      if (c.face < 1) { noFace++; continue; }      // an edge is not a face
+      const r = OPS.join(world, { a: id, b: other });
+      if (r.changed) { made++; changed.push(...r.changed); }
+    }
+    return { changed: [...new Set(changed)],
+      note: `${id} nailed to ${made} thing${made === 1 ? '' : 's'} it lands on${noFace ? `; ${noFace} edge contacts left for UNLAPPED` : ''}` };
+  },
+
+  /**
    * Nail off everything the schedule covers — what a framer actually does, in one
    * pass, rather than one joint at a time.
    */
   nailOff(world, { only } = {}) {
-    const g = world.grounded();
-    let made = 0, skipped = 0;
+    let made = 0, skipped = 0, noFace = 0;
     const changed = [];
-    for (const [id, ups] of g.under) {
-      for (const u of ups) {
-        const A = world.get(id), B = world.get(u.id);
-        if (!A || !B) continue;
-        if (world.joints.has(joinKey(id, u.id))) continue;
-        const rule = scheduleForPair(A, B);
-        if (!rule) { skipped++; continue; }
-        if (only && ![A.kind, B.kind].includes(only)) continue;
-        const r = OPS.join(world, { a: id, b: u.id });
-        if (r.changed) { made++; changed.push(...r.changed); }
-      }
+    // Face contact, not the load path. Walking the support graph, this op nailed
+    // what carries what and never nailed what merely touches — so the hitch
+    // coupler, the roof cover to every gable, and sixteen rafters to their top
+    // plates were left loose on a build that reported zero open conditions. And
+    // because the UNJOINED check walked the same graph, it could not report the
+    // joints this op could not make.
+    for (const c of world.contacts({ minFace: 0 })) {
+      const A = world.get(c.a), B = world.get(c.b);
+      if (!A || !B) continue;
+      if (world.joints.has(joinKey(c.a, c.b))) continue;
+      const rule = scheduleForPair(A, B);
+      if (!rule) { skipped++; continue; }
+      if (only && ![A.kind, B.kind].includes(only)) continue;
+      // An edge is not a face. Two members that meet along a line have nothing to
+      // put a fastener through, and asserting a joint there would be a lie that
+      // silences the condition. Those are reported by UNLAPPED, not nailed.
+      if (c.face < 1) { noFace++; continue; }
+      const r = OPS.join(world, { a: c.a, b: c.b });
+      if (r.changed) { made++; changed.push(...r.changed); }
     }
-    return { changed: [...new Set(changed)], note: `nailed off ${made} joint${made === 1 ? '' : 's'}${skipped ? `; ${skipped} contacts have no schedule entry` : ''}` };
+    const notes = [`nailed off ${made} joint${made === 1 ? '' : 's'}`];
+    if (skipped) notes.push(`${skipped} contacts have no schedule entry`);
+    if (noFace) notes.push(`${noFace} meet edge to edge with no face to nail`);
+    return { changed: [...new Set(changed)], note: notes.join('; ') };
   },
 
   /** A placeholder the loop replaces: a requirement's stage is run by the caller. */
@@ -1130,8 +1172,13 @@ export const OPS = {
               detail: 'apron on the roof, storm collar on the pipe' } }));
     OPS.join(world, { a: fid, b: roof.id });
     OPS.join(world, { a: fid, b: id });
-    return { changed: [fid, id, roof.id],
-      note: `${id} flashed where it comes through ${roof.id} — ${w.toFixed(0)} in apron and a storm collar` };
+    // An eleven inch apron lands on whatever else is up there. Joining it to the
+    // roof and the pipe and stopping left it unfastened to two solar panels, which
+    // is a blocking condition, so the loop walked every flashing back and shipped
+    // two unflashed roof penetrations instead.
+    const also = OPS.nailTo(world, { id: fid });
+    return { changed: [...new Set([fid, id, roof.id, ...(also.changed || [])])],
+      note: `${id} flashed where it comes through ${roof.id} — ${w.toFixed(0)} in apron and a storm collar; ${also.note}` };
   },
 
   /**

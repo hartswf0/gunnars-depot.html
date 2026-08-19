@@ -1,0 +1,90 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>punch list</title>
+<style>html,body{margin:0;background:#0b0e12}canvas{display:block;width:100vw;height:100vh}</style>
+<canvas id="c"></canvas>
+<script type="importmap">
+{"imports":{"three":"../vendor/three/three.module.min.js","three/addons/":"../vendor/three/addons/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { View } from '../operative/view.js';
+import { build } from '../operative/ingold.js';
+import { place, byId } from '../operative/views.js';
+import { checkAll } from '../operative/checks.js';
+import { joinKey, scheduleForPair } from '../operative/joints.js';
+import * as R from '../operative/radiography.js';
+import * as T from '../operative/tomography.js';
+import { Colony, withSchedule } from '../operative/ants.js';
+import { scheduleForPair as sfp } from '../operative/joints.js';
+import * as V from '../operative/verdict.js';
+
+const view = new View(document.getElementById('c'));
+view.controls.enabled = false;
+view.controls.update = () => {};
+
+const { world } = build({ budget: 200 });
+view.sync(world); view.resize();
+
+// The colony walks the finished building.
+const air = R.occludersOf(world, { medium: 'air' });
+const encl = T.flood(T.voxelise(air, { step: 2 }));
+const colony = withSchedule(new Colony(air, { world, enclosure: encl, n: 60, seed: 11 }), sfp);
+colony.step(600);
+const spoken = V.accuse(colony, world);
+
+// Where the ants actually put their pins, and what each one is.
+const marks = new THREE.Group(); view.scene.add(marks);
+const pin = (p, colour, r) => {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 12, 10),
+    new THREE.MeshBasicMaterial({ color: colour, transparent: true, opacity: .85,
+      depthTest: false, depthWrite: false }));
+  m.position.set(p[0], p[1], p[2]); m.renderOrder = 20; marks.add(m); return m;
+};
+const COLOUR = { UNEXPECTED: 0xef4444, UNKNOWN: 0xf59e0b, EXPECTED: 0x22c55e };
+for (const f of spoken.verdict.judged) pin(f.at, COLOUR[f.verdict], f.verdict === 'EXPECTED' ? 1.6 : 2.6);
+
+// And the one condition still standing, drawn where it is rather than described.
+const unlapped = checkAll(world).find(c => c.code === 'UNLAPPED');
+const pairs = [];
+for (const c of world.contacts({ minFace: 0 })) {
+  if (world.joints.has(joinKey(c.a, c.b))) continue;
+  const A = world.get(c.a), B = world.get(c.b);
+  if (!A || !B || !scheduleForPair(A, B) || c.face >= 1) continue;
+  pairs.push({ a: c.a, b: c.b,
+    at: [0, 1, 2].map(i => (Math.max(A.lo[i], B.lo[i]) + Math.min(A.hi[i], B.hi[i])) / 2) });
+}
+const untied = (unlapped ? unlapped.elements : []);
+for (const p of pairs) if (untied.includes(p.a) && untied.includes(p.b)) pin(p.at, 0x38bdf8, 3.2);
+
+function look(id) {
+  const v = byId(id);
+  const p = place(world, v, 45, view.camera.aspect);
+  view.camera.fov = p.fov; view.camera.near = 0.5;
+  view.camera.updateProjectionMatrix();
+  view.camera.position.set(...p.eye);
+  view.camera.up.set(0, 0, 1);
+  view.camera.lookAt(...p.target);
+  view.camera.updateMatrixWorld(true);
+  // x-ray drops the skin so the frame and the pins in it read
+  const hide = v.xray ? new Set(['sheathing', 'deck', 'wellcap']) : null;
+  for (const [id2, m] of view.meshes) {
+    const el = world.get(id2);
+    if (!el) continue;
+    m.visible = !hide || !hide.has(el.kind);
+    const ghost = v.xray && ['stud', 'plate', 'joist', 'rafter', 'cabinet', 'bed', 'bench', 'counter'].includes(el.kind);
+    m.material.transparent = true;
+    m.material.opacity = ghost ? 0.22 : 1;
+  }
+  view.render();
+}
+window.look = look;
+window.report = {
+  text: spoken.text, score: spoken.score, counts: spoken.verdict.counts,
+  places: spoken.verdict.places.slice(0, 12).map(p => ({ place: p.place, score: p.score,
+    kind: p.finding.kind, verdict: p.finding.verdict, ants: p.finding.ants, at: p.finding.at })),
+  conditions: checkAll(world).map(c => ({ code: c.code, severity: c.severity, message: c.message })),
+  joints: world.joints.size, members: world.elements.size
+};
+window.ready = true;
+</script>

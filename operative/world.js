@@ -79,6 +79,49 @@ export class World {
   solids() { return this.all().filter(e => e.kind !== 'opening' && e.kind !== 'run' && e.kind !== 'port'); }
 
   /**
+   * Every pair of solids whose faces meet: what must be nailed to what.
+   *
+   * This is deliberately NOT the support graph, and the difference is the whole
+   * reason it exists. `supportGraph` answers *who carries whom*, and to answer it
+   * honestly about a sheared rafter it runs exact SAT and refuses any contact it
+   * cannot resolve — which is correct for a load path and wrong for a fastening
+   * schedule.
+   *
+   * A colony of ants walking the finished trailer found seventy-seven pairs the
+   * schedule covers and nothing had nailed, including the hitch coupler to the
+   * tongue plate and the tongue to the first floor joist. Every one of them meets
+   * face to face with *exactly zero* interpenetration, and every one was rejected
+   * by the load-path test — so `nailOff`, which walked the support graph, never
+   * made those joints, and the UNJOINED check, which walked the same graph, could
+   * never report the joints `nailOff` could never make. The op and its own check
+   * shared one assumption, which is why the building could not see it from inside.
+   *
+   * So: plain face adjacency, on the boxes, stated in one place. A framer looking
+   * at two members touching does not run a separating-axis test. `tol` is the
+   * slack for the eighth-inch expansion gaps printed on every sheet of sheathing.
+   */
+  contacts({ tol = 0.02, minFace = 1 } = {}) {
+    const solids = this.solids();
+    const out = [];
+    for (let i = 0; i < solids.length; i++) {
+      const a = solids[i];
+      for (let j = i + 1; j < solids.length; j++) {
+        const b = solids[j];
+        const ov = [0, 1, 2].map(k => Math.min(a.hi[k], b.hi[k]) - Math.max(a.lo[k], b.lo[k]));
+        if (ov.some(o => o < -tol)) continue;                 // apart on some axis
+        // The two largest overlaps are the face; the smallest is the axis they
+        // meet across. A corner contact has two near-zero overlaps and is still a
+        // contact — that is the plate lap at every corner of this building.
+        const sorted = ov.slice().sort((x, y) => y - x);
+        const face = Math.max(0, sorted[0]) * Math.max(0, sorted[1]);
+        if (face < minFace) continue;
+        out.push({ a: a.id, b: b.id, face: +face.toFixed(2), across: ov.indexOf(sorted[2]) });
+      }
+    }
+    return out;
+  }
+
+  /**
    * Support graph: who carries whom. Recomputed, never stored stale.
    * Two edge kinds, because construction has two: BEAR (gravity, seated) and
    * FASTEN (nailed / welded / lagged face contact). Sheathing hangs; a

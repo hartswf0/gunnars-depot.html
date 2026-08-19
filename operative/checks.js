@@ -524,20 +524,45 @@ export function checkAll(world) {
   }
 
   // 7e. what is touching is not joined until it is nailed
+  //
+  // Face contact, not the load path. This walked `graph.under` and so could only
+  // ever report the joints `nailOff` could make — and nailOff walked the same
+  // graph. One assumption shared by the op and its own check, which is why a
+  // finished trailer with an unfastened hitch coupler reported zero conditions.
+  // A colony of ants, which walks contact rather than support, found it.
   const unjoined = [];
-  const seenContact = new Set();
-  for (const [id, ups] of graph.under) {
-    for (const u of ups) {
-      const k = joinKey(id, u.id);
-      if (world.joints.has(k)) continue;
-      if (seenContact.has(k)) continue;   // the graph records both directions; a contact is one contact
-      seenContact.add(k);
-      const A = world.get(id), B = world.get(u.id);
-      if (!A || !B) continue;
-      const rule = scheduleForPair(A, B);
-      if (!rule) continue;
-      unjoined.push({ a: id, b: u.id, rule });
-    }
+  const edgeOnly = [];
+  for (const c of world.contacts({ minFace: 0 })) {
+    if (world.joints.has(joinKey(c.a, c.b))) continue;
+    const A = world.get(c.a), B = world.get(c.b);
+    if (!A || !B) continue;
+    const rule = scheduleForPair(A, B);
+    if (!rule) continue;
+    // Two members meeting along a line have no face to put a fastener through.
+    // That is not a missing nail — nailing it would assert a connection that
+    // cannot exist — but it is not automatically a defect either.
+    if (c.face < 1) edgeOnly.push({ a: c.a, b: c.b, rule });
+    else unjoined.push({ a: c.a, b: c.b, rule });
+  }
+  // A member abutting another is only a problem if it is not tied to it *somehow*.
+  // Reported flat, this fired on 49 pairs and 32 of them were fine: the panel
+  // beside a door abuts the sole plate along a line, and the strip below the door
+  // laps the plate and is nailed to both, so the shear path exists. Two hops of
+  // asserted joints, and what survives is the real thing — the gable sheathing,
+  // which sits on the top plate and is tied to nothing but the roof above it.
+  const unlapped = edgeOnly.filter(u => !linkedWithin(world, u.a, u.b, 2));
+  if (unlapped.length) {
+    const sample = unlapped.slice(0, 3).map(u => `${u.a}/${u.b}`).join(', ');
+    out.push(cond('UNLAPPED', SEVERITY.serious,
+      `${unlapped.length} pair${unlapped.length === 1 ? '' : 's'} the schedule says to fasten meet edge to edge ` +
+      `with no face to nail and no joint within two hops (${sample}${unlapped.length > 3 ? ', …' : ''})`,
+      unlapped.slice(0, 8).flatMap(u => [u.a, u.b]),
+      { count: unlapped.length, abutting: edgeOnly.length,
+        basis: 'IRC R602.3.2 — top plate laps; R602.10 — sheathing transfers shear to the plate it bears on',
+        // The instrument's own specification, carried with the finding.
+        resolution: 'says a pair is tied together somewhere within two joints; it does not say the tie is adequate, ' +
+                    'and it cannot tell a member that should have lapped from one that is meant to abut' },
+      null));
   }
   if (unjoined.length) {
     const sample = unjoined.slice(0, 3).map(u => `${u.a}/${u.b}`).join(', ');
@@ -561,6 +586,32 @@ export function checkAll(world) {
 
   out.sort((a, b2) => b2.severity - a.severity);
   return out;
+}
+
+/**
+ * Are these two tied together by asserted joints within `hops`?
+ *
+ * Not the support graph — joints only. The question is whether a connection was
+ * *made*, not whether the geometry could carry a load.
+ */
+function linkedWithin(world, a, b, hops) {
+  const adj = new Map();
+  for (const j of world.joints.values()) {
+    if (!adj.has(j.a)) adj.set(j.a, new Set());
+    if (!adj.has(j.b)) adj.set(j.b, new Set());
+    adj.get(j.a).add(j.b); adj.get(j.b).add(j.a);
+  }
+  let front = new Set([a]);
+  const seen = new Set([a]);
+  for (let h = 0; h < hops; h++) {
+    const next = new Set();
+    for (const x of front) for (const y of adj.get(x) || []) {
+      if (y === b) return true;
+      if (!seen.has(y)) { seen.add(y); next.add(y); }
+    }
+    front = next;
+  }
+  return false;
 }
 
 /** Connectivity of one building service, from its sources outward. */
