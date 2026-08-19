@@ -1060,6 +1060,58 @@ separate those two — it counts how many findings stand next to something we
 actually removed, and everything else is either a defect the build shipped with
 or the colony's own floor.
 
+### Asking the right question of the answer
+
+The page counts how many ant findings the lesion explains, and the first version
+of that count asked the wrong question. It measured *distance*: is this finding
+within a foot of the box we emptied? It read **0 of 18** — with a wall panel
+removed the colony had apparently found eighteen holes and none of them was the
+one we made.
+
+A `GAP` is recorded where the **ant** was standing, not where the hole is. An ant
+on the bed platform sees daylight through a strip four feet away and three feet
+up, and reports from the platform. Every gap already carries the direction the
+ray left in, so the question that means something is whether that ray passes
+through the space the removed member used to fill:
+
+```
+                              holes   by line of sight   by proximity
+shell.N.win_bed.above            35                 31              0
+shell.W.door_entry.far           71                 69              7
+gable.E                           9                  5              0
+leaf.door.entry                 106                104             11
+```
+
+The colony was staring straight through the hole the entire time. The instrument
+that was wrong was the one grading it.
+
+### What each instrument notices
+
+Running all three against the same two lesions is the sharpest thing on the page,
+because they disagree about which hole is serious:
+
+```
+                          conditions  sev 3   rays out   ant findings
+intact                             0      0          0              2
+shell.N.win_bed.above              8      7         19             35
+shell.W.door_entry.far             1      0        239             35
+```
+
+`shell.W.door_entry.far` is **seventy-three square feet** — the largest sheet of
+wall in the building. Take it off and the deterministic checks report exactly one
+condition, below severity 3, and that one is the coarse ray sweep noticing a leak.
+Nothing is floating, because the panel carried nothing. Nothing is unjoined,
+because its joints left with it. Nothing overlaps.
+
+The smaller strip over the bed window produces eight conditions and seven at
+severity 3 — not because it is a worse hole, but because things were fastened to
+it and are now hanging in the air.
+
+**The checks notice a missing panel in proportion to what was hanging on it, not
+in proportion to the hole it leaves.** That is not a bug in the checks; it is what
+a rule-based instrument is. It is also exactly why something that walks around
+inside and looks is worth having.
+
 The **two eave blocks** are not found at all, and that is the same blind spot the
 CT has: a two-inch gap between rafters, above the wall plate, that neither a
 crawling ant nor a two-inch voxel resolves. The full ray survey does find it. The

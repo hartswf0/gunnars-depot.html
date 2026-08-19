@@ -223,13 +223,25 @@ function cloud(size, opts = {}) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
   g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(0), 3));
+  // depthTest off, and drawn last. The colony's whole job is inside a box, and the
+  // box has a skin — with the depth test on, sixty ants and five hundred pheromone
+  // marks were being drawn correctly and thrown away behind a translucent wall.
+  // This is an overlay on the building, not a thing in it, and it says so.
   const m = new THREE.PointsMaterial({ size, vertexColors: true, sizeAttenuation: true,
-    transparent: true, depthWrite: false, ...opts });
-  const p = new THREE.Points(g, m); p.frustumCulled = false; swarm.add(p); return p;
+    transparent: true, depthWrite: false, depthTest: false, ...opts });
+  const p = new THREE.Points(g, m);
+  p.frustumCulled = false; p.renderOrder = 10; swarm.add(p); return p;
 }
-const antsPts  = cloud(2.6, { opacity: 1 });
-const marksPts = cloud(1.8, { opacity: .55, blending: THREE.AdditiveBlending });
-const findPts  = cloud(7.0, { opacity: .9,  blending: THREE.AdditiveBlending });
+// Sized against a twenty-foot trailer seen from thirty feet away, which is where
+// the camera starts. At the two inches an ant actually is, the whole colony was a
+// faint dusting nobody could see moving.
+const antsPts  = cloud(4.8, { opacity: 1 });
+const marksPts = cloud(3.2, { opacity: .5, blending: THREE.AdditiveBlending });
+// Not additive. Eighty findings six inches apart all summed to the same flat
+// white and the kind colour — which is the whole diagnosis — stopped meaning
+// anything. Marks are additive because density is what a trail *is*; findings
+// are discrete claims and each one keeps its own colour.
+const findPts  = cloud(10,  { opacity: .8 });
 
 const KIND_RGB = {
   HOLE:     [1.00, 0.20, 0.20], GAP:      [1.00, 0.42, 0.10],
@@ -272,8 +284,10 @@ function paintSwarm() {
   for (const m of colony.marks) if (m.s > peak) peak = m.s;
   for (const m of colony.marks) {
     mp.push(m.p[0], m.p[1], m.p[2]);
+    // Brightness is strength, so evaporation is visible: a trail nobody returns
+    // to dims out over a few seconds and that is the false-positive filter running.
     const v = Math.min(1, m.s / peak);
-    mc.push(0.10 + v * 0.25, 0.45 + v * 0.45, 0.70 + v * 0.30);
+    mc.push(0.06 + v * 0.30, 0.22 + v * 0.62, 0.34 + v * 0.62);
   }
   feed(marksPts, mp, mc);
 
@@ -296,10 +310,12 @@ const LESIONS = [
   { id: 'blocks', name: 'two eave blocks removed',
     cut: w => ['bird.E.113', 'bird.E.129'].filter(id => w.remove(id)) },
   { id: 'panel', name: 'largest wall panel removed', cut: w => {
-      const p = w.all({ kind: 'sheathing' })
-        .filter(e => e.meta.wall === 'N')
-        .sort((a, b) => (b.hi[0] - b.lo[0]) * (b.hi[2] - b.lo[2]) - (a.hi[0] - a.lo[0]) * (a.hi[2] - a.lo[2]))[0];
+      const face = (e) => Math.max((e.hi[0] - e.lo[0]) * (e.hi[2] - e.lo[2]),
+                                   (e.hi[1] - e.lo[1]) * (e.hi[2] - e.lo[2]));
+      const p = w.all({ kind: 'sheathing' }).sort((a, b) => face(b) - face(a))[0];
       return p && w.remove(p.id) ? [p.id] : []; } },
+  { id: 'strip', name: 'the strip over the bed window', cut: w =>
+      w.remove('shell.N.win_bed.above') ? ['shell.N.win_bed.above'] : [] },
   { id: 'leaf', name: 'door leaf removed', cut: w => w.remove('leaf.door.entry') && ['leaf.door.entry'] },
   { id: 'studs', name: 'three studs pulled', cut: w => {
       const s = w.all({ kind: 'stud' }).slice(4, 7).map(e => e.id);
@@ -464,7 +480,10 @@ function table() {
   $('#findings').innerHTML = ''; $('#findings').appendChild(t);
 }
 function goTo(f) {
-  const d = 46;
+  // Far enough back to frame the neighbourhood. Points are sized in world units —
+  // an ant is a few inches — so at four feet the swarm fills the screen with
+  // squares and you cannot tell which member you are looking at.
+  const d = 110;
   view.controls.target.set(f.at[0], f.at[1], f.at[2]);
   view.camera.position.set(f.at[0] + d * .7, f.at[1] - d * .8, f.at[2] + d * .5);
   view.controls.update();
@@ -515,17 +534,43 @@ function compare() {
   }
 
   if (lesionBoxes.length) {
-    // Within a foot of the hole the lesion left. Distance to the box, not to its
-    // centre: a wall panel is eight feet long and its centre is nowhere near most
-    // of it.
-    const near = (f) => lesionBoxes.some(b =>
-      Math.hypot(...[0, 1, 2].map(i => Math.max(b.lo[i] - f.at[i], 0, f.at[i] - b.hi[i]))) < 12);
-    const agree = antHoles.filter(near).length;
+    // Not proximity — line of sight. A GAP is recorded where the *ant* was
+    // standing, not where the hole is, and an ant on the bed platform can see
+    // daylight through a strip three feet above it and four feet away. Measured
+    // by distance the two never met and the panel read 0 of 18 while the colony
+    // was in fact staring straight through it. Every GAP records the direction
+    // the ray left in, so the honest question is whether that ray passes through
+    // the space the removed member used to fill.
+    const through = (f) => {
+      const d = f.detail && f.detail.toward;
+      if (!d) return lesionBoxes.some(b => gap(b, f.at) < 24);   // a HOLE has no direction
+      return lesionBoxes.some(b => hits(f.at, d, b));
+    };
+    const agree = antHoles.filter(through).length;
     box('AGAINST THE LESION', `${agree}/${antHoles.length}`,
-      `ant findings within a foot of a hole we actually made — ${lesionBoxes.map(b => b.id).join(', ')}. ` +
-      `The rest are either defects the build shipped with, or the colony's own floor, and the only ` +
-      `way to tell is to run it again intact.`);
+      `ant findings whose escaping ray goes through the space we emptied — ` +
+      `${lesionBoxes.map(b => b.id).join(', ')}. The rest are either defects the build shipped ` +
+      `with, or the colony's own floor, and the only way to tell those apart is to run it again intact.`);
   }
+}
+/** Distance from a point to a box, zero inside it. */
+function gap(b, p) {
+  return Math.hypot(...[0, 1, 2].map(i => Math.max(b.lo[i] - p[i], 0, p[i] - b.hi[i])));
+}
+/** Does the ray from `o` along `d` cross the box? Slabs, with a little slack for
+ *  the eighth-inch offsets an ant stands at. */
+function hits(o, d, b, slack = 2) {
+  let t0 = 0, t1 = 1e9;
+  for (let i = 0; i < 3; i++) {
+    const lo = b.lo[i] - slack, hi = b.hi[i] + slack;
+    if (Math.abs(d[i]) < 1e-9) { if (o[i] < lo || o[i] > hi) return false; continue; }
+    let a = (lo - o[i]) / d[i], z = (hi - o[i]) / d[i];
+    if (a > z) { const t = a; a = z; z = t; }
+    if (a > t0) t0 = a;
+    if (z < t1) t1 = z;
+    if (t0 > t1) return false;
+  }
+  return true;
 }
 
 // ---------------------------------------------------------------- wiring

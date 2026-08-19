@@ -983,6 +983,37 @@ check('taking a wall panel off makes the colony find more daylight',
 check('and an intact one has a small, bounded floor of its own',
   antIntact <= 8 && holed2 > antIntact * 2, `floor ${antIntact}, response ${holed2}`);
 
+// Attribution. A GAP is recorded where the *ant* was standing, not where the hole
+// is — an ant on the bed platform sees daylight through a strip four feet away
+// and three feet up. Asked by distance, the colony looks blind; asked whether the
+// ray it recorded passes through the space we emptied, it was staring right at it.
+const lesionBox = (() => { const e = BUILT.elements.get('shell.N.win_bed.above');
+  return { lo: e.lo.slice(), hi: e.hi.slice() }; })();
+const antStrip = copyOf(BUILT); antStrip.remove('shell.N.win_bed.above');
+const stripFinds = colonise(antStrip, { ticks: 400 })
+  .findings().filter(f => f.kind === 'GAP' || f.kind === 'HOLE');
+const boxGap = (b, p) => Math.hypot(...[0,1,2].map(i => Math.max(b.lo[i]-p[i], 0, p[i]-b.hi[i])));
+const rayHits = (o, d, b, slack = 2) => {
+  let t0 = 0, t1 = 1e9;
+  for (let i = 0; i < 3; i++) {
+    const lo = b.lo[i] - slack, hi = b.hi[i] + slack;
+    if (Math.abs(d[i]) < 1e-9) { if (o[i] < lo || o[i] > hi) return false; continue; }
+    let a = (lo - o[i]) / d[i], z = (hi - o[i]) / d[i];
+    if (a > z) { const t = a; a = z; z = t; }
+    if (a > t0) t0 = a; if (z < t1) t1 = z;
+    if (t0 > t1) return false;
+  }
+  return true;
+};
+const bySight = stripFinds.filter(f => f.detail && f.detail.toward
+  ? rayHits(f.at, f.detail.toward, lesionBox) : boxGap(lesionBox, f.at) < 24).length;
+const byNear = stripFinds.filter(f => boxGap(lesionBox, f.at) < 12).length;
+check('every gap records which way the light got out',
+  stripFinds.filter(f => f.kind === 'GAP').every(f => f.detail && f.detail.toward));
+check('and the escaping ray is what ties a finding to the hole, not distance to it',
+  bySight > stripFinds.length * 0.6 && bySight > byNear,
+  `${bySight} by line of sight, ${byNear} by proximity, of ${stripFinds.length}`);
+
 // The split that stops the colony shouting about doors. A leaf in an opening and
 // a tank in a carcass are in contact with things, and neither wants nailing.
 const antKinds = new Set(cA.rumours().map(f => f.kind));
