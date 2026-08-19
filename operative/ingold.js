@@ -76,6 +76,13 @@ export function openings(w, log = []) {
     log.push(step(w, 'cut', { ...args, id }, why));
     log.push(step(w, 'header', { opening: id }, 'an interrupted stud carries nothing'));
   }
+  // And fill them. An opening with nothing in it is a hole, and this model had
+  // five of them for its whole life: the ray scan was content, because light is
+  // supposed to come through a window, and the voxel CT was not, because it
+  // floods air — and air walked in the front door and reported that the trailer
+  // enclosed nothing at all. Glass is transparent to one instrument and solid to
+  // the other, which is the difference between a window and a hole.
+  log.push(step(w, 'closeAll', {}, 'a door leaf and four panes; the openings are openings, not holes'));
   return log;
 }
 

@@ -807,6 +807,113 @@ check('an existing structure can be scanned from its mesh',
 const inside = RG.interiorOf(mesh, { step: Math.max(8, Math.hypot(...RG.bounds(mesh.solids).size) / 12) });
 check('and points inside it can be found by parity', inside.length > 0, `${inside.length} interior points`);
 
+
+// ------------------------------------------- 27. admitting a patient
+group('any model in the repository, whatever format it arrived in');
+const MESH = await import('../operative/mesh.js');
+const rdBuf = (f) => { const b = fs.readFileSync(path.join(ROOT, f));
+  return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); };
+
+// Every model here exists three times over. Three independent parsers, one answer:
+// if they disagree, at least two of them are wrong and none of them can be trusted.
+const three = ['stl', 'dae', 'glb'].map(ext => {
+  const f = `assets/models/modules/foundation-base.${ext}`;
+  const m = MESH.loadMesh(f, ext === 'dae' ? fs.readFileSync(path.join(ROOT, f), 'utf8') : rdBuf(f));
+  return { ext, m, std: MESH.standardise(m.tris, { upAxis: m.upAxis, format: m.format }) };
+});
+check('STL, Collada and glTF all load', three.every(x => x.m.tris.length > 0),
+  three.map(x => `${x.ext}:${x.m.tris.length / 9}`).join(' '));
+check('and they contain the same number of triangles',
+  new Set(three.map(x => x.m.tris.length)).size === 1);
+const sizes = three.map(x => MESH.meshBounds(x.std.tris).size.map(n => +n.toFixed(1)));
+check('and once standardised they are the same building to the inch',
+  JSON.stringify(sizes[0]) === JSON.stringify(sizes[1]) &&
+  JSON.stringify(sizes[1]) === JSON.stringify(sizes[2]),
+  sizes.map(s => s.join('x')).join('  vs  '));
+check('which is 102 in wide, because it is this trailer',
+  Math.abs(sizes[0][0] - 102) < 1, `${sizes[0][0]} in`);
+// Read the triangles and skip the scene graph and every model in this repository
+// is a 1 x 1 x 1 cube at the origin, because they are all instanced unit boxes.
+check('the scene graph is walked, not skipped',
+  Math.max(...MESH.meshBounds(three.find(x => x.ext === 'glb').m.tris).size) > 2,
+  'an unwalked glTF measures 1 x 1 x 1');
+check('and the parts are named',
+  three.find(x => x.ext === 'glb').m.parts.length > 5,
+  `${three.find(x => x.ext === 'glb').m.parts.length} named parts`);
+check('up is read from the format, not guessed from the proportions',
+  three.find(x => x.ext === 'glb').m.upAxis === 'Y_UP' &&
+  three.find(x => x.ext === 'dae').m.upAxis === 'Z_UP');
+check('the XML reader works without a DOM', (() => {
+  const doc = MESH.parseXML('<a x="1"><b>2 3</b><c/></a>');
+  return MESH.find(doc, 'a') && MESH.findAll(doc, 'b')[0].text.trim() === '2 3';
+})(), 'node has no DOMParser and a diagnostic that only runs in a browser cannot be checked');
+
+// ------------------------------------------- 28. the CT
+group('slice the patient');
+const TG = await import('../operative/tomography.js');
+const airOcc = RG.occludersOf(T4, { medium: 'air' });
+const lightOcc = RG.occludersOf(T4);
+// Light goes through glass; air does not. Until there was glass in the model,
+// neither instrument could say so — and the flood walked in the front door.
+check('glass is transparent to light and solid to air',
+  lightOcc.solids.length < airOcc.solids.length,
+  `${lightOcc.solids.length} light occluders vs ${airOcc.solids.length} air`);
+check('and there is glass to be transparent',
+  T4.all({ kind: 'glazing' }).length === 4 && T4.all({ kind: 'leaf' }).length === 1,
+  `${T4.all({ kind: 'glazing' }).length} panes, ${T4.all({ kind: 'leaf' }).length} leaf`);
+
+const vox = TG.flood(TG.voxelise(airOcc, { step: 2 }));
+check('the trailer encloses a volume', vox.enclosed > 100000, `${vox.enclosed} cells`);
+check('and it is about the size of a trailer',
+  Math.abs(vox.enclosed * 8 / 1728 - 1050) < 250, `${(vox.enclosed * 8 / 1728).toFixed(0)} cu ft`);
+const rooms = TG.cavities(vox);
+check('one big cavity, which is the rooms', rooms.length && rooms[0].volume > 900,
+  `${rooms.length} cavities, largest ${rooms[0] && rooms[0].volume} cu ft`);
+check('from the middle of the room, air has no way out',
+  TG.escapeRoute(vox, [50, 150, 50]).sealed);
+// The same flood on the light list walks straight out through the windows, which
+// is the point: two instruments, two answers, and the difference is meaningful.
+check('the same flood through the light list does not',
+  !TG.flood(TG.voxelise(lightOcc, { step: 2 })).enclosed ||
+  TG.flood(TG.voxelise(lightOcc, { step: 2 })).enclosed < vox.enclosed / 10,
+  'light gets out of a window; air does not');
+// Resolution, stated. Marked by cell centre rather than overlap, a half-inch
+// panel on a two-inch grid catches one column in four and every wall is a sieve.
+const coarse = TG.flood(TG.voxelise(airOcc, { step: 6 }));
+check('a coarse grid seals what it cannot resolve', coarse.enclosed > 0,
+  `${coarse.enclosed} cells at 6 in`);
+const sl = TG.slice(vox, 2, Math.floor(TG.sliceCount(vox, 2) / 2));
+check('a slice is a plan cut with three labels',
+  sl.px.some(v => v === TG.LABEL.MATERIAL) && sl.px.some(v => v === TG.LABEL.ENCLOSED) &&
+  sl.px.some(v => v === TG.LABEL.OUTSIDE));
+check('and it says what height it was cut at', typeof sl.at === 'number');
+
+// Exposure: the lamp stands in enclosed air beside each part.
+const exp = TG.exposure(airOcc, { rays: 16, enclosure: vox });
+check('parts on the outside have nowhere inside to stand a lamp',
+  exp.some(x => x.outside), `${exp.filter(x => x.outside).length} of ${exp.length}`);
+check('and the ones inside mostly see no sky at all',
+  exp.filter(x => !x.outside && x.fraction === 0).length > exp.filter(x => x.fraction > 0.2).length);
+check('the finding says how sure it is',
+  typeof TG.unexpectedExposure(airOcc, exp).basis === 'string');
+
+// ------------------------------------------- 29. a mesh gets the same instruments
+group('a patient with no chart still gets imaged');
+const patient = MESH.standardise(
+  MESH.loadMesh('x.glb', rdBuf('assets/models/concepts/contractor-reality-trailer.glb')).tris,
+  { format: 'glb' });
+const pOcc = RG.fromTriangles(patient.tris);
+const pIn = RG.interiorOf(pOcc, { step: 14 });
+check('interior points are found in a mesh by parity', pIn.length > 10, `${pIn.length}`);
+const pScan = RG.scan(pOcc, pIn.slice(0, 30), { rays: 96 });
+check('and it can be scanned for leaks', pScan.cast > 2000 && pScan.escapes.length >= 0,
+  `${pScan.escapes.length} of ${pScan.cast}`);
+const pVox = TG.flood(TG.voxelise(pOcc, { step: 3 }));
+check('and sliced', pVox.material > 0 && pVox.n.every(n => n > 5), `${pVox.n.join('x')}`);
+check('and it encloses something', pVox.enclosed > 0, `${pVox.enclosed} cells`);
+const pRad = RG.radiograph(pOcc, 1, { w: 40, h: 40 });
+check('and radiographed', pRad.peak > 0);
+
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

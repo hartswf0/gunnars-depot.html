@@ -109,7 +109,22 @@ export const SCHEDULE = [
   { a: 'flashing',  b: 'sheathing', type: 'nail', size: '10d nail', spacing: 10, how: 'into the skin' },
   { a: 'flashing',  b: 'rafter',    type: 'nail', size: '10d nail', spacing: 10, how: 'into the tails' },
   { a: 'flashing',  b: 'plate',     type: 'nail', size: '10d nail', spacing: 10, how: 'into the plate' },
-  { a: 'flashing',  b: 'run',       type: 'strap', size: 'steel', count: 2, how: 'storm collar' }
+  { a: 'flashing',  b: 'run',       type: 'strap', size: 'steel', count: 2, how: 'storm collar' },
+  // Glass and doors. A window is fixed into its rough opening through the frame
+  // and a nailing flange over the skin; a leaf hangs on the jack it is hinged to.
+  { a: 'glazing',   b: 'jack',      type: 'screw', size: '#8 x 2', count: 4, how: 'through the frame' },
+  { a: 'glazing',   b: 'king',      type: 'screw', size: '#8 x 2', count: 4, how: 'through the frame' },
+  { a: 'glazing',   b: 'header',    type: 'screw', size: '#8 x 2', count: 2, how: 'into the head' },
+  { a: 'glazing',   b: 'cripple',   type: 'screw', size: '#8 x 2', count: 2, how: 'into the sill' },
+  { a: 'glazing',   b: 'stud',      type: 'screw', size: '#8 x 2', count: 2, how: 'into the frame' },
+  { a: 'glazing',   b: 'sheathing', type: 'nail',  size: '8d nail', spacing: 8, how: 'nailing flange' },
+  { a: 'glazing',   b: 'plate',     type: 'screw', size: '#8 x 2', count: 2, how: 'into the plate' },
+  { a: 'leaf',      b: 'jack',      type: 'screw', size: '#10 x 3', count: 6, how: 'three hinges' },
+  { a: 'leaf',      b: 'king',      type: 'screw', size: '#10 x 3', count: 6, how: 'three hinges' },
+  { a: 'leaf',      b: 'header',    type: 'screw', size: '#8 x 2', count: 2, how: 'into the head' },
+  { a: 'leaf',      b: 'sheathing', type: 'nail',  size: '8d nail', spacing: 8, how: 'through the casing' },
+  { a: 'leaf',      b: 'plate',     type: 'screw', size: '#8 x 2', count: 2, how: 'threshold' },
+  { a: 'leaf',      b: 'stud',      type: 'screw', size: '#10 x 3', count: 6, how: 'hinges' }
 ];
 
 const key = (a, b) => [a, b].sort().join('|');
@@ -140,6 +155,7 @@ export function sortOf(e) {
 
 /** Roles that name a real thing a rule can be written about. */
 export const ROLES = new Set([
+  'glazing', 'door leaf',
   'cabinet', 'bed', 'bench', 'counter', 'table', 'leg', 'mattress', 'partition',
   'chase', 'panel', 'controller', 'inverter', 'battery', 'regulator', 'pump',
   'heater', 'fridge', 'cooktop', 'sink', 'lav', 'wc', 'shower', 'light',

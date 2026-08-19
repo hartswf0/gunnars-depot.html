@@ -14,7 +14,7 @@ Open `operative-builder.html` from GitHub Pages or any local static server
 Everything else runs offline: `three` (r185, MIT) is vendored under
 `vendor/three/`, and the reference studies are read from this repository.
 
-Run the receipts with `node tests/run.mjs` (276 assertions, no dependencies).
+Run the receipts with `node tests/run.mjs` (302 assertions, no dependencies).
 
 The trailer is a working MEP model, not decorated geometry: **289 members**, five
 connected systems, and every device on its system's graph.
@@ -33,7 +33,7 @@ chase. Conductors are sized against **both** ampacity (NEC 310.16) and 3% voltag
 drop; traps against trap-arm limits (IPC 909.1).
 
 **`ingold-trailer.html` is the building this was for.** The environment above is the
-means; the trailer is the result. 402 members and 533 joints on the reference
+means; the trailer is the result. 407 members and 558 joints on the reference
 sheets' 8'-6" x 20'-0" envelope: bath, galley, dinette, bed, five headed
 openings, and water, waste and off-grid power as connected systems. Nobody
 scripted it — the builder ran the loop for 45 decisions and settled with nothing
@@ -66,6 +66,8 @@ operative/
   weather.js     where the water goes: slope, ponding, penetrations, the drip line
   light.js       can you see in here — daylight, and whether the lamps reach the floor
   radiography.js fill it with light and see where it gets out; calibrate the instrument
+  tomography.js  flood it with air and slice the result; put the lamp on each part
+  mesh.js        load a patient — STL, Collada, glTF — and walk its scene graph
   views.js       twelve named cameras, and the rule for which one to look from next
   critic.js      the suck score protocol — fucked until proven otherwise
   reference.js   STL silhouette extraction and comparison against the concepts
@@ -889,3 +891,95 @@ Every one of them at an eighth of an inch: the expansion gap printed on every
 sheet of sheathing, at the seams the door and window cuts created three edits
 earlier. The scanner found gaps I had just made, at exactly the size I made them.
 On site you tape those. There is a `tape` op now.
+
+
+## The hospital
+
+`hospital.html`. A diagnostic bay rather than another view of one trailer: admit
+any model in this repository and run the same instruments on it.
+
+Two kinds of patient, and the difference is stated on admission:
+
+- **a world**, which has a chart — every member knows its kind, its layer, what it
+  is joined to and how it got there. Conditions, vitals and exact exposure are
+  available.
+- **a mesh**, which has only images. STL, Collada, glTF. No chart: it can be
+  scanned, sliced, radiographed and photographed, and nothing can be said about
+  what any of its parts is *for*.
+
+### Reading a patient in
+
+Every model here exists three times over, and all three are instanced unit boxes
+placed by a scene graph. Read the triangles and skip the graph and **every model
+in this repository is a 1 × 1 × 1 cube at the origin.** So `mesh.js` walks the
+graph — glTF nodes with TRS or a matrix, Collada `<node>` with translate/rotate/
+scale — and includes a small XML reader, because node has no `DOMParser` and a
+diagnostic that only runs in a browser cannot be checked.
+
+Which way is up comes from the format, not from the proportions: glTF is Y-up by
+specification, Collada declares `<up_axis>`, an STL declares nothing. Guessed from
+"taller in y than in z", the foundation module came out lying on its side, because
+a trailer chassis is not taller than it is long in any orientation.
+
+Three parsers, one answer, asserted: **102.0 × 187.0 × 33.0 in from all three.**
+
+### The CT
+
+A grid through the bounding box, material marked by *overlap* rather than by
+cell-centre — a half-inch panel on a two-inch grid catches one column in four, so
+every wall was a sieve and the flood reported no enclosed volume at all — then
+air flooded in from the outside. What the flood cannot reach is enclosed.
+
+```
+material  79,655 cells    557 cu ft
+enclosed 150,335 cells  1,051 cu ft
+outside   93,135 cells    651 cu ft
+From the middle of the building, air has no path out. Sealed, at this resolution.
+```
+
+Sagittal, coronal and axial cuts through the labelled volume, on a scrubber. The
+axial cut is a floor plan the model drew of itself.
+
+`escapeRoute()` walks the shortest air path from a point inside to the outside and
+returns the route in inches. "Enclosed = 0" tells you a building leaks and nothing
+else; tracing the path is the difference between *there is a leak* and *it goes
+out here*.
+
+### Light gets through a window; air does not
+
+The CT is why there is glass in this model at all.
+
+The ray scan was content with five openings that had nothing in them — light is
+supposed to come through a window. The flood was not, because it floods air, and
+air walked in the front door and reported that the trailer enclosed nothing.
+**The two instruments disagreeing was the finding.** Nothing had ever represented
+a door leaf or a pane of glass.
+
+So there is a `close` op, and `occludersOf(world, { medium })` returns different
+lists for light and for air. Glazing is transparent to one and solid to the other,
+and that sentence was unsayable until there was glazing to say it about.
+
+### Exposure
+
+The lamp goes on each part in turn, standing in the *enclosed* air beside it, and
+the reading is how much sky that part can see. Pushed a fraction of an inch off a
+corner stud without that constraint, the lamp stands in the garden and reports the
+whole sky — every stud, plate and sole in the trailer came back "unexpectedly
+exposed" that way. The CT defines inside; the exposure test uses it.
+
+With a chart the finding is exact: a part on the interior or frame layer that sees
+sky is standing next to a hole. With a bare mesh it is a geometric guess and says
+so — on a 1,350-triangle concept study it called seventy parts of eighty-four
+unexpected, because nearly everything in a thin-shelled model touches the bounding
+box.
+
+### Calibration, again, at the top of the page
+
+The bay calibrates before it shows a patient anything, and the banner is the first
+thing on the page:
+
+```
+the instrument is honest
+A box known to be sealed leaks 0 of 576 rays. The same box with one wall removed
+reads 93. Anything below the first number is the instrument, not the building.
+```

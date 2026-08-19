@@ -51,12 +51,25 @@ export function sphereDirections(n) {
  * window opening is a hole on purpose, and services hang in the air rather than
  * enclosing anything.
  */
-export const TRANSPARENT = new Set(['run', 'opening', 'port']);
+// Light goes through glass; air does not. That distinction only became sayable
+// once there was glass — see `close` in ops.js. The voxel CT in tomography.js
+// treats glazing as solid, and the difference between the two readings is the
+// difference between a window and a hole.
+export const TRANSPARENT = new Set(['run', 'opening', 'port', 'glazing']);
 
-export function occludersOf(world, { include = null, openings = 'transparent' } = {}) {
+/**
+ * What stops a ray, for a given medium. Light and air do not agree, and the
+ * whole point of having glass in the model is that they now can disagree in
+ * writing: `for: 'light'` sees through glazing, `for: 'air'` does not. The CT's
+ * flood asked for the light list by default and walked out through the windows.
+ */
+export function occludersOf(world, { include = null, openings = 'transparent', medium = 'light' } = {}) {
+  const clear = medium === 'air'
+    ? new Set(['run', 'opening', 'port'])
+    : TRANSPARENT;
   const out = [];
   for (const e of world.all()) {
-    if (TRANSPARENT.has(e.kind)) continue;
+    if (clear.has(e.kind)) continue;
     if (e.layer === 'services' && e.kind !== 'panel') continue;
     if (include && !include(e)) continue;
     const P = poly(e.box, e.shear);
@@ -68,7 +81,8 @@ export function occludersOf(world, { include = null, openings = 'transparent' } 
   // to be told apart from a ray leaving through a seam — otherwise every window
   // reads as a defect and the real defects drown.
   const holes = openings === 'transparent'
-    ? world.all({ kind: 'opening' }).map(o => {
+    ? world.all().filter(o => o.kind === 'opening' ||
+        (medium === 'light' && o.kind === 'glazing')).map(o => {
         const P = poly(o.box, o.shear); const bb = aabb(P);
         return { id: o.id, kind: 'opening', P, lo: bb.lo, hi: bb.hi, meta: o.meta };
       })

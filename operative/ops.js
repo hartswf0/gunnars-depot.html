@@ -1211,6 +1211,58 @@ export const OPS = {
       note: `${tid}: seam taped across ${sz[face].toFixed(0)} in` };
   },
 
+  /**
+   * Fill an opening: a leaf in a doorway, a pane in a window.
+   *
+   * Nothing in this model has ever represented a door or a piece of glass. The
+   * openings were holes and stayed holes, which the ray scan was happy with —
+   * light is supposed to come through a window — and which the voxel CT was not,
+   * because it floods *air*, and air walked in through the front door and
+   * reported that the trailer enclosed nothing at all.
+   *
+   * The two instruments disagreeing was the finding. Glass is transparent to one
+   * and solid to the other, and until there was glass neither of them could say
+   * so.
+   */
+  close(world, { opening, id, type, thickness }) {
+    const op = world.get(opening);
+    if (!op) return { ok: false, note: `no opening "${opening}"` };
+    const kind = type || (op.meta.type === 'door' ? 'leaf' : 'glazing');
+    const lid = id || `${kind}.${opening}`;
+    if (world.get(lid)) return { ok: false, note: `${lid} already exists` };
+    const w = world.walls[op.meta.wall];
+    const t = thickness || (kind === 'leaf' ? 1.75 : 0.75);
+    // in the plane of the wall, inset a little so it reads as sitting in a frame
+    const p = [...op.box.p], sz = [...op.box.s];
+    const thin = w ? (w.axis === 'y' ? 0 : 1) : sz.indexOf(Math.min(...sz));
+    sz[thin] = t;
+    // Filling the rough opening exactly. Inset by half an inch all round — the
+    // shim gap a real window is packed and taped into — the CT's flood went
+    // straight round the glass and the trailer still enclosed nothing.
+    // The frame takes up that difference; the model says the opening is closed.
+    world.add(new Element({ id: lid, kind, layer: 'walls',
+      material: kind === 'leaf' ? 'wood' : 'glass',
+      box: box(p, sz),
+      meta: { role: kind === 'leaf' ? 'door leaf' : 'glazing', fills: opening,
+              wall: op.meta.wall, transparent: kind !== 'leaf' } }));
+    return { changed: [lid, opening],
+      note: `${opening} filled with ${kind === 'leaf' ? 'a door leaf' : 'glazing'} ` +
+            `${Math.max(sz[0], sz[1]).toFixed(0)} x ${sz[2].toFixed(0)} in` };
+  },
+
+  /** Fill every opening that has nothing in it. */
+  closeAll(world, {} = {}) {
+    const changed = [];
+    let n = 0;
+    for (const op of world.all({ kind: 'opening' })) {
+      if (world.all().some(e => e.meta.fills === op.id)) continue;
+      const r = OPS.close(world, { opening: op.id });
+      if (r.ok === false) continue;
+      changed.push(...r.changed); n++;
+    }
+    return { changed, note: `${n} opening${n === 1 ? '' : 's'} filled` };
+  },
+
   place(world, { id, kind, layer, at, size, material, section, shear }) {
     if (world.get(id)) return { ok: false, note: `${id} already exists` };
     world.add(new Element({ id, kind, layer: layer || 'interior', box: box(at, size), material, section, shear }));
