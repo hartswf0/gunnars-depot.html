@@ -983,3 +983,116 @@ the instrument is honest
 A box known to be sealed leaks 0 of 576 rays. The same box with one wall removed
 reads 93. Anything below the first number is the instrument, not the building.
 ```
+
+
+## The colony
+
+`operative/ants.js`, `ant-scout.html`. Every instrument up to here is something
+we point at the building. This one is released into it.
+
+The ants come from the formicary engine — a food-foraging colony — with the food
+taken out. They crawl surfaces rather than ground, fire a small lidar fan from
+wherever they are standing, and forage for the places the geometry gives out:
+
+| kind | what an ant did |
+| --- | --- |
+| `HOLE` | walked out of the building |
+| `GAP` | saw daylight from inside |
+| `CLASH` | material inside material |
+| `UNJOINED` | crossed between two members the schedule says should be fastened |
+| `CLIFF` | the surface ended at nothing |
+| `VOID` | a cavity behind the surface |
+| `UNRULED` | two members meet and no rule covers it |
+
+`UNRULED` is not a defect. `nailOff` has always reported the *count* of contacts
+with no schedule entry — "84 pairs have no rule" — and nobody had ever looked at
+the list. The colony walks it.
+
+### Three rules kept from the formicary
+
+They are what makes a colony an instrument rather than a mob, and each was
+arrived at there by something going wrong:
+
+1. **Pheromone is evidence, not an order.** Every ant has its own threshold for
+   believing a trail and its own bias toward leaving it, and it follows one only
+   so far before striking out. A colony that obeys its own trail converges on the
+   first thing it found and reports that one thing forever.
+2. **Marking is pulsatile, and braked by crowding and by experience.** An ant
+   among other ants marks less; an ant that has already succeeded marks less. Without
+   the brakes the first finding drowns out every later one.
+3. **There is a scout floor.** Some fraction never follows anything. Without it a
+   colony that has found one hole never finds the second.
+
+Evaporation is the fourth, and it is the whole false-positive filter: a mark
+nobody returns to fades, and the rumour it was carrying goes with it. Nothing has
+to decide a finding was wrong. It just stops being paid for.
+
+### Corroboration is the measurement
+
+A finding is keyed by kind and a six-inch cell, and what is counted is **how many
+distinct ants arrived at it independently** — not how many times it was hit, and
+not how loudly. One ant that saw something once is a rumour. Two is a finding:
+
+```
+weight = kindWeight × (1 − 0.55^ants) × log1p(hits)
+```
+
+### Does it see?
+
+A detector that has never been shown a known defect is decoration. `ant-scout.html`
+carries a lesion menu for exactly this, and the response is monotonic in damage
+(60 ants, 1000 ticks, seed 11):
+
+```
+intact                        4 corroborated gaps   strongest:  5 ants
+two eave blocks removed       4                     strongest:  5 ants
+gable end removed            10                     strongest:  9 ants
+largest wall panel removed   40                     strongest: 25 ants
+door leaf removed           117                     strongest: 19 ants
+```
+
+Two things in that table are worth more than the trend.
+
+The **four on an intact trailer** are all in the same place: the wheel wells,
+which are boxes open to the road by design. The colony is right that there is a
+hole there. It has no way to know it was meant. The page's lesion panel exists to
+separate those two — it counts how many findings stand next to something we
+actually removed, and everything else is either a defect the build shipped with
+or the colony's own floor.
+
+The **two eave blocks** are not found at all, and that is the same blind spot the
+CT has: a two-inch gap between rafters, above the wall plate, that neither a
+crawling ant nor a two-inch voxel resolves. The full ray survey does find it. The
+answer is not to fix the colony; it is that the colony is not the instrument for
+that question, and the page runs all three side by side so you can see which one
+earned its answer.
+
+### Where the ants were wrong
+
+Every one of these was a colony confidently reporting a building that was fine:
+
+- **227 false gaps**, because "no hit within forty inches" was taken for
+  "outside". In a twenty-foot room most rays from the floor travel further than
+  that without meeting anything. The endpoint is now labelled against the CT, and
+  the label is three-valued: a ray that ends inside a wall is not an escape.
+- **A clash on every joist under the deck**, from a fixed one-inch threshold. The
+  test now measures the thickness of the member the ant is standing on.
+- **Doors and housed tanks reported as unjoined.** A leaf filling an opening and a
+  tank inside a carcass are in contact with things and neither wants nailing.
+- **The whole colony blind the moment the building leaked.** `indoors` asked the
+  CT, and removing one wall panel makes nothing enclosed — so with a wall missing
+  every ant decided it was outdoors and reported nothing at all. The gate is now
+  local: what fraction of *this ant's own* rays came back.
+- **Nineteen gaps in the wheel wells**, until "indoors" also required a floor: a
+  cast straight down must hit something. A point with nothing under it is not in
+  a room.
+- **The nest inside the door.** It was the middle of the door opening, and the
+  opening has a leaf in it — so ants that failed to find a surface fell back to
+  standing inside half an inch of plywood for the rest of the run. And an ant that
+  did end up inside something was pushed out along its own normal, which for an
+  ant on the sole plate under a door meant coming out at the top of the door,
+  eighty inches up, on a face it had never touched. Out through the nearest face
+  now, and the nest is walked to open air before anything hatches.
+
+The pattern is the one this whole repository keeps finding: **the instrument
+reads the building through an assumption, and the assumption is the bug.**

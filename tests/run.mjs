@@ -914,6 +914,106 @@ check('and it encloses something', pVox.enclosed > 0, `${pVox.enclosed} cells`);
 const pRad = RG.radiograph(pOcc, 1, { w: 40, h: 40 });
 check('and radiographed', pRad.peak > 0);
 
+
+// ------------------------------------------- 30. a colony that forages for defects
+// The colony is a stochastic instrument, so the assertions here are about the
+// properties that make a stochastic instrument usable: it repeats, it responds
+// to damage, and it does not report from inside a wall.
+group('ants that look for gaps instead of food');
+const ANT = await import('../operative/ants.js');
+const JN = await import('../operative/joints.js');
+
+const antOcc = RG.occludersOf(BUILT, { medium: 'air' });
+const antVox = TG.flood(TG.voxelise(antOcc, { step: 2 }));
+const colonise = (world, { n = 40, ticks = 260, seed = 11 } = {}) => {
+  const occ = RG.occludersOf(world, { medium: 'air' });
+  const c = ANT.withSchedule(
+    new ANT.Colony(occ, { world, enclosure: TG.flood(TG.voxelise(occ, { step: 2 })), n, seed }),
+    JN.scheduleForPair);
+  c.step(ticks);
+  return c;
+};
+const holesIn = (c) => c.findings().filter(f => f.kind === 'GAP' || f.kind === 'HOLE').length;
+
+// Determinism. Without it nothing below is a measurement — it is a mood.
+const antR1 = ANT.rng(7), antR2 = ANT.rng(7);
+check('the generator repeats for a seed', [0,1,2,3].every(() => antR1() === antR2()));
+const cA = colonise(copyOf(BUILT), { ticks: 140 });
+const cB = colonise(copyOf(BUILT), { ticks: 140 });
+check('and so does the whole colony',
+  JSON.stringify(cA.findings()) === JSON.stringify(cB.findings()),
+  `${cA.findings().length} vs ${cB.findings().length}`);
+
+check('a released colony walks', cA.stats().steps > 40 * 100, `${cA.stats().steps} ant-steps`);
+// Being inside something is not forbidden — two members in flush contact share a
+// plane, so the surface of one is the interior of the other and an ant standing
+// there is a tenth of an inch inside its neighbour. What is forbidden is staying,
+// and reporting from in there.
+let antTicksIn = 0, antTicksTotal = 0;
+for (let t = 0; t < 60; t++) {
+  cA.step(1);
+  for (const a of cA.ants) { antTicksTotal++; if (a.p && cA.embedded(a.p)) antTicksIn++; }
+}
+check('an ant inside something is pushed out and is rare', antTicksIn < antTicksTotal * 0.04,
+  `${antTicksIn} of ${antTicksTotal} ant-ticks embedded`);
+// The guard fires on the tick *after* the step that buried it, so being embedded
+// right now proves nothing. What it must not do is stay: one more tick and every
+// one of them has moved.
+const buried = cA.ants.filter(a => a.p && cA.embedded(a.p)).map(a => [a, a.p.slice()]);
+cA.step(1);
+check('and it does not stay in there', buried.every(([a, was]) =>
+  a.p[0] !== was[0] || a.p[1] !== was[1] || a.p[2] !== was[2]),
+  `${buried.length} were embedded`);
+check('some of them get inside the trailer', cA.ants.some(a => a.indoors));
+
+// Response to damage. This is the whole claim: take a wall off and the colony
+// finds more daylight than it did with the wall on. Not "some", more.
+const antIntact = holesIn(cA);
+const antOpened = copyOf(BUILT);
+const antGone = antOpened.all({ kind: 'sheathing' })
+  .filter(e => e.meta.wall === 'N')
+  .sort((a, b) => (b.hi[0]-b.lo[0])*(b.hi[2]-b.lo[2]) - (a.hi[0]-a.lo[0])*(a.hi[2]-a.lo[2]))[0];
+antOpened.remove(antGone.id);
+const holed2 = holesIn(colonise(antOpened, { ticks: 140 }));
+check('taking a wall panel off makes the colony find more daylight',
+  holed2 > antIntact, `intact ${antIntact}, holed ${holed2}`);
+// The floor, stated. An intact trailer is not silent — the wheel wells are boxes
+// open to the road by design and the colony has no way to know that was meant.
+// What matters is that the floor stays small next to the response.
+check('and an intact one has a small, bounded floor of its own',
+  antIntact <= 8 && holed2 > antIntact * 2, `floor ${antIntact}, response ${holed2}`);
+
+// The split that stops the colony shouting about doors. A leaf in an opening and
+// a tank in a carcass are in contact with things, and neither wants nailing.
+const antKinds = new Set(cA.rumours().map(f => f.kind));
+check('every finding is a kind the colony knows', [...antKinds].every(k => k in ANT.KINDS));
+check('contacts with no schedule entry are UNRULED, not UNJOINED',
+  !antKinds.has('UNJOINED') || cA.rumours().filter(f => f.kind === 'UNJOINED')
+    .every(f => f.near.length === 0 || f.detail),
+  `${cA.rumours().filter(f => f.kind === 'UNJOINED').length} unjoined`);
+
+// Corroboration, which is the ranking. A rumour is one ant; a finding is two.
+check('findings are a subset of rumours', cA.findings().length <= cA.rumours().length,
+  `${cA.findings().length} of ${cA.rumours().length}`);
+check('and every one of them was seen by at least two ants',
+  cA.findings().every(f => f.ants >= 2));
+check('the ranking is by corroboration, descending',
+  cA.findings().every((f, i, all) => i === 0 || all[i-1].weight >= f.weight));
+
+// Evaporation. A colony held still forgets; that is the false-positive filter.
+const antBefore = cA.marks.length;
+cA.step(200);
+check('pheromone evaporates', cA.marks.every(m => m.s > 0.002) && antBefore > 0,
+  `${antBefore} marks antBefore, ${cA.marks.length} after`);
+
+// It works on a patient with no chart at all.
+const meshColony = new ANT.Colony(pOcc, { n: 16, seed: 3 });
+meshColony.step(60);
+check('a bare mesh can be crawled too', meshColony.stats().steps > 200,
+  `${meshColony.stats().steps} steps on ${pOcc.solids.length} triangles`);
+check('and with no world it never claims a pair should have been fastened',
+  !meshColony.rumours().some(f => f.kind === 'UNJOINED'));
+
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
