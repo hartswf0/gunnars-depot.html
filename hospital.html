@@ -428,11 +428,15 @@ study('exposure', 'EXPOSURE', 'any', () => {
 study('sheet', 'CONTACT SHEET', 'any', () => {
   const p = patient;
   const s = section('Contact sheet',
-    'A close-up of each part, subject lit and neighbours ghosted. One sheet of tiles can be compared ' +
-    'to itself; ninety separate images cannot. Difference is easier to see than absence.');
+    'A close-up of each part. One sheet of tiles can be compared to itself; ninety separate images ' +
+    'cannot. Difference is easier to see than absence.' + (p.kind === 'world'
+      ? ' The subject is lit and its neighbours are ghosted.'
+      : ' A mesh is one object with named parts rather than addressable members, so the subject is ' +
+        'caged rather than painted, and the shell is made translucent to see the cage through it.'));
   const g = el('div', 'sheet');
   s.appendChild(g);
   PAUSED = true;
+  if (meshGroup) { meshGroup.material.transparent = true; meshGroup.material.opacity = 0.22; }
   const items = p.kind === 'world'
     ? p.world.solids().filter(e => e.kind !== 'run')
     : p.parts;
@@ -442,7 +446,10 @@ study('sheet', 'CONTACT SHEET', 'any', () => {
   // Render one at a time so the page stays alive on a phone.
   let i = 0;
   const next = () => {
-    if (i >= chosen.length) { PAUSED = false; restoreView(); say('contact sheet done'); return; }
+    if (i >= chosen.length) {
+      if (meshGroup) meshGroup.material.opacity = 1;
+      PAUSED = false; restoreView(); say('contact sheet done'); return;
+    }
     const e = chosen[i++];
     const f = el('figure'); const c = el('canvas');
     f.appendChild(c); f.appendChild(el('figcaption', null, e.id));
@@ -517,6 +524,7 @@ function restoreView() {
     m.renderOrder = 0; m.material.color.setHex(paintOf(id));
   }
   if (patient && patient.kind === 'world') view.frame(patient.world);
+  else if (patient) showMesh(patient.tris);
   view.controls.enabled = true;
   view.render();
 }

@@ -94,13 +94,13 @@
   "pvDailyWh": 1200,
   "loads": 13
  },
- "members": 402,
+ "members": 407,
  "open": 0,
- "joints": 533,
+ "joints": 558,
  "loop": {
   "state": "SETTLED",
   "steps": 45,
-  "seconds": 27.3,
+  "seconds": 27.5,
   "walkedBack": 0,
   "moves": [
    {
@@ -271,16 +271,16 @@
     "note": "stage openings",
     "kept": true,
     "before": 8,
-    "after": 11
+    "after": 12
    },
    {
     "step": 18,
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 133 joints; 575 contacts have no schedule entry",
+    "note": "nailed off 158 joints; 575 contacts have no schedule entry",
     "kept": true,
-    "before": 11,
+    "before": 12,
     "after": 5
    },
    {
