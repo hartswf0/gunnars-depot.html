@@ -18,6 +18,7 @@ import * as T from '../operative/tomography.js';
 import { Colony, withSchedule } from '../operative/ants.js';
 import { scheduleForPair as sfp } from '../operative/joints.js';
 import * as V from '../operative/verdict.js';
+import * as X from '../operative/where.js';
 
 const view = new View(document.getElementById('c'));
 view.controls.enabled = false;
@@ -79,7 +80,11 @@ function look(id) {
   view.render();
 }
 window.look = look;
+const CENSUS = X.census(world, [...checkAll(world), ...colony.findings()]);
 window.report = {
+  census: { byZone: CENSUS.byZone, byRoom: CENSUS.byRoom, bySystem: CENSUS.bySystem,
+            byPathology: CENSUS.byPathology, byHeight: CENSUS.byHeight, axle: CENSUS.axle },
+  placed: CENSUS.placed,
   text: spoken.text, score: spoken.score, counts: spoken.verdict.counts,
   places: spoken.verdict.places.slice(0, 12).map(p => ({ place: p.place, score: p.score,
     kind: p.finding.kind, verdict: p.finding.verdict, ants: p.finding.ants, at: p.finding.at })),

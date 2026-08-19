@@ -1,4 +1,850 @@
 {
+  "census": {
+    "byZone": [
+      {
+        "key": "aft",
+        "n": 2,
+        "codes": [
+          "AISLE_TOO_NARROW",
+          "UNRULED"
+        ],
+        "worst": 3
+      },
+      {
+        "key": "fore",
+        "n": 7,
+        "codes": [
+          "UNLAPPED",
+          "CLASH",
+          "UNRULED"
+        ],
+        "worst": 2
+      },
+      {
+        "key": "axle",
+        "n": 24,
+        "codes": [
+          "UNJOINED",
+          "GAP",
+          "UNRULED"
+        ],
+        "worst": 0
+      }
+    ],
+    "byRoom": [
+      {
+        "key": "sleep",
+        "n": 1,
+        "codes": [
+          "AISLE_TOO_NARROW"
+        ],
+        "worst": 3
+      },
+      {
+        "key": "unplaced",
+        "n": 2,
+        "codes": [
+          "UNLAPPED",
+          "CLASH"
+        ],
+        "worst": 2
+      },
+      {
+        "key": "dinette",
+        "n": 29,
+        "codes": [
+          "UNJOINED",
+          "GAP",
+          "CLASH",
+          "UNRULED"
+        ],
+        "worst": 0
+      },
+      {
+        "key": "galley",
+        "n": 1,
+        "codes": [
+          "UNRULED"
+        ],
+        "worst": 0
+      }
+    ],
+    "bySystem": [
+      {
+        "key": "fit-out",
+        "n": 9,
+        "codes": [
+          "AISLE_TOO_NARROW",
+          "UNJOINED",
+          "UNRULED"
+        ],
+        "worst": 3
+      },
+      {
+        "key": "frame",
+        "n": 1,
+        "codes": [
+          "UNLAPPED"
+        ],
+        "worst": 2
+      },
+      {
+        "key": "road",
+        "n": 23,
+        "codes": [
+          "GAP",
+          "CLASH",
+          "UNRULED"
+        ],
+        "worst": 0
+      }
+    ],
+    "byPathology": [
+      {
+        "key": "a body cannot use it",
+        "n": 1,
+        "codes": [
+          "AISLE_TOO_NARROW"
+        ],
+        "worst": 3
+      },
+      {
+        "key": "nothing to fasten to",
+        "n": 1,
+        "codes": [
+          "UNLAPPED"
+        ],
+        "worst": 2
+      },
+      {
+        "key": "nothing has an opinion",
+        "n": 21,
+        "codes": [
+          "UNRULED"
+        ],
+        "worst": 0
+      },
+      {
+        "key": "not fastened",
+        "n": 5,
+        "codes": [
+          "UNJOINED"
+        ],
+        "worst": 0
+      },
+      {
+        "key": "the outside gets in",
+        "n": 3,
+        "codes": [
+          "GAP"
+        ],
+        "worst": 0
+      },
+      {
+        "key": "two things in one place",
+        "n": 2,
+        "codes": [
+          "CLASH"
+        ],
+        "worst": 0
+      }
+    ],
+    "byHeight": [
+      {
+        "key": "wall",
+        "n": 32,
+        "codes": [
+          "AISLE_TOO_NARROW",
+          "UNLAPPED",
+          "UNJOINED",
+          "GAP",
+          "CLASH",
+          "UNRULED"
+        ],
+        "worst": 3
+      },
+      {
+        "key": "under",
+        "n": 1,
+        "codes": [
+          "UNRULED"
+        ],
+        "worst": 0
+      }
+    ],
+    "axle": [
+      115,
+      183
+    ]
+  },
+  "placed": [
+    {
+      "code": "AISLE_TOO_NARROW",
+      "severity": 3,
+      "message": "the best route from the door to bed.base narrows to 2 in; 22 in is the minimum",
+      "at": [
+        50.5,
+        210,
+        23.8
+      ],
+      "zone": "aft",
+      "height": "wall",
+      "room": "sleep",
+      "system": "fit-out",
+      "pathology": "a body cannot use it",
+      "elements": [
+        "bed.base"
+      ],
+      "ants": null
+    },
+    {
+      "code": "UNLAPPED",
+      "severity": 2,
+      "message": "17 pairs the schedule says to fasten meet edge to edge with no face to nail and no joint within two hops (top2.E/gable.E, top2.E/gable.S.7, top2.E/gable.N.7, …)",
+      "at": [
+        66.4,
+        45.5,
+        106.6
+      ],
+      "zone": "fore",
+      "height": "wall",
+      "room": null,
+      "system": "frame",
+      "pathology": "nothing to fasten to",
+      "elements": [
+        "top2.E",
+        "gable.E",
+        "top2.E",
+        "gable.S.7",
+        "top2.E",
+        "gable.N.7"
+      ],
+      "ants": null
+    },
+    {
+      "code": "UNJOINED",
+      "severity": null,
+      "message": "",
+      "at": [
+        30,
+        131.9,
+        29.5
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "fit-out",
+      "pathology": "not fastened",
+      "elements": [
+        "table",
+        "bench.W"
+      ],
+      "ants": 17
+    },
+    {
+      "code": "GAP",
+      "severity": null,
+      "message": "",
+      "at": [
+        11.2,
+        118.3,
+        25.8
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "the outside gets in",
+      "elements": [
+        "well.W.side"
+      ],
+      "ants": 4
+    },
+    {
+      "code": "GAP",
+      "severity": null,
+      "message": "",
+      "at": [
+        11.2,
+        116.7,
+        25.7
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "the outside gets in",
+      "elements": [
+        "well.W.side"
+      ],
+      "ants": 4
+    },
+    {
+      "code": "GAP",
+      "severity": null,
+      "message": "",
+      "at": [
+        10.3,
+        118.8,
+        29.2
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "the outside gets in",
+      "elements": [
+        "well.W.cap"
+      ],
+      "ants": 2
+    },
+    {
+      "code": "UNJOINED",
+      "severity": null,
+      "message": "",
+      "at": [
+        15,
+        182.7,
+        15.8
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "fit-out",
+      "pathology": "not fastened",
+      "elements": [
+        "bed.base",
+        "deck.axle"
+      ],
+      "ants": 3
+    },
+    {
+      "code": "UNJOINED",
+      "severity": null,
+      "message": "",
+      "at": [
+        15,
+        182.1,
+        15.8
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "fit-out",
+      "pathology": "not fastened",
+      "elements": [
+        "bed.base",
+        "deck.axle"
+      ],
+      "ants": 3
+    },
+    {
+      "code": "CLASH",
+      "severity": null,
+      "message": "",
+      "at": [
+        11.2,
+        114.9,
+        27.7
+      ],
+      "zone": "fore",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "two things in one place",
+      "elements": [
+        "well.W.side",
+        "well.W.fore",
+        "well.W.cap"
+      ],
+      "ants": 2
+    },
+    {
+      "code": "CLASH",
+      "severity": null,
+      "message": "",
+      "at": [
+        3.6,
+        90.6,
+        15.8
+      ],
+      "zone": "fore",
+      "height": "wall",
+      "room": null,
+      "system": "road",
+      "pathology": "two things in one place",
+      "elements": [
+        "deck.fore",
+        "sole.W.0"
+      ],
+      "ants": 2
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        59.2,
+        114.8,
+        15.8
+      ],
+      "zone": "fore",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "deck.axle",
+        "deck.fore"
+      ],
+      "ants": 13
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        67.4,
+        115,
+        15.8
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "deck.axle",
+        "deck.fore"
+      ],
+      "ants": 10
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        47.4,
+        115.1,
+        15.8
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "deck.fore",
+        "deck.axle"
+      ],
+      "ants": 7
+    },
+    {
+      "code": "UNJOINED",
+      "severity": null,
+      "message": "",
+      "at": [
+        30,
+        164.1,
+        30
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "fit-out",
+      "pathology": "not fastened",
+      "elements": [
+        "table",
+        "bench.W"
+      ],
+      "ants": 2
+    },
+    {
+      "code": "UNJOINED",
+      "severity": null,
+      "message": "",
+      "at": [
+        71,
+        132.8,
+        29.6
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "fit-out",
+      "pathology": "not fastened",
+      "elements": [
+        "table",
+        "bench.E"
+      ],
+      "ants": 2
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        11.2,
+        118.3,
+        25.8
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "fit-out",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "bench.W",
+        "well.W.side"
+      ],
+      "ants": 6
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        8.5,
+        120,
+        24.8
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "fit-out",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "bench.W",
+        "wheel.L1"
+      ],
+      "ants": 7
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        72.6,
+        114.7,
+        15.8
+      ],
+      "zone": "fore",
+      "height": "wall",
+      "room": "galley",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "deck.axle",
+        "deck.fore"
+      ],
+      "ants": 5
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        12,
+        182.8,
+        15.7
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "deck.aft",
+        "deck.axle",
+        "well.W.aft"
+      ],
+      "ants": 5
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        56.8,
+        114.4,
+        15.8
+      ],
+      "zone": "fore",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "deck.axle",
+        "deck.fore"
+      ],
+      "ants": 5
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        39.4,
+        115.3,
+        15.8
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "deck.fore",
+        "deck.axle"
+      ],
+      "ants": 4
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        24,
+        115.9,
+        15.8
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "deck.fore",
+        "deck.axle"
+      ],
+      "ants": 3
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        29.2,
+        115.5,
+        15.8
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "deck.fore",
+        "deck.axle"
+      ],
+      "ants": 3
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        87.5,
+        182.3,
+        15
+      ],
+      "zone": "axle",
+      "height": "under",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "deck.aft",
+        "deck.axle"
+      ],
+      "ants": 3
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        9.8,
+        115,
+        26.1
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "well.W.side",
+        "well.W.fore"
+      ],
+      "ants": 3
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        7.4,
+        115.8,
+        25
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "wheel.L1",
+        "well.W.fore"
+      ],
+      "ants": 3
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        11.2,
+        118,
+        27.3
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "fit-out",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "bench.W",
+        "well.W.side"
+      ],
+      "ants": 3
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        56.8,
+        183.6,
+        15.8
+      ],
+      "zone": "aft",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "deck.axle",
+        "deck.aft"
+      ],
+      "ants": 2
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        69.1,
+        181.8,
+        15.8
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "deck.aft",
+        "deck.axle",
+        "bench.E",
+        "joist.177"
+      ],
+      "ants": 2
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        56,
+        182.2,
+        15.8
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "deck.aft",
+        "deck.axle"
+      ],
+      "ants": 2
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        24.9,
+        177.4,
+        15.7
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "joist.177",
+        "bench.W",
+        "deck.aft",
+        "deck.axle"
+      ],
+      "ants": 2
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        38.1,
+        114.4,
+        15.8
+      ],
+      "zone": "fore",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "deck.axle",
+        "deck.fore"
+      ],
+      "ants": 2
+    },
+    {
+      "code": "UNRULED",
+      "severity": null,
+      "message": "",
+      "at": [
+        75.5,
+        182.4,
+        15.8
+      ],
+      "zone": "axle",
+      "height": "wall",
+      "room": "dinette",
+      "system": "road",
+      "pathology": "nothing has an opinion",
+      "elements": [
+        "deck.aft",
+        "deck.axle"
+      ],
+      "ants": 2
+    }
+  ],
   "text": "SUCK SCORE: 40\n\nWHAT SUCKS:\n17 ants independently crossed an unfastened contact the schedule covers at table (30, 131.9, 29.5).\n3 ants independently crossed an unfastened contact the schedule covers at bed.base (15, 182.7, 15.8).\n13 ants independently crossed a contact no rule covers at deck.axle (59.2, 114.8, 15.8) — and nothing in the model has an opinion about whether that is allowed.\n7 ants independently crossed a contact no rule covers at deck.fore (47.4, 115.1, 15.8) — and nothing in the model has an opinion about whether that is allowed.\n7 ants independently crossed a contact no rule covers at bench.W (8.5, 120, 24.8) — and nothing in the model has an opinion about whether that is allowed.\n5 ants independently crossed a contact no rule covers at deck.aft (12, 182.8, 15.7) — and nothing in the model has an opinion about whether that is allowed.\n3 ants independently crossed a contact no rule covers at well.W.side (9.8, 115, 26.1) — and nothing in the model has an opinion about whether that is allowed.\n3 ants independently crossed a contact no rule covers at wheel.L1 (7.4, 115.8, 25) — and nothing in the model has an opinion about whether that is allowed.\n\n5 further findings fell where a hole was meant and are not counted.\n\nWHAT THIS READING IS WORTH:\n60 ants, 14 rays each every 1 step, 40 inch sight, 600 ticks.\nBLIND: two missing blocks in a thirty foot eave are invisible to this instrument at every setting it has — the full ray survey sees them\n\nNEXT: BUILD AGAIN — worst place scores 40 — substantial visible discrepancies",
   "score": 40,
   "counts": {
@@ -118,11 +964,16 @@
   ],
   "conditions": [
     {
+      "code": "AISLE_TOO_NARROW",
+      "severity": 3,
+      "message": "the best route from the door to bed.base narrows to 2 in; 22 in is the minimum"
+    },
+    {
       "code": "UNLAPPED",
       "severity": 2,
       "message": "17 pairs the schedule says to fasten meet edge to edge with no face to nail and no joint within two hops (top2.E/gable.E, top2.E/gable.S.7, top2.E/gable.N.7, …)"
     }
   ],
-  "joints": 585,
-  "members": 407
+  "joints": 601,
+  "members": 423
 }

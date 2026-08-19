@@ -1216,6 +1216,71 @@ check('and a frame with no openings is not told it lacks a fire escape', (() => 
   return !checkAll(bare).some(c => ['NO_EGRESS', 'LOW_HEADROOM', 'AISLE_TOO_NARROW'].includes(c.code));
 })());
 
+// ------------------------------------------- 35. where is it fucked
+group('a finding with coordinates');
+const WH = await import('../operative/where.js');
+
+const zn = WH.zones(BUILT);
+check('the axle zone is read off the wheel wells, not guessed',
+  zn.axle[0] > 0 && zn.axle[1] > zn.axle[0], `y ${zn.axle.join('..')}`);
+check('and the trailer really is narrower there', (() => {
+  const pinch = BUILT.get('well.E.side').lo[0] - BUILT.get('well.W.side').hi[0];
+  const full = BUILT.get('sole.E.0').lo[0] - BUILT.get('sole.W.0').hi[0];
+  return pinch < full;
+})());
+check('fore, over the axles and aft all resolve',
+  ['fore', 'axle', 'aft'].every(k =>
+    [zn.along(zn.axle[0] - 10), zn.along((zn.axle[0]+zn.axle[1])/2), zn.along(zn.axle[1] + 10)].includes(k)));
+check('and under the floor is told from the wall and the roof',
+  zn.height(zn.floorZ - 6) === 'under' && zn.height(zn.floorZ + 30) === 'wall' &&
+  zn.height(zn.plateZ + 6) === 'roof');
+
+const rms = WH.rooms(BUILT);
+check('rooms are found from the things that make them rooms',
+  rms.length >= 4 && rms.every(r => r.members.length), rms.map(r => r.id).join(', '));
+
+// The same list read four ways.
+const cond35 = checkAll(BUILT);
+const colony35 = colonise(copyOf(BUILT), { ticks: 400 });
+const cen = WH.census(BUILT, [...cond35, ...colony35.findings()]);
+check('every finding is placed on all four axes', cen.placed.length > 10 &&
+  cen.placed.every(p => p.pathology && (p.zone || p.at === null)), `${cen.placed.length} placed`);
+check('the four slices are of the same list',
+  [cen.byZone, cen.byRoom, cen.bySystem, cen.byPathology]
+    .every(sl => sl.reduce((n, r) => n + r.n, 0) === cen.placed.length));
+check('nothing is silently dropped by being unplaceable',
+  cen.byRoom.reduce((n, r) => n + r.n, 0) === cen.placed.length);
+
+// The finding the slicing exists to make visible.
+const axle = cen.byZone.find(r => r.key === 'axle');
+check('most of what is wrong is over the axles', axle && axle.n > cen.placed.length / 2,
+  cen.byZone.map(r => `${r.key} ${r.n}`).join(', '));
+const dinetteRow = cen.byRoom.find(r => r.key === 'dinette');
+check('and most of it is in the dinette', dinetteRow && dinetteRow.n > cen.placed.length / 2,
+  cen.byRoom.map(r => `${r.key} ${r.n}`).join(', '));
+check('the largest class is the model admitting it has no rule',
+  cen.byPathology[0] && cen.byPathology.some(r => r.key === 'nothing has an opinion'),
+  cen.byPathology.map(r => `${r.key} ${r.n}`).join(' | '));
+
+// Pathology is independent of place: the same disease in two zones is one row.
+const unfastened = cen.placed.filter(p => p.pathology === 'not fastened');
+check('one disease in several places reads as one disease',
+  unfastened.length === 0 || new Set(unfastened.map(p => p.code)).size <= 2,
+  `${unfastened.length} findings, codes ${[...new Set(unfastened.map(p => p.code))].join(',')}`);
+
+// Scoping.
+const justAxle = WH.scope(cen.placed, { zone: 'axle' });
+check('the loop can be pointed at one zone',
+  justAxle.length && justAxle.every(p => p.zone === 'axle'), `${justAxle.length} over the axles`);
+check('and pointing it somewhere empty says so rather than saying nothing is wrong',
+  /not the same as it being right/.test(
+    WH.accuseScope(BUILT, cen.placed, { room: 'nowhere' }).text));
+const acc = WH.accuseScope(BUILT, cen.placed, { zone: 'axle' });
+check('a scoped accusation names the scope and counts the kinds',
+  /^SUCK SCOPE: zone axle/.test(acc.text) && acc.n === justAxle.length, acc.text.split('\n')[0]);
+check('and it still does not propose a fix or name an operation',
+  !/\b(should|could|try|fix|op:|OPS\.)\b/i.test(acc.text));
+
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

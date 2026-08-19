@@ -30,7 +30,7 @@ page.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
 await page.goto(`http://127.0.0.1:${PORT}/tools/punchlist.html?t=${Date.now()}`, { waitUntil: 'load' });
 await page.waitForFunction('window.ready === true');
 
-const VIEWS = ['threeq', 'threeq.rear', 'service', 'plan'];
+const VIEWS = ['threeq', 'threeq.rear', 'service', 'plan', 'left', 'inside.entry'];
 const shots = [];
 for (const v of VIEWS) {
   await page.evaluate((id) => window.look(id), v);
