@@ -10,17 +10,18 @@ The GitHub Pages entry point is `index.html`. The Three.js building environment 
 
 - `index.html` - mobile-friendly launcher for GitHub Pages.
 - `whats-fucked.html` - assumes the build is wrong and goes looking. Photographs the model from twelve named views, scores each one, and runs two agents with separate context windows - a critic that only accuses, a builder that only acts. Worst view wins, never the average; a clean view moves the camera rather than ending anything.
-- `ingold-trailer.html` - the 8'-6" x 20'-0" trailer from the reference sheets: 360 members, 459 joints, five connected systems, 7,049 lb, built by the operative loop and replayed move by move.
+- `ingold-trailer.html` - the 8'-6" x 20'-0" trailer from the reference sheets: 402 members, 533 joints, five connected systems, 7,050 lb, built by the operative loop and replayed move by move.
 - `making-of.html` - a plain transcript of how it was made: what was asked for against what got built, then the consequential loops with their commands, answers and screenshots.
 - `tools/session-record.mjs` - regenerates that record from a Claude Code session transcript.
 - `operative-builder.html` - Three.js building environment where instructions become framing operations and the framing answers back. See [OPERATIVE_BUILDER.md](OPERATIVE_BUILDER.md).
 - `operative/` - the world model, deterministic checks, operations, reference comparison, and view behind it.
 - `vendor/three/` - vendored three.js (r185, MIT) so the app runs with no CDN.
-- `tests/run.mjs` - `node tests/run.mjs` runs 259 assertions against the world model and the built trailer.
+- `tests/run.mjs` - `node tests/run.mjs` runs 276 assertions against the world model and the built trailer.
 - `tools/spec-report.mjs` - rebuilds `data/spec-report.json` by running the builder and measuring the result against the spec sheet.
 - `tools/shoot.mjs` - photographs the built trailer from all twelve views into `assets/views/`, with a manifest that records which pictures are renders and which are references.
 - `tools/taxonomy.mjs` - counts what actually goes wrong, in three separate populations: what the checks caught, what went wrong writing the builder, and what a person caught by looking. Writes `data/error-taxonomy.json`.
 - `tools/flyseye.mjs` - a close-up of every part on one contact sheet, subject painted and neighbours ghosted, so a model can compare ninety of them at once instead of looking at ninety images. Writes `assets/flyseye/sheet.html`.
+- `tools/scan.mjs` - fills the building with light and records where it gets out. Calibrates against a box known to be sealed first, then writes an unfolded exposure plate, three radiographs and a list of leaks with the parts that bound each one. `--stl path` scans any existing structure instead. Writes `assets/scan/scan.html`.
 - `making-of.html` - the 18 decisions the builder made, and the session that produced the builder, as a plain transcript.
 - `gunnar-thunder-builder.html` - mobile-first parts/layers builder for importing one DAE/STL as the base and building with editable widgets.
 - `builders-game.html` - mobile Builder's Language trailer game where commands become parts on a build grid.

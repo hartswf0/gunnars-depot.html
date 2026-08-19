@@ -94,13 +94,13 @@
   "pvDailyWh": 1200,
   "loads": 13
  },
- "members": 360,
+ "members": 402,
  "open": 0,
- "joints": 459,
+ "joints": 533,
  "loop": {
   "state": "SETTLED",
-  "steps": 31,
-  "seconds": 11.8,
+  "steps": 45,
+  "seconds": 27.3,
   "walkedBack": 0,
   "moves": [
    {
@@ -108,33 +108,183 @@
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 321 joints; 174 contacts have no schedule entry",
+    "note": "nailed off 321 joints; 399 contacts have no schedule entry",
     "kept": true,
-    "before": 171,
-    "after": 8
+    "before": 201,
+    "after": 38
    },
    {
     "step": 2,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.1 screwed to rafter.1 (rafter)",
+    "kept": true,
+    "before": 38,
+    "after": 36
+   },
+   {
+    "step": 3,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.17 screwed to rafter.17 (rafter)",
+    "kept": true,
+    "before": 36,
+    "after": 34
+   },
+   {
+    "step": 4,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.33 screwed to rafter.33 (rafter)",
+    "kept": true,
+    "before": 34,
+    "after": 32
+   },
+   {
+    "step": 5,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.49 screwed to rafter.49 (rafter)",
+    "kept": true,
+    "before": 32,
+    "after": 30
+   },
+   {
+    "step": 6,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.65 screwed to rafter.65 (rafter)",
+    "kept": true,
+    "before": 30,
+    "after": 28
+   },
+   {
+    "step": 7,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.81 screwed to rafter.81 (rafter)",
+    "kept": true,
+    "before": 28,
+    "after": 26
+   },
+   {
+    "step": 8,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.97 screwed to rafter.97 (rafter)",
+    "kept": true,
+    "before": 26,
+    "after": 24
+   },
+   {
+    "step": 9,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.113 screwed to rafter.113 (rafter)",
+    "kept": true,
+    "before": 24,
+    "after": 22
+   },
+   {
+    "step": 10,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.129 screwed to rafter.129 (rafter)",
+    "kept": true,
+    "before": 22,
+    "after": 20
+   },
+   {
+    "step": 11,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.145 screwed to rafter.145 (rafter)",
+    "kept": true,
+    "before": 20,
+    "after": 18
+   },
+   {
+    "step": 12,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.161 screwed to rafter.161 (rafter)",
+    "kept": true,
+    "before": 18,
+    "after": 16
+   },
+   {
+    "step": 13,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.177 screwed to rafter.177 (rafter)",
+    "kept": true,
+    "before": 16,
+    "after": 14
+   },
+   {
+    "step": 14,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.193 screwed to rafter.193 (rafter)",
+    "kept": true,
+    "before": 14,
+    "after": 12
+   },
+   {
+    "step": 15,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.209 screwed to rafter.209 (rafter)",
+    "kept": true,
+    "before": 12,
+    "after": 10
+   },
+   {
+    "step": 16,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.225 screwed to rafter.225 (rafter)",
+    "kept": true,
+    "before": 10,
+    "after": 8
+   },
+   {
+    "step": 17,
     "answering": "REQUIREMENT_FAILED",
     "brief": true,
     "move": "stage",
     "note": "stage openings",
     "kept": true,
     "before": 8,
-    "after": 8
+    "after": 11
    },
    {
-    "step": 3,
+    "step": 18,
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 66 joints; 302 contacts have no schedule entry",
+    "note": "nailed off 133 joints; 575 contacts have no schedule entry",
     "kept": true,
-    "before": 8,
+    "before": 11,
     "after": 5
    },
    {
-    "step": 4,
+    "step": 19,
     "answering": "REQUIREMENT_FAILED",
     "brief": true,
     "move": "stage",
@@ -144,17 +294,17 @@
     "after": 35
    },
    {
-    "step": 5,
+    "step": 20,
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 25 joints; 318 contacts have no schedule entry",
+    "note": "nailed off 25 joints; 591 contacts have no schedule entry",
     "kept": true,
     "before": 35,
     "after": 9
    },
    {
-    "step": 6,
+    "step": 21,
     "answering": "REQUIREMENT_FAILED",
     "brief": true,
     "move": "stage",
@@ -164,17 +314,17 @@
     "after": 43
    },
    {
-    "step": 7,
+    "step": 22,
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 7 joints; 320 contacts have no schedule entry",
+    "note": "nailed off 7 joints; 595 contacts have no schedule entry",
     "kept": true,
     "before": 43,
     "after": 21
    },
    {
-    "step": 8,
+    "step": 23,
     "answering": "FLOATING",
     "brief": false,
     "move": "mount",
@@ -184,7 +334,7 @@
     "after": 18
    },
    {
-    "step": 9,
+    "step": 24,
     "answering": "REQUIREMENT_FAILED",
     "brief": true,
     "move": "stage",
@@ -194,7 +344,7 @@
     "after": 21
    },
    {
-    "step": 10,
+    "step": 25,
     "answering": "FLOATING",
     "brief": false,
     "move": "mount",
@@ -204,7 +354,7 @@
     "after": 20
    },
    {
-    "step": 11,
+    "step": 26,
     "answering": "REQUIREMENT_FAILED",
     "brief": true,
     "move": "stage",
@@ -214,157 +364,147 @@
     "after": 29
    },
    {
-    "step": 12,
+    "step": 27,
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 4 joints; 332 contacts have no schedule entry",
+    "note": "nailed off 4 joints; 607 contacts have no schedule entry",
     "kept": true,
     "before": 29,
     "after": 21
    },
    {
-    "step": 13,
+    "step": 28,
     "answering": "REQUIREMENT_FAILED",
     "brief": true,
     "move": "stage",
     "note": "stage electrical",
     "kept": true,
     "before": 21,
-    "after": 30
+    "after": 29
    },
    {
-    "step": 14,
+    "step": 29,
     "answering": "UNJOINED",
     "brief": false,
     "move": "nailOff",
-    "note": "nailed off 4 joints; 336 contacts have no schedule entry",
+    "note": "nailed off 4 joints; 619 contacts have no schedule entry",
     "kept": true,
-    "before": 30,
-    "after": 15
+    "before": 29,
+    "after": 14
    },
    {
-    "step": 15,
+    "step": 30,
     "answering": "UNDERSIZED_CONDUCTOR",
     "brief": false,
     "move": "regauge",
     "note": "bank.inverter: 8 AWG -> 2/0 AWG",
     "kept": true,
-    "before": 15,
-    "after": 14
+    "before": 14,
+    "after": 13
    },
    {
-    "step": 16,
+    "step": 31,
     "answering": "EDGE_CLEARANCE",
     "brief": false,
     "move": "reroute",
     "note": "run lpg.heater rerouted: centred in joist.113 on y; centred in fridge on y",
     "kept": true,
-    "before": 14,
-    "after": 13
+    "before": 13,
+    "after": 12
    },
    {
-    "step": 17,
+    "step": 32,
     "answering": "UNVENTED_TRAP",
     "brief": false,
     "move": "vent",
-    "note": "1.5 in vent at trap.shower.pan, stack up through the roof, hung from shell.E on a 1.0 in hanger — it stays where it is",
+    "note": "1.5 in vent at trap.shower.pan, stack up through the roof, hung from shell.E.win_galley.below on a 1.0 in hanger — it stays where it is",
     "kept": true,
-    "before": 13,
-    "after": 13
+    "before": 12,
+    "after": 12
    },
    {
-    "step": 18,
+    "step": 33,
     "answering": "UNFLASHED",
     "brief": false,
     "move": "flash",
     "note": "run.stack.vent.stack.3 flashed where it comes through roof.cover — 11 in apron and a storm collar",
     "kept": true,
-    "before": 13,
-    "after": 12
+    "before": 12,
+    "after": 11
    },
    {
-    "step": 19,
+    "step": 34,
     "answering": "UNFLASHED",
     "brief": false,
     "move": "flash",
     "note": "run.flue.stack.0 flashed where it comes through roof.cover — 17 in apron and a storm collar",
     "kept": true,
-    "before": 12,
-    "after": 11
-   },
-   {
-    "step": 20,
-    "answering": "UNFLASHED",
-    "brief": false,
-    "move": "flash",
-    "note": "run.pv.string.4 flashed where it comes through roof.cover — 13 in apron and a storm collar",
-    "kept": true,
     "before": 11,
     "after": 10
    },
    {
-    "step": 21,
+    "step": 35,
     "answering": "UNFLASHED",
     "brief": false,
     "move": "flash",
-    "note": "run.stack.vent.shower.pan.2 flashed where it comes through roof.cover — 11 in apron and a storm collar",
+    "note": "run.pv.string.3 flashed where it comes through roof.cover — 13 in apron and a storm collar",
     "kept": true,
     "before": 10,
     "after": 9
    },
    {
-    "step": 22,
-    "answering": "VOLTAGE_DROP",
+    "step": 36,
+    "answering": "UNFLASHED",
     "brief": false,
-    "move": "regauge",
-    "note": "pv.string: 10 AWG -> 4 AWG",
+    "move": "flash",
+    "note": "run.stack.vent.shower.pan.2 flashed where it comes through roof.cover — 11 in apron and a storm collar",
     "kept": true,
     "before": 9,
     "after": 8
    },
    {
-    "step": 23,
+    "step": 37,
     "answering": "VOLTAGE_DROP",
     "brief": false,
     "move": "regauge",
-    "note": "mppt.bank: 8 AWG -> 4 AWG",
+    "note": "pv.string: 10 AWG -> 8 AWG",
     "kept": true,
     "before": 8,
     "after": 7
    },
    {
-    "step": 24,
+    "step": 38,
     "answering": "VOLTAGE_DROP",
     "brief": false,
     "move": "regauge",
-    "note": "bank.dc: 8 AWG -> 4 AWG",
+    "note": "mppt.bank: 8 AWG -> 4 AWG",
     "kept": true,
     "before": 7,
     "after": 6
    },
    {
-    "step": 25,
+    "step": 39,
     "answering": "VOLTAGE_DROP",
     "brief": false,
     "move": "regauge",
-    "note": "dc.lights: 18 AWG -> 14 AWG",
+    "note": "bank.dc: 8 AWG -> 4 AWG",
     "kept": true,
     "before": 6,
     "after": 5
    },
    {
-    "step": 26,
+    "step": 40,
     "answering": "VOLTAGE_DROP",
     "brief": false,
     "move": "regauge",
-    "note": "dc.fridge: 14 AWG -> 12 AWG",
+    "note": "dc.lights: 18 AWG -> 14 AWG",
     "kept": true,
     "before": 5,
     "after": 4
    },
    {
-    "step": 27,
+    "step": 41,
     "answering": "VOLTAGE_DROP",
     "brief": false,
     "move": "regauge",
@@ -374,7 +514,7 @@
     "after": 3
    },
    {
-    "step": 28,
+    "step": 42,
     "answering": "UNLIT",
     "brief": false,
     "move": "relamp",
@@ -384,7 +524,7 @@
     "after": 2
    },
    {
-    "step": 29,
+    "step": 43,
     "answering": "PLATE_TIE_REQUIRED",
     "brief": false,
     "move": "strap",
@@ -394,7 +534,7 @@
     "after": 1
    },
    {
-    "step": 30,
+    "step": 44,
     "answering": "PLATE_TIE_REQUIRED",
     "brief": false,
     "move": "strap",

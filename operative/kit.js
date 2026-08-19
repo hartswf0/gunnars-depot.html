@@ -267,7 +267,8 @@ export function seedTrailer(world = new World(), spec = {}) {
   const rafterWidth = K.width + 2 * eaveX;
   const rafterRise = rise * (rafterWidth / K.width);
   const rafterZ = K.wallTop + rD / 2;
-  for (const y of layout(0, K.length, K.rafterSpacing, rT)) {
+  const rafterY = layout(0, K.length, K.rafterSpacing, rT);
+  for (const y of rafterY) {
     add({ id: `rafter.${y.toFixed(0)}`, kind: 'rafter', layer: 'roof', material: 'treated_wood', section: K.rafterSection,
           box: box([K.width / 2, y, rafterZ + rise / 2], [rafterWidth, rT, rD]),
           shear: { axis: 'x', rise: rafterRise },
@@ -330,6 +331,30 @@ export function seedTrailer(world = new World(), spec = {}) {
             box: box([(x0 + x1) / 2, w.at + w.normal[1] * (pD / 2 + t / 2), K.wallTop + h / 2],
                      [x1 - x0, t, h]),
             meta: { wall: w.id, role: 'stepped infill up to the roof', step: i } });
+    }
+  }
+
+  // ---- bird blocking -------------------------------------------------------
+  // Between the top of the wall and the underside of the roof there is one
+  // rafter's depth of nothing, all the way round, interrupted only by the rafters
+  // themselves. On the east side that is 188 inches of continuous open eave, and
+  // the only thing that ever mentioned it was a ray scanner: filled with light,
+  // the trailer drew that gap on its own exterior as a line.
+  //
+  // A framer closes it with a block in every bay. It is called bird blocking
+  // because of what gets in otherwise.
+  if (rise) {
+    for (const w of walls) {
+      if (w.axis !== 'y') continue;                   // the long walls; the ends are gable strips
+      const xw = w.at, top = soffit(xw), bot = top, capZ = top + rD;
+      for (let i = 0; i < rafterY.length - 1; i++) {
+        const y0 = rafterY[i] + rT / 2, y1 = rafterY[i + 1] - rT / 2;
+        if (y1 - y0 < 1) continue;
+        add({ id: `bird.${w.id}.${rafterY[i].toFixed(0)}`, kind: 'blocking', layer: 'roof',
+              material: 'treated_wood', section: K.rafterSection,
+              box: box([xw, (y0 + y1) / 2, (bot + capZ - 0.3) / 2], [pD, y1 - y0, capZ - bot - 0.3]),
+              meta: { wall: w.id, role: 'bird blocking, closing the eave' } });
+      }
     }
   }
 

@@ -14,7 +14,7 @@ Open `operative-builder.html` from GitHub Pages or any local static server
 Everything else runs offline: `three` (r185, MIT) is vendored under
 `vendor/three/`, and the reference studies are read from this repository.
 
-Run the receipts with `node tests/run.mjs` (259 assertions, no dependencies).
+Run the receipts with `node tests/run.mjs` (276 assertions, no dependencies).
 
 The trailer is a working MEP model, not decorated geometry: **289 members**, five
 connected systems, and every device on its system's graph.
@@ -33,10 +33,10 @@ chase. Conductors are sized against **both** ampacity (NEC 310.16) and 3% voltag
 drop; traps against trap-arm limits (IPC 909.1).
 
 **`ingold-trailer.html` is the building this was for.** The environment above is the
-means; the trailer is the result. 340 members and 432 joints on the reference
+means; the trailer is the result. 402 members and 533 joints on the reference
 sheets' 8'-6" x 20'-0" envelope: bath, galley, dinette, bed, five headed
 openings, and water, waste and off-grid power as connected systems. Nobody
-scripted it — the builder ran the loop for 26 decisions and settled with nothing
+scripted it — the builder ran the loop for 45 decisions and settled with nothing
 outstanding, and the page replays its own construction move by move, with what
 the building answered at each one. `making-of.html` shows the 18 decisions as a
 table and the session that produced them as a plain transcript.
@@ -65,6 +65,7 @@ operative/
   loads.js       what it weighs, and what the road does to every fastener
   weather.js     where the water goes: slope, ponding, penetrations, the drip line
   light.js       can you see in here — daylight, and whether the lamps reach the floor
+  radiography.js fill it with light and see where it gets out; calibrate the instrument
   views.js       twelve named cameras, and the rule for which one to look from next
   critic.js      the suck score protocol — fucked until proven otherwise
   reference.js   STL silhouette extraction and comparison against the concepts
@@ -147,6 +148,7 @@ Deterministic, measured, and each citing its basis:
 | `UNLIT` | the lamps do not reach the floor |
 | `NO_DAYLIGHT` | glazing below 8% of the floor it serves (IRC R303.1) |
 | `NO_VIEW_OUT` | most of the floor cannot see a window from where a person sits |
+| `LEAK` | rays fired from inside got out somewhere that is not an opening |
 
 The support graph distinguishes **bearing** (gravity, seated) from **fastening**
 (nailed, welded, lagged), because construction does. Sheathing hangs; a
@@ -787,3 +789,103 @@ Getting there took four failures worth keeping:
 
 That last one is the most useful failure in this repository. A camera that
 quietly disagrees with where you put it produces images that look like answers.
+
+
+## Is the building fucked, or are our eyes fucked?
+
+Every check above has to know what it is looking for. `UNJOINED` knows about
+fasteners. `PONDING` knows about slope. `ACCESS_BLOCKED` knows about NEC 110.26.
+Each one answers a question somebody thought to ask, and the things that have hurt
+in this project are always the ones nobody thought to ask about: the wall skin
+that stopped at the top plate, found by accident in a photograph.
+
+`radiography.js` asks nothing. It fills the inside with light and records where
+the light gets out. A ray does not need to know what a wall is; it only needs to
+not hit one. Anywhere a ray escapes that is not a window is a hole, whether or not
+anyone has a rule for that kind of hole.
+
+### The plate
+
+Every escaping ray is plotted where it crossed the building's own surface, and the
+surface is unfolded flat — roof on top, underside at the bottom, four walls in the
+band between. **A sealed building develops black. A seam develops as a line,
+because a seam is a line.**
+
+The first plate had a 188-inch line across the east face. That was the eave: one
+rafter's depth of open air right around the building, closed now with a block in
+every bay — which a framer calls bird blocking, because of what gets in otherwise.
+
+### The control group
+
+Rays that leave through a door or a window are plotted on a second plate at the
+same exposure. The first time it ran, **that plate was empty.** Not one ray in
+fifty thousand had left through an opening.
+
+`cut` had been interrupting studs, adding headers and recording openings since the
+beginning, and had never once touched the exterior sheathing. The trailer had a
+framed door you could not walk through and four framed windows you could not see
+out of. Nothing had noticed, because every check was about the framing.
+
+**The absence of the expected reading was the finding.** That is the thing this
+instrument can do that none of the others can.
+
+### Calibrating
+
+```
+CALIBRATION  the instrument is honest
+             sealed box leaks 0 of 1152; a missing wall reads 196
+```
+
+Six panels with no gaps. Every ray must be stopped. If any get out, the number
+about to be reported on a real building is the scanner's noise floor and the
+correct response is to fix the scanner and say nothing about the building. The
+second half matters just as much: the same box with one wall removed has to read
+*something*, because a scanner that reports zero on everything is also reporting
+zero on the sealed box.
+
+This is the only measurement in the project that can tell **the building is wrong**
+from **our eyes are wrong**.
+
+### Resolution, stated rather than assumed
+
+Two sweeps, and the difference is written into the finding itself:
+
+| | rays | finds a missing wall panel | finds two missing eave blocks |
+|---|---|---|---|
+| in-loop `LEAK` check | ~8,400 | yes | **no** |
+| `node tools/scan.mjs` | ~79,000 | yes | yes |
+
+Tuned by taking a panel off and checking that it came back. At the first setting a
+missing 101 × 34 in panel produced twenty-two escapes spread across sixteen
+one-ray clusters, every one below threshold — the check ran, cost time, and
+reported nothing. **A blind check is worse than no check, because it looks like a
+clean bill of health.**
+
+### Radiographs
+
+Parallel rays through the whole thing, each carrying how much material it passed
+through. This finds nothing on its own; it shows density, and a part that is not
+where anyone thought it was shows up as a shadow in the wrong place. Rafters read
+as stripes, studs as fine lines, openings as voids, the furniture as bright mass
+along the floor.
+
+### On something that is not this trailer
+
+`node tools/scan.mjs --stl path/to/anything.stl`. Triangles instead of boxes, a
+Möller-Trumbore test instead of a parallelepiped one, interior points found by
+parity — three probe rays, and a point only counts as inside if all three agree,
+because a single ray that grazes an edge gets the answer exactly backwards and
+seeds the scanner outside the building, where the whole sky reads as a leak.
+
+Nothing else about the scan changes. It does not know what a trailer is.
+
+### What it found
+
+```
+20 of 78,720 rays got out where they should not — 0.03%
+```
+
+Every one of them at an eighth of an inch: the expansion gap printed on every
+sheet of sheathing, at the seams the door and window cuts created three edits
+earlier. The scanner found gaps I had just made, at exactly the size I made them.
+On site you tape those. There is a `tape` op now.

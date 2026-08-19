@@ -1,0 +1,71 @@
+<!doctype html>
+<meta charset="utf-8"><title>Scan — ingold-trailer</title>
+<style>
+ body{margin:0;padding:16px;background:#07090c;color:#e8edf3;
+   font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;max-width:1100px}
+ h1{font-size:13px;letter-spacing:.12em;margin:0 0 2px}
+ h2{font-size:11px;letter-spacing:.14em;color:#7c8894;margin:26px 0 6px;font-weight:600}
+ p{color:#7c8894;margin:0 0 14px;max-width:62ch}
+ .cal{border:1px solid #14532d;
+   background:#08160e;padding:8px 10px;margin:10px 0 0}
+ .plates{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+ figure{margin:0;background:#0b0e12;border:1px solid #1e262f}
+ img{display:block;width:100%;height:auto;image-rendering:pixelated}
+ figcaption{padding:5px 7px;color:#7c8894;font-size:10px}
+ table{border-collapse:collapse;width:100%;font-size:11px}
+ th,td{text-align:left;padding:4px 8px 4px 0;border-bottom:1px solid #141a21;vertical-align:top}
+ th{color:#7c8894;font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+ td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+</style>
+<h1>SCAN — INGOLD-TRAILER</h1>
+<div class="cal"><b>the instrument is honest</b><br>
+A box known to be sealed leaks <b>0</b> of 1152 rays.
+The same box with one wall removed reads <b>196</b>.
+Anything below the first number is the instrument, not the building.</div>
+
+<h2>Exposure plate</h2>
+<p>The building's own surface, unfolded flat, with every escaping ray plotted
+where it actually left. Roof on top, underside at the bottom, the four walls in
+the middle band. A sealed building develops black. A seam develops as a line,
+because a seam is a line.</p>
+<p>The second plate is the control group, on the same exposure: the rays that
+left through a door or a window. If it is empty, the openings are not openings —
+which is exactly what it said the first time it was run.</p>
+<div class="plates">
+ <figure><img src="unwrapped.png"><figcaption>LEAKS — 20 of 78720 rays, brightest pixel 1</figcaption></figure>
+ <figure><img src="unwrapped-openings.png"><figcaption>THROUGH OPENINGS — 3659 rays, brightest pixel 9.599999999999998 — the control group</figcaption></figure>
+ <figure><img src="dome.png"><figcaption>BY DIRECTION — the same leaks, sorted by which way they went</figcaption></figure>
+</div>
+
+<h2>Radiographs</h2>
+<p>Parallel rays through the whole thing, carrying how much material each one
+passed through. This finds nothing on its own; it shows density, and a part that
+is not where anyone thought it was shows up as a shadow in the wrong place.</p>
+<div class="plates">
+ <figure><img src="xray-x.png"><figcaption>ALONG X — through the side</figcaption></figure>
+ <figure><img src="xray-y.png"><figcaption>ALONG Y — through the end</figcaption></figure>
+ <figure><img src="xray-z.png"><figcaption>ALONG Z — plan</figcaption></figure>
+</div>
+
+<h2>Leaks</h2>
+<table>
+<tr><th>rays</th><th>face</th><th>at</th><th>extent (in)</th><th>bounded by</th></tr>
+<tr><td class="n">2</td><td>+y</td><td class="n">36.4, 248, 41.7</td><td class="n">7.7 &times; 0 &times; 0.1</td><td>shell.N.win_bed.below (7.5 in)<br>cripple.N.36.sill (8.0 in)<br>shell.N.win_bed.near (9.9 in)</td></tr>
+<tr><td class="n">2</td><td>+y</td><td class="n">56.4, 248, 41.7</td><td class="n">7.7 &times; 0 &times; 0.1</td><td>shell.N.win_bed.below (7.5 in)<br>cripple.N.52.sill (8.7 in)</td></tr>
+<tr><td class="n">1</td><td>+x</td><td class="n">101.5, 9.8, 43.7</td><td class="n">0 &times; 0 &times; 0</td><td>shell.E.win_galley.near (0.0 in)<br>shell.E.win_galley.below (0.1 in)<br>stud.E.17 (6.2 in)<br>stud.S.97 (7.5 in)</td></tr>
+<tr><td class="n">1</td><td>+x</td><td class="n">101.5, 49.8, 43.7</td><td class="n">0 &times; 0 &times; 0</td><td>shell.E.win_galley.near (0.0 in)<br>shell.E.win_galley.below (0.1 in)<br>stud.E.49 (0.6 in)</td></tr>
+<tr><td class="n">1</td><td>+x</td><td class="n">101.5, 129.8, 43.7</td><td class="n">0 &times; 0 &times; 0</td><td>shell.E.win_galley.far (0.0 in)<br>shell.E.win_galley.below (0.1 in)<br>stud.E.129 (0.6 in)<br>heater (7.0 in)</td></tr>
+<tr><td class="n">1</td><td>+x</td><td class="n">101.5, 149.8, 43.7</td><td class="n">0 &times; 0 &times; 0</td><td>shell.E.win_galley.far (0.0 in)<br>shell.E.win_galley.below (0.1 in)<br>stud.E.145 (4.3 in)<br>outlet.2 (7.8 in)</td></tr>
+<tr><td class="n">1</td><td>+x</td><td class="n">101.5, 169.8, 43.7</td><td class="n">0 &times; 0 &times; 0</td><td>shell.E.win_galley.far (0.0 in)<br>shell.E.win_galley.below (0.1 in)<br>stud.E.177 (6.2 in)<br>stud.E.161 (8.3 in)</td></tr>
+<tr><td class="n">1</td><td>+x</td><td class="n">101.5, 189.8, 43.7</td><td class="n">0 &times; 0 &times; 0</td><td>shell.E.win_galley.far (0.0 in)<br>shell.E.win_galley.below (0.1 in)<br>stud.E.193 (2.3 in)</td></tr>
+<tr><td class="n">1</td><td>+y</td><td class="n">0.3, 248, 41.6</td><td class="n">0 &times; 0 &times; 0</td><td>shell.N.win_bed.below (7.5 in)<br>shell.N.win_bed.near (7.5 in)<br>stud.W.239 (8.0 in)<br>shell.W.door_entry.far (8.0 in)</td></tr>
+<tr><td class="n">1</td><td>+y</td><td class="n">34, 248, 109.1</td><td class="n">0 &times; 0 &times; 0</td><td>roof.cover (2.4 in)<br>gable.N.2 (7.6 in)<br>rafter.239 (8.0 in)<br>shell.N.win_bed.above (8.1 in)</td></tr>
+<tr><td class="n">1</td><td>-y</td><td class="n">16.7, -32, 117</td><td class="n">0 &times; 0 &times; 0</td><td>&mdash;</td></tr>
+<tr><td class="n">1</td><td>-y</td><td class="n">50.8, -32, 53.6</td><td class="n">0 &times; 0 &times; 0</td><td>&mdash;</td></tr>
+<tr><td class="n">1</td><td>+x</td><td class="n">101.5, 40.1, 43.7</td><td class="n">0 &times; 0 &times; 0</td><td>shell.E.win_galley.near (0.0 in)<br>shell.E.win_galley.below (0.1 in)<br>stud.E.33 (6.6 in)<br>stud.E.49 (7.9 in)</td></tr>
+<tr><td class="n">1</td><td>+x</td><td class="n">101.5, 100.1, 43.7</td><td class="n">0 &times; 0 &times; 0</td><td>shell.E.win_galley.far (0.0 in)<br>shell.E.win_galley.below (0.1 in)<br>stud.E.97 (2.6 in)<br>jack.win.galley.1 (4.6 in)</td></tr>
+<tr><td class="n">1</td><td>+x</td><td class="n">101.5, 140.1, 43.7</td><td class="n">0 &times; 0 &times; 0</td><td>shell.E.win_galley.far (0.0 in)<br>shell.E.win_galley.below (0.1 in)<br>stud.E.145 (3.9 in)<br>outlet.2 (7.6 in)</td></tr>
+<tr><td class="n">1</td><td>+x</td><td class="n">101.5, 180.1, 43.7</td><td class="n">0 &times; 0 &times; 0</td><td>shell.E.win_galley.far (0.0 in)<br>shell.E.win_galley.below (0.1 in)<br>stud.E.177 (2.6 in)</td></tr>
+<tr><td class="n">1</td><td>+x</td><td class="n">101.5, 200.1, 43.7</td><td class="n">0 &times; 0 &times; 0</td><td>shell.E.win_galley.far (0.0 in)<br>shell.E.win_galley.below (0.1 in)<br>stud.E.193 (6.6 in)<br>stud.E.209 (7.9 in)</td></tr>
+<tr><td class="n">1</td><td>+y</td><td class="n">72.5, 248, 41.7</td><td class="n">0 &times; 0 &times; 0</td><td>shell.N.win_bed.far (7.5 in)<br>shell.N.win_bed.below (7.5 in)<br>king.win.bed.1 (8.0 in)<br>jack.win.bed.1 (8.1 in)</td></tr>
+</table>

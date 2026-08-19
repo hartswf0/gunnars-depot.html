@@ -11,6 +11,7 @@ import { floorUnder, mountsFor, workspaceOf, intrusion, blockage, daylightOf, CL
 import { shake } from './loads.js';
 import { rain, MIN_SLOPE, MIN_OVERHANG } from './weather.js';
 import { daylight, artificial, GLAZING_FRACTION, MIN_FC, TARGET_FC } from './light.js';
+import { occludersOf, emittersFor, scan as raysThrough, clusters as leakClusters, around as leakAround } from './radiography.js';
 
 export const SEVERITY = { blocking: 3, serious: 2, open: 1, note: 0 };
 
@@ -428,7 +429,13 @@ export function checkAll(world) {
     out.push(cond('PONDING', SEVERITY.serious,
       `${wet.drip.roof} falls ${wet.drip.slope.toFixed(2)} in per foot; below ${MIN_SLOPE} the water sits on it`,
       [wet.drip.roof], { slope: wet.drip.slope, minimum: MIN_SLOPE, basis: 'IRC R905.10.1' },
-      { op: 'pitch', args: {} }));
+      // A shed roof's pitch is not a free parameter — it is whatever the two
+      // bearing walls make it. On walls of equal height `pitch` reseats the roof
+      // dead flat and reports success, so proposing it alone put the loop in a
+      // circle: pitch, still ponding, pitch, still ponding. To tilt the roof you
+      // raise a wall, and then you reseat it.
+      { op: 'raise', args: { wall: 'E', by: 6 },
+        chain: [{ op: 'raise', args: { wall: 'E', by: 6 } }, { op: 'pitch', args: {} }] }));
   }
   if (wet.drip && typeof wet.drip.overhang === 'number' && wet.drip.overhang < MIN_OVERHANG &&
       !world.all({ kind: 'flashing' }).some(f => f.meta.role === 'drip edge')) {
@@ -477,6 +484,43 @@ export function checkAll(world) {
         target: night.target, needs: night.wattsNeeded, darkest: night.darkest.slice(0, 3),
         basis: 'lumen method, CU 0.5, LLF 0.9' },
       { op: 'relamp', args: {} }));
+  }
+
+  // 7d-quinquies. fill it with light and see where the light gets out.
+  //
+  // Every check above had to know what it was looking for. This one asks nothing:
+  // a ray does not need to know what a wall is, only to not hit one. Anywhere a
+  // ray escapes that is not a window is a hole, whether or not anyone ever wrote
+  // a rule about that kind of hole.
+  //
+  // Coarse on purpose — it runs on every commit, so it is a thirty-millisecond
+  // sweep rather than the half-second survey `tools/scan.mjs` does. It finds the
+  // shape of a leak; the survey measures it.
+  if (world.all({ kind: 'sheathing' }).length > 2) {
+    // Tuned by removing a wall panel and checking that it comes back. At step 40
+    // with 96 rays a missing 101 x 34 in panel produced twenty-two escapes spread
+    // over sixteen one-ray clusters, every one of them under the threshold — the
+    // check ran, cost time, and reported nothing. A blind check is worse than no
+    // check, because it looks like a clean bill of health.
+    const beam = raysThrough(occludersOf(world), emittersFor(world, { step: 32 }), { rays: 128 });
+    for (const c of leakClusters(beam.escapes, 12)) {
+      if (c.n < 3) continue;                            // one or two rays is not yet a finding
+      const near = leakAround(world, c.at, 8);
+      out.push(cond('LEAK', SEVERITY.serious,
+        `${c.n} rays got out at ${c.at.join(', ')} on the ${c.face} face — ` +
+        `a ${c.extent.filter(e => e > 0).map(e => e.toFixed(0)).join(' x ')} in hole ` +
+        `between ${near.slice(0, 2).map(n => n.id).join(' and ')}`,
+        near.slice(0, 3).map(n => n.id),
+        { rays: c.n, at: c.at, face: c.face, extent: c.extent,
+          of: beam.cast, viaOpenings: beam.viaOpening.length,
+          bounded: near.map(n => `${n.id} ${n.d.toFixed(1)} in`),
+          // The instrument's own specification, carried with the finding: this
+          // sweep sees a missing wall panel and does not see two missing blocks
+          // in a thirty-foot eave. `node tools/scan.mjs` sees both.
+          resolution: 'coarse sweep: finds a missing panel, misses a missing block' },
+        near.length >= 2 && near[0].d < 1 && near[1].d < 1
+          ? { op: 'tape', args: { a: near[0].id, b: near[1].id } } : null));
+    }
   }
 
   // 7e. what is touching is not joined until it is nailed

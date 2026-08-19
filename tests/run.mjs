@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { seedTrailer } from '../operative/kit.js';
 import { build } from '../operative/ingold.js';
 import { checkAll } from '../operative/checks.js';
-import { commit, commitChain, undo, OPS as OPSALL } from '../operative/ops.js';
+import { commit, commitChain, undo, OPS as OPSALL, snapshot, restore } from '../operative/ops.js';
 import { parse, nextMove, planPath } from '../operative/language.js';
 import { learn, preflight, THRESHOLD } from '../operative/invariants.js';
 import { parseSTL, bindReference, compareToReference } from '../operative/reference.js';
@@ -28,6 +28,19 @@ const stl = (f) => { const b = fs.readFileSync(path.join(ROOT, f)); return parse
 // frame that is only stacked genuinely carries nothing, so anything that asserts
 // settlement starts from a nailed frame.
 const framed = () => { const w = seedTrailer(); commit(w, 'nailOff', {}); return w; };
+// One full build, reused. Eight of them at twenty seconds each is three minutes of
+// test suite, and every one after the first only wanted a copy to break.
+const BUILT = build({ budget: 160 }).world;
+function copyOf(source) {
+  const c = new (source.constructor)();
+  c.walls = JSON.parse(JSON.stringify(source.walls));
+  c.datum = JSON.parse(JSON.stringify(source.datum));
+  c.runs = JSON.parse(JSON.stringify(source.runs || {}));
+  c.reference = source.reference;
+  restore(c, snapshot(source));
+  c.conditions = checkAll(c);
+  return c;
+}
 
 // ---------------------------------------------------------------- 1. the seed
 group('the seed build stands up on its own');
@@ -449,8 +462,16 @@ check('nothing is left merely touching where a schedule exists',
 const studJoints = jointsOf(T, 'stud.W.65');
 check('a stud is nailed to its plates', studJoints.some(j => j.size === '16d' && j.count >= 2),
   studJoints.map(j => `${j.count}x${j.size}`).join(', '));
+// `shell.W` is gone: cutting the door split it into pieces, each with its own id
+// and its own joints. Find the skin by which wall it is on, not by what it used
+// to be called.
+const westSkin = T.all({ kind: 'sheathing' }).filter(e => e.meta.wall === 'W');
 check('sheathing is nailed on a spacing, not a count',
-  jointsOf(T, 'shell.W').some(j => j.count > 10), `${jointsOf(T, 'shell.W').length} joints on shell.W`);
+  westSkin.some(p => jointsOf(T, p.id).some(j => j.count > 10)),
+  westSkin.map(p => `${p.id}:${jointsOf(T, p.id).length}`).join(' '));
+check('and the pieces beside an opening remember the panel they came from',
+  westSkin.some(p => p.meta.from && p.meta.opening),
+  westSkin.map(p => p.id).join(' '));
 check('a rafter gets a tie, not just a toe nail',
   jointsOf(T, 'rafter.65').some(j => j.type === 'tie'), jointsOf(T, 'rafter.65').map(j => j.type).join(','));
 check('the schedule cites the code', scheduleFor('stud', 'plate').size === '16d');
@@ -517,7 +538,7 @@ check('the one in the middle of the room stays in the air',
 check('and the refusal says there is nothing to hang it on',
   /nothing within reach/.test(mounted.note), mounted.note);
 
-const T2 = build({ budget: 90 }).world;
+const T2 = BUILT;
 check('the finished trailer holds every one of its own parts',
   dropTest(T2).falling.length === 0,
   dropTest(T2).falling.map(f => `${f.id} ${f.fall}`).join(', '));
@@ -544,10 +565,11 @@ check('the fuse block is not behind the bed',
   T2.get('dc.panel').lo[1] < bed.lo[1],
   `panel y ${T2.get('dc.panel').lo[1]}, bed y ${bed.lo[1]}`);
 check('a shelf parked in front of a panel is caught even though nothing collides', (() => {
-  const P = build({ budget: 90 }).world;
+  const P = copyOf(BUILT);
   const p2 = P.get('dc.panel');
+  // clear of the bench, so the only thing this proves is the one thing it is about
   commit(P, 'place', { id: 'shelf.test', kind: 'cabinet', layer: 'interior',
-    at: [p2.box.p[0] + 20, p2.box.p[1], 40], size: [30, 24, 40], material: 'plywood' });
+    at: [p2.box.p[0] + 18, p2.box.p[1] - 14, 44], size: [26, 12, 30], material: 'plywood' });
   const cs = checkAll(P);
   return cs.some(c => c.code === 'ACCESS_BLOCKED' && c.elements.includes('shelf.test')) &&
          !cs.some(c => c.code === 'OVERLAP' && c.elements.includes('shelf.test'));
@@ -622,7 +644,7 @@ check('it renders as one line per op', vocabulary().split('\n').length === Objec
 // ------------------------------------------- 22. the road
 group('a house is shaken once; a trailer is shaken every mile');
 const LD = await import('../operative/loads.js');
-const T3 = build({ budget: 120 }).world;
+const T3 = BUILT;
 const sh = LD.shake(T3);
 check('the trailer has a weight', sh.weight > 4000 && sh.weight < 12000, `${sh.weight} lb`);
 // Modelled as solids, a plastic water tank came out at 4,492 lb and a C6 channel
@@ -647,7 +669,7 @@ check('tributary load is a dominator, not a guess', (() => {
   return rail && stud && rail.carried > stud.carried;
 })(), 'a main rail carries more than one stud');
 // take the fasteners out of one joint and the road notices
-const S4 = build({ budget: 120 }).world;
+const S4 = copyOf(BUILT);
 for (const [k, j] of S4.joints) if (j.a === 'tank.fresh' || j.b === 'tank.fresh') j.count = 1;
 check('take the straps off the water tank and it says so',
   LD.shake(S4).failures.some(f => f.id === 'tank.fresh'),
@@ -693,7 +715,7 @@ check('the lamps actually light the place', night.average >= LI.MIN_FC,
 // 18 W of pucks passed the power budget for months, because a battery is happy
 // with a house that is too dark to read in.
 check('and a dim house is caught even when the power budget is fine', (() => {
-  const D = build({ budget: 120 }).world;
+  const D = copyOf(BUILT);
   for (const l of D.all().filter(e => e.meta.role === 'light')) l.meta.watts = 3;
   const cs = checkAll(D);
   return cs.some(c => c.code === 'UNLIT') && !cs.some(c => c.code === 'POWER_BUDGET');
@@ -719,6 +741,71 @@ check('and the schedule finds the row that was written for it',
   'fixture/fixture had no row; fridge/cabinet always did');
 check('nothing in the interior is left merely touching',
   !checkAll(T3).some(c => c.code === 'UNJOINED'));
+
+
+// ------------------------------------------- 26. is the building fucked, or are our eyes
+group('fill it with light and see where the light gets out');
+const RG = await import('../operative/radiography.js');
+
+// Before anything is measured, measure the instrument. This is the only check in
+// the project that can tell "the building is wrong" from "the scanner is wrong".
+const cal = RG.calibrate({ rays: 256 });
+check('a box known to be sealed leaks nothing', cal.sealedIsSealed, `${cal.noiseFloor} of ${cal.cast}`);
+check('and the same box with a wall missing does leak', cal.findsAKnownHole, `${cal.knownHoleReads}`);
+check('so the instrument reports itself honest', cal.verdict === 'the instrument is honest', cal.verdict);
+check('the directions are deterministic — two scans are the same scan',
+  JSON.stringify(RG.sphereDirections(64)) === JSON.stringify(RG.sphereDirections(64)));
+check('and they cover the sphere', (() => {
+  const d = RG.sphereDirections(2000);
+  const mean = [0, 1, 2].map(i => d.reduce((a, v) => a + v[i], 0) / d.length);
+  return mean.every(m => Math.abs(m) < 0.02);
+})(), 'no direction is favoured');
+
+const T4 = BUILT;
+const beam = RG.scan(RG.occludersOf(T4), RG.emittersFor(T4, { step: 20 }), { rays: 256 });
+check('the trailer holds nearly all of its light',
+  beam.leakFraction < 0.002, `${(beam.leakFraction * 100).toFixed(3)}% of ${beam.cast} rays`);
+// The control group. When this was zero it was not good news — it meant the door
+// and all four windows were framed openings with the skin still unbroken across
+// them, which nothing else in the project had ever noticed.
+check('and the openings are actually open', beam.viaOpening.length > 100,
+  `${beam.viaOpening.length} rays through a door and four windows`);
+check('every escape says where on the building it left',
+  beam.escapes.every(e => e.face && e.at.every(Number.isFinite)));
+
+// Resolution, stated rather than assumed.
+const holed = copyOf(BUILT);
+const panel = holed.all({ kind: 'sheathing' }).filter(e => e.meta.wall === 'N')
+  .sort((a, b) => (b.hi[0] - b.lo[0]) * (b.hi[2] - b.lo[2]) - (a.hi[0] - a.lo[0]) * (a.hi[2] - a.lo[2]))[0];
+holed.remove(panel.id);
+check('take a wall panel off and the loop check finds it',
+  checkAll(holed).some(c => c.code === 'LEAK'),
+  `removed ${panel.id}`);
+const blocked = copyOf(BUILT);
+blocked.remove('bird.E.113'); blocked.remove('bird.E.129');
+check('the coarse in-loop sweep does not see two missing eave blocks',
+  !checkAll(blocked).some(c => c.code === 'LEAK'), 'and the finding says so in its own measure');
+const survey = RG.scan(RG.occludersOf(blocked), RG.emittersFor(blocked, { step: 24 }), { rays: 192 });
+check('but the survey does', RG.clusters(survey.escapes, 12).some(c => c.n >= 3),
+  `${survey.escapes.length} escapes`);
+
+// The plates
+const un = RG.unwrap(beam.escapes, beam.bounds, 120);
+check('the unfolded plate has six faces', un.faces.length === 6);
+check('and every escape lands on one of them',
+  un.px.reduce((a, v) => a + (v >= 1 ? 1 : 0), 0) > 0);
+const shot = RG.radiograph(RG.occludersOf(T4), 2, { w: 48, h: 48 });
+check('a radiograph accumulates material rather than stopping at the first surface',
+  shot.peak > 0 && shot.px.some(v => v > 0 && v < shot.peak), `peak ${shot.peak.toFixed(0)}`);
+
+// A mesh, so the same scan works on something that is not this trailer at all.
+const meshTris = stl('assets/models/concepts/contractor-reality-trailer.stl');
+const mesh = RG.fromTriangles(meshTris);
+check('an existing structure can be scanned from its mesh',
+  mesh.triangles === meshTris.length / 9 && mesh.solids.length === mesh.triangles,
+  `${mesh.triangles} triangles`);
+const inside = RG.interiorOf(mesh, { step: Math.max(8, Math.hypot(...RG.bounds(mesh.solids).size) / 12) });
+check('and points inside it can be found by parity', inside.length > 0, `${inside.length} interior points`);
 
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);

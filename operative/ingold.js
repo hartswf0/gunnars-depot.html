@@ -421,7 +421,13 @@ export function electrical(w, log = []) {
   // reach by crawling across a mattress. They move to the aisle wall between the
   // bathroom and the dinette, which is the only stretch of this trailer with
   // 36 in of clear floor in front of it.
-  put('mppt', 'controller', [WALL_FACE.W + 1.5, 88.75, 80], [3, 8, 10], {}, 'MPPT charge controller on the aisle wall');
+  // 88.75 is inside the entry door, which is 72 to 108 on this wall. The three of
+  // them were mounted in the doorway and the model only said so when a door was
+  // cut through the skin and they lost the panel they were screwed to. They stack
+  // on the first stud past the door, where the aisle in front of them is the
+  // clear floor NEC asks for — in a 8'-6" trailer the circulation space is the
+  // only 36 in of clear floor there is.
+  put('mppt', 'controller', [WALL_FACE.W + 1.5, 112.75, 82], [3, 8, 10], {}, 'MPPT charge controller, stacked on stud.W.113');
   for (const [i, x] of [22, 40].entries()) {
     log.push(step(w, 'source', { id: `battery.${i + 1}`, system: 'power', at: [x, 226, D + 8],
       size: [13, 7, 9], layer: 'interior', hostedBy: 'bed.base' }, '100 Ah LiFePO4'));
@@ -429,8 +435,8 @@ export function electrical(w, log = []) {
     w.get(`battery.${i + 1}`).meta.volts = 12;
   }
   put('inverter', 'inverter', [62, 226, D + 8], [12, 7, 8], { layer: 'interior', host: 'bed.base' }, '2 kW pure sine');
-  put('dc.panel', 'panel', [WALL_FACE.W + 1.5, 88.75, 62], [3, 9, 7], {}, '12 V fuse block, with somewhere to stand in front of it');
-  put('ac.panel', 'panel', [WALL_FACE.W + 1.5, 104.75, 62], [3, 9, 7], {}, '120 V breakers beside it');
+  put('dc.panel', 'panel', [WALL_FACE.W + 1.5, 112.75, 60], [3, 9, 7], {}, '12 V fuse block, with the aisle in front of it');
+  put('ac.panel', 'panel', [WALL_FACE.W + 1.5, 112.75, 70], [3, 9, 7], {}, '120 V breakers above it');
 
   // loads
   // A puck screws to the underside of a rafter. It therefore lives under a rafter.
@@ -463,17 +469,17 @@ export function electrical(w, log = []) {
   // wiring — deliberately gauged the way it would be guessed, so the drop can answer
   const R = (run, path, dia, amps, awg, why, volts) =>
     log.push(step(w, 'route', { system: 'power', run, path, dia, amps, awg, volts: volts || 12 }, why));
-  R('pv.string', [[26, 70, ROOF_TOP], [76, 70, ROOF_TOP], [76, 230, ROOF_TOP], [5, 88.75, 80]], 0.5, 17, '10', 'string across both panels, then down to the controller');
-  R('mppt.bank', [[5, 88.75, 80], [40, 226, D + 8]], 0.6, 30, '8', 'controller to the bank');
+  R('pv.string', [[26, 70, ROOF_TOP], [76, 70, ROOF_TOP], [76, 104.75, ROOF_TOP], [5, 104.75, ROOF_TOP], [5, 104.75, 82], [5, 112.75, 82]], 0.5, 17, '10', 'across both panels, then down through a rafter bay — dropped on the rafter line it bored 0.5 in from its edge');
+  R('mppt.bank', [[5, 112.75, 82], [40, 226, D + 8]], 0.6, 30, '8', 'controller to the bank');
   R('bank.inverter', [[40, 226, D + 8], [62, 226, D + 8]], 1.0, 167, '8', 'bank to the inverter');
-  R('bank.dc', [[40, 226, D + 8], [5, 88.75, 62]], 0.6, 40, '8', 'bank to the fuse block');
-  R('inv.ac', [[62, 226, D + 8], [5, 104.75, 62]], 0.5, 17, '12', 'inverter to the breakers', 120);
-  R('dc.lights', [[5, 88.75, 62], [50.5, 208.75, 104], [50.5, 16.75, 104]], 0.3, 1.5, '18', 'one run down the centre for the pucks');
-  R('dc.fridge', [[5, 88.75, 62], [86, 120, 100], [86, 104, D + 8]], 0.3, 3.8, '14', 'fridge circuit');
-  R('dc.pumpfeed', [[5, 88.75, 62], [70, 196, D + 5]], 0.3, 5, '14', 'pump circuit');
-  R('dc.fan', [[5, 88.75, 62], [80, 30, 100], [80, 16.75, 104]], 0.3, 1.3, '18', 'bath extract');
-  R('ac.outlets', [[5, 104.75, 62], [4.25, 192.75, D + 20], [4.25, 48.75, D + 20]], 0.3, 3, '14', 'outlet ring west, at socket height', 120);
-  R('ac.outlets.e', [[5, 104.75, 62], [96.75, 160.75, D + 20], [96.75, 144.75, D + 20]], 0.3, 3, '14', 'and east', 120);
+  R('bank.dc', [[40, 226, D + 8], [5, 112.75, 60]], 0.6, 40, '8', 'bank to the fuse block');
+  R('inv.ac', [[62, 226, D + 8], [5, 112.75, 70]], 0.5, 17, '12', 'inverter to the breakers', 120);
+  R('dc.lights', [[5, 112.75, 60], [50.5, 208.75, 104], [50.5, 16.75, 104]], 0.3, 1.5, '18', 'one run down the centre for the pucks');
+  R('dc.fridge', [[5, 112.75, 60], [86, 120, 100], [86, 104, D + 8]], 0.3, 3.8, '14', 'fridge circuit');
+  R('dc.pumpfeed', [[5, 112.75, 60], [70, 196, D + 5]], 0.3, 5, '14', 'pump circuit');
+  R('dc.fan', [[5, 112.75, 60], [80, 30, 100], [80, 16.75, 104]], 0.3, 1.3, '18', 'bath extract');
+  R('ac.outlets', [[5, 112.75, 70], [4.25, 192.75, D + 20], [4.25, 48.75, D + 20]], 0.3, 3, '14', 'outlet ring west, at socket height', 120);
+  R('ac.outlets.e', [[5, 112.75, 70], [96.75, 160.75, D + 20], [96.75, 144.75, D + 20]], 0.3, 3, '14', 'and east', 120);
   return log;
 }
 

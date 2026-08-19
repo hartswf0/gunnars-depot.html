@@ -1,0 +1,8 @@
+{
+ "noiseFloor": 0,
+ "sealedIsSealed": true,
+ "findsAKnownHole": true,
+ "knownHoleReads": 196,
+ "cast": 1152,
+ "verdict": "the instrument is honest"
+}

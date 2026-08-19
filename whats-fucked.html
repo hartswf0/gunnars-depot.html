@@ -133,6 +133,7 @@ import { OPS, commitChain, vocabulary } from './operative/ops.js';
 import { shake } from './operative/loads.js';
 import { rain } from './operative/weather.js';
 import { artificial, daylight } from './operative/light.js';
+import { occludersOf, emittersFor, scan as raysThrough, clusters as leakClusters, calibrate } from './operative/radiography.js';
 
 const $ = (s) => document.querySelector(s);
 const LS = 'whats-fucked';
@@ -284,6 +285,12 @@ function lintersOnly(shot) {
 function physics() {
   try {
     const s = shake(world), r = rain(world), n = artificial(world), d = daylight(world);
+    // Before the leak number means anything, the instrument has to be checked
+    // against a box known to be sealed. This is the only measurement here that
+    // can tell "the building is wrong" from "our eyes are wrong".
+    const cal = calibrate({ rays: 128 });
+    const beam = raysThrough(occludersOf(world), emittersFor(world, { step: 32 }), { rays: 128 });
+    const leaks = leakClusters(beam.escapes, 12).filter(c => c.n >= 3);
     return [
       `WEIGHT ${s.weight} lb; ${s.failures.length} joint${s.failures.length === 1 ? '' : 's'} over capacity ` +
       `under FMCSA road loads`,
@@ -292,7 +299,12 @@ function physics() {
       `${r.ponds.length} ponding surface${r.ponds.length === 1 ? '' : 's'}`,
       n ? `LIGHT ${n.watts} W averaging ${n.average} fc against a ${n.target} fc target` : '',
       d ? `DAYLIGHT ${d.glazingArea} sq ft of glazing for ${d.floorArea} sq ft of floor ` +
-          `(${(d.glazingFraction * 100).toFixed(1)}%), ${d.dark} of ${d.points} floor samples see no window` : ''
+          `(${(d.glazingFraction * 100).toFixed(1)}%), ${d.dark} of ${d.points} floor samples see no window` : '',
+      `LIGHT OUT ${beam.escapes.length} of ${beam.cast} rays fired from inside got out where they ` +
+      `should not (${leaks.length} distinct leak${leaks.length === 1 ? '' : 's'}); ` +
+      `${beam.viaOpening.length} left through a door or a window`,
+      `INSTRUMENT ${cal.verdict} — a box known to be sealed leaks ${cal.noiseFloor} of ${cal.cast}, ` +
+      `and the same box with a wall off reads ${cal.knownHoleReads}`
     ].filter(Boolean).join('\n');
   } catch (e) { return `physics unavailable: ${e.message}`; }
 }

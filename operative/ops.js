@@ -14,7 +14,8 @@ import { artificial, TARGET_FC } from './light.js';
 const key = (c) => `${c.code}:${c.elements.join('|')}`;
 
 /** Deep snapshot of the mutable world, so any move can be walked back. */
-function snapshot(world) {
+/** A complete, serialisable copy of the world's state. */
+export function snapshot(world) {
   return {
     // joints are state too; undo used to leave them behind, so a walked-back world
     // kept 398 connections to members that no longer existed
@@ -25,7 +26,8 @@ function snapshot(world) {
     })))
   };
 }
-function restore(world, snap) {
+/** Put a snapshot back. */
+export function restore(world, snap) {
   world.elements.clear();
   for (const e of snap.elements) world.add(new Element(e));
   if (snap.joints) { world.joints.clear(); for (const [k, v] of snap.joints) world.joints.set(k, v); }
@@ -300,7 +302,72 @@ export const OPS = {
       meta: { wall, axis: w.axis, type, from, to, sill: z0, head: z1, cutStuds: cut, headroom: z1 - z0 }
     }));
     changed.push(openId, ...cut);
-    return { changed, note: `${type} ${(to - from).toFixed(0)}x${(z1 - z0).toFixed(0)} in cut in wall ${wall}; ${cut.length} stud${cut.length === 1 ? '' : 's'} interrupted` };
+
+    // And cut the skin. For the whole life of this project `cut` interrupted the
+    // studs, added a header and recorded an opening — and left the exterior
+    // sheathing as one unbroken panel across it. The trailer had a framed door
+    // you could not walk through and four framed windows you could not see out
+    // of, and nothing said so, because every check was about the framing.
+    //
+    // It surfaced when the ray scanner reported that not one ray in fifty
+    // thousand had left through an opening. The control group was empty. The
+    // absence of the expected reading was the finding.
+    const panels = world.all({ kind: 'sheathing' }).filter(p =>
+      p.meta.wall === wall && !p.meta.opening &&
+      p.lo[2] < z1 - 0.01 && p.hi[2] > z0 + 0.01);
+    const u = along(w);                       // the axis the wall runs along
+    for (const p of panels) {
+      if (p.lo[u] > from - 0.01 && p.hi[u] < to + 0.01 && p.lo[2] > z0 - 0.01 && p.hi[2] < z1 + 0.01) {
+        world.remove(p.id); changed.push(p.id); continue;    // wholly inside the hole
+      }
+      if (p.hi[u] <= from + 0.01 || p.lo[u] >= to - 0.01) continue;   // clear of it
+      // An eighth of an inch at every cut edge. Every sheet of sheathing ships with
+      // that gap printed on it for expansion, and without it the four pieces butt
+      // face to face and the overlap check — which inflates by a tolerance before
+      // testing — reports the wall as interpenetrating itself.
+      const GAP = 0.125;
+      const pieces = [
+        ['below', p.lo[u], p.hi[u], p.lo[2], Math.min(z0, p.hi[2]) - GAP],
+        ['above', p.lo[u], p.hi[u], Math.max(z1, p.lo[2]) + GAP, p.hi[2]],
+        ['near',  p.lo[u], Math.min(from, p.hi[u]) - GAP, Math.max(z0, p.lo[2]), Math.min(z1, p.hi[2])],
+        ['far',   Math.max(to, p.lo[u]) + GAP, p.hi[u], Math.max(z0, p.lo[2]), Math.min(z1, p.hi[2])]
+      ];
+      let made = 0;
+      const made2 = [];
+      for (const [tag, a, b, c, e] of pieces) {
+        if (b - a < 0.5 || e - c < 0.5) continue;
+        const np = [...p.box.p], ns = [...p.box.s];
+        np[u] = (a + b) / 2; ns[u] = b - a;
+        np[2] = (c + e) / 2; ns[2] = e - c;
+        const nid = `${p.id}.${openId.replace(/\./g, '_')}.${tag}`;
+        world.add(new Element({ id: nid, kind: 'sheathing', layer: p.layer, material: p.material,
+          box: box(np, ns), shear: p.shear,
+          meta: { ...p.meta, role: 'skin beside an opening', from: p.id, opening: openId } }));
+        changed.push(nid); made2.push(nid); made++;
+      }
+      // Everything that was screwed to the panel is still screwed to the wall; the
+      // wall just has a hole in it now. Dropped instead of transferred, the fuse
+      // block and the charge controller fell off the west wall the moment a door
+      // was cut in it, forty feet away.
+      const orphaned = [...world.joints.entries()].filter(([, j]) => j.a === p.id || j.b === p.id);
+      for (const [key, j] of orphaned) {
+        world.joints.delete(key);
+        const other = world.get(j.a === p.id ? j.b : j.a);
+        if (!other) continue;
+        const heir = made2.map(id => world.get(id)).filter(Boolean)
+          .map(n => ({ n, d: Math.hypot(...[0, 1, 2].map(i =>
+            Math.max(n.lo[i] - other.hi[i], other.lo[i] - n.hi[i], 0))) }))
+          .sort((a, b) => a.d - b.d)[0];
+        // The spread has to come first: `{a, b, ...j}` puts the dead panel's own
+        // ids straight back over the new ones and the transfer rejoins nothing.
+        if (heir && heir.d < 2) OPS.join(world, { ...j, a: heir.n.id, b: other.id });
+      }
+      world.remove(p.id); changed.push(p.id);
+      if (!made) return { ok: false, note: `cutting ${openId} would remove all of ${p.id}` };
+    }
+
+    return { changed, note: `${type} ${(to - from).toFixed(0)}x${(z1 - z0).toFixed(0)} in cut in wall ${wall}; ` +
+      `${cut.length} stud${cut.length === 1 ? '' : 's'} interrupted, skin opened in ${panels.length} panel${panels.length === 1 ? '' : 's'}` };
   },
 
   /** Carry the load over an opening: header sized from the span table, on jacks, with kings and cripples. */
@@ -630,6 +697,11 @@ export const OPS = {
     const all = !wall;
     for (const e of world.all()) {
       if (!set.has(e.meta.wall) && !(all && (e.kind === 'rafter' || (e.kind === 'panel' && e.layer === 'roof')))) continue;
+      // Raising a wall lifts whatever was at the top of it. A panel under a
+      // windowsill or beside a door was never at the top, and stretching it up
+      // grew the skin straight across the opening it had just been cut around.
+      const atTheTop = e.hi[2] >= (world.walls[e.meta.wall] || { wallTop: Infinity }).wallTop - 0.5;
+      if (e.kind === 'sheathing' && e.meta.opening && !atTheTop) continue;
       if (e.kind === 'stud' || e.kind === 'king' || e.kind === 'sheathing') stretchUp(e);
       else if (e.kind === 'plate' && e.meta.role !== 'sole plate') lift(e);
       else if (e.kind === 'strap' && e.meta.role === 'steel tie') { /* stays with its plate */ }
@@ -692,10 +764,21 @@ export const OPS = {
           lowest = Math.min(lowest, top);
           changed.push(e.id);
         } else if (e.kind === 'sheathing') {
+          // Same rule as raising: only what was at the top of the wall follows the
+          // roof. Without this, reseating the roof stretched the panel under the
+          // doorway from the floor to the rafters and sealed the door shut.
+          if (e.meta.opening && e.hi[2] < wall.wallTop - 0.5) continue;
           const bot = e.box.p[2] - e.box.s[2] / 2;
-          const top = plane(e.box.p[0]);
-          e.shear = Math.abs(m) < 1e-6 ? null : { axis: 'x', rise: +(m * e.box.s[0]).toFixed(4) };
-          e.box.s[2] = top - bot;
+          // Square at the bottom, cut to the lowest point of the roof over its own
+          // span. A sheared box is a parallelogram: tilting the top to follow the
+          // roof tilted the bottom by the same amount, and a panel beside a door
+          // dropped its low corner straight through the panel under the door.
+          // A real panel is cut to a slope on one edge only, and the wedge left
+          // above it is infill — which is what the gable strips are for.
+          const half = e.box.s[0] / 2;
+          const top = Math.min(plane(e.box.p[0] - half), plane(e.box.p[0] + half));
+          e.shear = null;
+          e.box.s[2] = Math.max(0.75, top - bot);
           e.box.p[2] = bot + e.box.s[2] / 2;
           changed.push(e.id);
         }
@@ -1099,6 +1182,33 @@ export const OPS = {
       note: `${lamps.length} lamps ${before / lamps.length} W -> ${each} W each; ` +
             `${after.average} fc average against a ${target} fc target ` +
             `(${(each * lamps.length - before)} W more on the bank)` };
+  },
+
+  /**
+   * Tape a joint in the skin. Sheathing ships with an eighth of an inch of
+   * expansion gap printed on it, which is a hole; the air barrier is the tape
+   * over it, and in the model as on site it is a thing you install, not an
+   * assumption. The ray scanner found every one of these before anybody thought
+   * to look for them.
+   */
+  tape(world, { a, b, at }) {
+    const A = world.get(a), B = b ? world.get(b) : null;
+    if (!A) return { ok: false, note: `no element "${a}"` };
+    const tid = `tape.${a}${b ? `.${b}` : ''}`;
+    if (world.get(tid)) return { ok: false, note: `${tid} already exists` };
+    // the seam is where the two panels almost meet; with one panel, the point given
+    const lo = [0, 1, 2].map(i => B ? Math.max(Math.min(A.hi[i], B.hi[i]), Math.min(A.lo[i], B.lo[i])) : (at ? at[i] - 2 : A.lo[i]));
+    const hi = [0, 1, 2].map(i => B ? Math.min(Math.max(A.hi[i], B.hi[i]), Math.max(A.lo[i], B.lo[i])) : (at ? at[i] + 2 : A.hi[i]));
+    const p = [0, 1, 2].map(i => (lo[i] + hi[i]) / 2);
+    const sz = [0, 1, 2].map(i => Math.max(0.06, hi[i] - lo[i]));
+    // 3 in wide across the seam, on whichever axis the seam is thinnest
+    const thin = [0, 1, 2].reduce((m, i) => (sz[i] < sz[m] ? i : m), 0);
+    const face = [0, 1, 2].filter(i => i !== thin).sort((x, y) => sz[x] - sz[y])[0];
+    sz[face] = Math.max(sz[face], 3);
+    world.add(new Element({ id: tid, kind: 'tape', layer: 'walls', material: 'paint',
+      box: box(p, sz), meta: { role: 'sheathing seam tape', seals: [a, b].filter(Boolean) } }));
+    return { changed: [tid, a, b].filter(Boolean),
+      note: `${tid}: seam taped across ${sz[face].toFixed(0)} in` };
   },
 
   place(world, { id, kind, layer, at, size, material, section, shear }) {
