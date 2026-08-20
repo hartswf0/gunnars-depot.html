@@ -7,8 +7,8 @@
       "bone": "rightHand",
       "want": "basin",
       "handZ": 67,
-      "surfaceZ": 36,
-      "off": 31,
+      "surfaceZ": 55,
+      "off": 12,
       "ok": false
     },
     "clash": 2,
@@ -39,11 +39,11 @@
       "bone": "rightHand",
       "want": "worktop",
       "handZ": 68,
-      "surfaceZ": 40,
-      "off": 29,
+      "surfaceZ": 59,
+      "off": 10,
       "ok": false
     },
-    "clash": 11,
+    "clash": 7,
     "collisions": [
       {
         "bone": "rightUpperArm",
@@ -51,20 +51,6 @@
         "kind": "chase",
         "layer": "interior",
         "depth": 6
-      },
-      {
-        "bone": "leftLowerLeg",
-        "id": "bench.E",
-        "kind": "fixture",
-        "layer": "interior",
-        "depth": 4.2
-      },
-      {
-        "bone": "leftFoot",
-        "id": "bench.E",
-        "kind": "fixture",
-        "layer": "interior",
-        "depth": 4.1
       },
       {
         "bone": "rightShoulder",
@@ -81,11 +67,25 @@
         "depth": 1.5
       },
       {
-        "bone": "rightLowerLeg",
-        "id": "bench.E",
+        "bone": "hips",
+        "id": "heater",
         "kind": "fixture",
         "layer": "interior",
-        "depth": 1.4
+        "depth": 1.3
+      },
+      {
+        "bone": "rightUpperLeg",
+        "id": "heater",
+        "kind": "fixture",
+        "layer": "interior",
+        "depth": 0.8
+      },
+      {
+        "bone": "rightLowerLeg",
+        "id": "well.E.side",
+        "kind": "wellside",
+        "layer": "foundation",
+        "depth": 0.8
       }
     ],
     "ok": false,
@@ -99,8 +99,8 @@
       "bone": "rightHand",
       "want": "worktop",
       "handZ": 67,
-      "surfaceZ": 38,
-      "off": 29,
+      "surfaceZ": 57,
+      "off": 10,
       "ok": false
     },
     "clash": 0,
@@ -111,58 +111,23 @@
   {
     "activity": "ON THE TOILET",
     "at": "wc",
-    "headTop": 68,
+    "headTop": 70,
     "work": {
       "bone": "hips",
       "want": "seat",
-      "handZ": 31,
-      "surfaceZ": 31,
+      "handZ": 33,
+      "surfaceZ": 33,
       "off": 0,
       "ok": true
     },
-    "clash": 8,
+    "clash": 1,
     "collisions": [
       {
-        "bone": "leftUpperLeg",
+        "bone": "leftLowerArm",
         "id": "lav.cab",
         "kind": "fixture",
         "layer": "interior",
-        "depth": 2.7
-      },
-      {
-        "bone": "leftLowerLeg",
-        "id": "lav.cab",
-        "kind": "fixture",
-        "layer": "interior",
-        "depth": 2.3
-      },
-      {
-        "bone": "rightUpperLeg",
-        "id": "lav.cab",
-        "kind": "fixture",
-        "layer": "interior",
-        "depth": 2
-      },
-      {
-        "bone": "rightLowerLeg",
-        "id": "lav.cab",
-        "kind": "fixture",
-        "layer": "interior",
-        "depth": 1.6
-      },
-      {
-        "bone": "leftFoot",
-        "id": "lav.cab",
-        "kind": "fixture",
-        "layer": "interior",
-        "depth": 0.9
-      },
-      {
-        "bone": "rightFoot",
-        "id": "lav.cab",
-        "kind": "fixture",
-        "layer": "interior",
-        "depth": 0.9
+        "depth": 1.5
       }
     ],
     "ok": false,
@@ -171,12 +136,12 @@
   {
     "activity": "EATING AT THE TABLE",
     "at": "bench.W",
-    "headTop": 68,
+    "headTop": 71,
     "work": {
       "bone": "hips",
       "want": "seat",
-      "handZ": 31,
-      "surfaceZ": 31,
+      "handZ": 34,
+      "surfaceZ": 34,
       "off": 0,
       "ok": true
     },
@@ -188,12 +153,12 @@
   {
     "activity": "WORKING AT THE TABLE",
     "at": "bench.W",
-    "headTop": 66,
+    "headTop": 69,
     "work": {
       "bone": "hips",
       "want": "seat",
-      "handZ": 31,
-      "surfaceZ": 31,
+      "handZ": 34,
+      "surfaceZ": 34,
       "off": 0,
       "ok": true
     },
@@ -269,13 +234,13 @@
       "bone": "rightHand",
       "want": "overhead",
       "handZ": 74,
-      "surfaceZ": 60,
-      "off": 14,
-      "ok": false
+      "surfaceZ": 79,
+      "off": -5,
+      "ok": true
     },
     "clash": 0,
     "collisions": [],
-    "ok": false,
+    "ok": true,
     "file": "reaching-the-high-shelf.png"
   },
   {
