@@ -68,7 +68,9 @@ export function openings(w, log = []) {
   const cuts = [
     ['door.entry',   { wall: 'W', from: 72,  to: 108, type: 'door' },                          'the plan enters on the long wall, past the bath'],
     ['win.dinette',  { wall: 'W', from: 128, to: 168, type: 'window', sill: 30, head: 60 },     'daylight on the dinette'],
-    ['win.galley',   { wall: 'E', from: 74,  to: 94,  type: 'window', sill: 28, head: 52 },     'over the sink'],
+    // Sill above the worktop, not behind it. At 28 in it sat below a 41 in counter,
+    // so the bottom foot of the window looked into the back of the cabinet.
+    ['win.galley',   { wall: 'E', from: 74,  to: 94,  type: 'window', sill: 44, head: 68 },     'over the sink, sill clear of the worktop'],
     ['win.bed',      { wall: 'N', from: 30,  to: 70,  type: 'window', sill: 26, head: 56 },     'the sheets end the trailer with a window at the bed'],
     ['win.bath',     { wall: 'S', from: 62,  to: 86,  type: 'window', sill: 36, head: 58 },     'light and vent for the shower']
   ];
@@ -124,31 +126,69 @@ export function interior(w, log = []) {
   log.push(step(w, 'place', { id: 'wall.bath.E', kind: 'partition', layer: 'interior',
     at: [81.75, 65.75, D + wallH / 2], size: [31.5, 3.5, wallH], material: 'plywood' }, 'the other side of the bath door'));
   // a composting head is the reason there is no black tank on this trailer
-  put('wc',        'toilet',  [16, 22], 0,  [20, 28, 15],  { material: 'tile', why: 'composting head: no water in, no waste out' });
-  put('lav.cab',   'cabinet', [42, 15], 0,  [20, 18, 20],  { hollow: true, why: 'vanity carcass' });
-  put('lav',       'sink',    [42, 15], 11, [16, 14, 8],   { material: 'tile', system: 'water', host: 'lav.cab', why: 'basin dropped into the vanity' });
-  put('shower.pan','shower',  [80, 24], 0,  [34, 36, 3],   { material: 'tile', system: 'waste', why: '34 x 36 pan in the corner' });
+  // Heights are the body's. Every one of these used to be about half what a six
+  // foot man needs — a 20 in vanity, a 15 in bench, a 16 in table — and nothing in
+  // the model could notice, because nothing in the model knew how tall a person
+  // is. See figure.js for the dimensions and everybody.js for the postures.
+  // The head turned to face north, into the room. Deeper than wide it faced east
+  // across the bath, and a seated man's knees reach 24 in — straight into whatever
+  // was beside it. Facing the length of the room, the knee room is open floor.
+  put('wc',        'toilet',  [20, 18], 0,  [28, 20, 17],  { material: 'tile', why: 'composting head facing north, seat at 17 in, 24 in of knee room in front of it' });
+  put('lav.cab',   'cabinet', [46, 15], 0,  [20, 18, 30],  { hollow: true, why: 'vanity beside the head, not in front of it' });
+  put('lav',       'sink',    [46, 15], 21, [16, 14, 8],   { material: 'tile', system: 'water', host: 'lav.cab', why: 'basin undermounted, rim at 29 in' });
+  put('shower.pan','shower',  [80, 22], 0,  [34, 32, 3],   { material: 'tile', system: 'waste', why: '34 x 32 pan: 32 deep leaves 26 in to dry off in' });
 
   // --- galley, y 68..114, along the east wall ------------------------------
-  put('cab.galley','cabinet', [86, 91],  0,    [23, 46, 20.5], { hollow: true, why: 'the base run, stopped short of the wheel well at y=115' });
-  put('top.galley','counter', [86, 91],  20.5, [23, 46, 1.5],  { material: 'stone', why: 'worktop over the run' });
-  put('sink',      'sink',    [86, 84],  12,   [16, 20, 8],    { material: 'steel', system: 'water', host: 'cab.galley', why: 'under the galley window' });
+  // 41 in, not the industry's 36. Thirty-six is sized for a median body; Grandjean
+  // puts light standing work two to six inches below the elbow, and this man's
+  // elbow is at 45.4. A trailer built for one person is the one place there is no
+  // argument for the median.
+  put('cab.galley','cabinet', [86, 91],  0,    [23, 46, 39.5], { hollow: true, why: '39.5 in carcass to a 41 in worktop: elbow less four' });
+  put('top.galley','counter', [86, 91],  39.5, [23, 46, 1.5],  { material: 'stone', why: 'worktop at 41 in — his elbow is at 45' });
+  put('sink',      'sink',    [86, 84],  31,   [16, 20, 8],    { material: 'steel', system: 'water', host: 'cab.galley', why: 'undermounted, bowl in the carcass and not through the top' });
   put('fridge',    'fridge',  [86, 104], 1,    [18, 16, 18],   { material: 'steel', system: 'power', host: 'cab.galley', why: '12 V drawer fridge, off-grid sized' });
-  put('cooktop',   'range',   [86, 104], 22,   [16, 14, 2],    { material: 'steel', system: 'power', why: 'two burners set on the worktop' });
+  put('cooktop',   'range',   [86, 104], 41,   [16, 14, 2],    { material: 'steel', system: 'power', why: 'two burners set on the worktop' });
 
   // --- dinette, y 118..178, inboard of the wheel wells ---------------------
   // Built clear of the well's face at x=12, not over it: the tyre comes up to 26 in
   // and reaches 5 in past the wall, so a bench at the wall line runs into it.
   // The well cap, at exactly this height, becomes the bench's back ledge.
-  put('bench.W',  'bench', [21, 148],   0,  [18, 60, 15], { hollow: true, why: 'clear of the tyre, backing onto the well' });
-  put('bench.E',  'bench', [80, 148],   0,  [18, 60, 15], { hollow: true, why: 'the same on the east side' });
-  put('table',    'table', [50.5, 148], 14, [33, 36, 2],  { why: '50 in of clear floor between the benches' });
-  put('table.leg','leg',   [50.5, 148], 0,  [9, 9, 14],   { why: 'a slab with nothing under it is not a table' });
+  // One bench, not two. Face to face across a table needs 18 + 33 + 18 and then an
+  // aisle: 91 in. Over the axles the trailer is 77 in wide between the wheel well
+  // faces, so the old dinette fitted to the inch with nothing left over and severed
+  // the trailer in two — everything aft of it, the bed included, was reachable only
+  // by climbing over the table. Bench plus table is 18 + 30 = 48, and the aisle is
+  // what is left.
+  put('bench.W',  'bench', [21, 148],   0,  [18, 60, 18], { hollow: true, why: 'seat at 18 in: the underside of a six foot man\'s knee' });
+  put('table',    'table', [39, 148],   27, [30, 36, 2],  { why: 'top at 29 in, overhanging the bench 6 in so knees go under it' });
+  put('table.leg','leg',   [50, 148],   0,  [9, 9, 27],   { why: 'on the aisle edge, out of the knee space' });
 
   // --- bed, y 184..236 -----------------------------------------------------
   put('bed.base', 'bed',      [50.5, 210], 0,  [75, 52, 16], { hollow: true, why: 'platform with storage under' });
   put('mattress', 'mattress', [50.5, 210], 16, [75, 52, 8],  { material: 'fabric', why: '52 in is what the axle left' });
   return log;
+}
+
+/**
+ * The clear bay between two studs nearest a given y, for a wall.
+ *
+ * Blocking spans bay to bay, and anything screwed into a wall cavity — a mixer, a
+ * vent stack — needs a bay found first. Module scope because `venting` needs it as
+ * much as `services` does: a stack strapped to nothing is a stack on the floor.
+ */
+export function studBay(w, wall, nearY) {
+  const us = w.all({ kind: ['stud', 'king', 'jack'] })
+    .filter(e => e.meta.wall === wall)
+    .map(e => ({ lo: e.box.p[1] - e.box.s[1] / 2, hi: e.box.p[1] + e.box.s[1] / 2 }))
+    .sort((a, b) => a.lo - b.lo);
+  let best = null, d = Infinity;
+  for (let i = 0; i < us.length - 1; i++) {
+    const lo = us[i].hi, hi = us[i + 1].lo;
+    if (hi - lo < 6) continue;
+    const mid = (lo + hi) / 2;
+    if (Math.abs(mid - nearY) < d) { d = Math.abs(mid - nearY); best = { lo, hi, mid }; }
+  }
+  return best;
 }
 
 /**
@@ -189,21 +229,6 @@ export function services(w, log = []) {
     }
     return best;
   };
-  // the same reading, for the studs of a wall: blocking has to span bay to bay
-  const studBay = (wall, nearY) => {
-    const us = w.all({ kind: ['stud', 'king', 'jack'] })
-      .filter(e => e.meta.wall === wall)
-      .map(e => ({ lo: e.box.p[1] - e.box.s[1] / 2, hi: e.box.p[1] + e.box.s[1] / 2 }))
-      .sort((a, b) => a.lo - b.lo);
-    let best = null, d = Infinity;
-    for (let i = 0; i < us.length - 1; i++) {
-      const lo = us[i].hi, hi = us[i + 1].lo;
-      if (hi - lo < 6) continue;
-      const mid = (lo + hi) / 2;
-      if (Math.abs(mid - nearY) < d) { d = Math.abs(mid - nearY); best = { lo, hi, mid }; }
-    }
-    return best;
-  };
 
   const Y_LAV = bay(15), Y_BATHTEE = bay(24), Y_SINK = bay(84), Y_SHOWER = bay(26),
         Y_TANK = bay(202), Y_PUMP = bay(196), Y_FRIDGE = bay(104), Y_BATT = bay(228);
@@ -229,38 +254,48 @@ export function services(w, log = []) {
   w.get('tank.fresh').meta.gallons = 65;
   log.push(step(w, 'fixture', { id: 'pump', kind: 'pump', system: 'water', at: [70, 196, D + 5],
     size: [8, 8, 8], layer: 'interior', material: 'steel', hostedBy: 'bed.base' }, '12 V on-demand pump'));
-  log.push(step(w, 'fixture', { id: 'heater', kind: 'heater', system: 'water', at: [94.5, 118, 50],
-    size: [6, 12, 20], layer: 'interior', material: 'steel' }, 'tankless, hung on the galley wall, per the diagram'));
+  // Aft of the base run. It hung at y=118 beside a 20.5 in carcass and fitted; the
+  // carcass is 34.5 in now and the heater was inside a cupboard.
+  log.push(step(w, 'fixture', { id: 'heater', kind: 'heater', system: 'water', at: [94.5, 124, 50],
+    size: [6, 12, 20], layer: 'interior', material: 'steel' }, 'tankless, hung on the galley wall aft of the base run'));
   log.push(step(w, 'source', { id: 'grey.out', system: 'waste', at: [50, 22, MAIN_LO] },
     'grey leaves the building — the sheet lists no grey tank'));
   // a shower is two connections, not one: a valve that takes water and a pan that gives it back
-  const SB = studBay('E', Y_SHOWER);
+  const SB = studBay(w, 'E', Y_SHOWER);
   log.push(step(w, 'place', { id: 'block.shower', kind: 'blocking', layer: 'frame',
     at: [w.walls.E.at, SB.mid, 45], size: [3.5, SB.hi - SB.lo, 5.5], material: 'treated_wood', section: '2x6' },
     'a valve in a stud bay has nothing to screw to until you put blocking between the studs'));
   log.push(step(w, 'fixture', { id: 'shower.valve', kind: 'valve', system: 'water',
     at: [95.5, SB.mid, 45], size: [4, 6, 8], layer: 'interior', material: 'steel' }, 'mixer at 45 in, screwed to the blocking'));
 
+  // Where a supply or a drain actually has to arrive. These were literals — D+15
+  // for the vanity, D+12 for the galley sink — measured off fixtures that have
+  // since been raised to a height a body can use, leaving every riser six to
+  // fourteen inches short of the thing it feeds and the lav reported as connected
+  // to no water at all. A riser goes to the fixture.
+  const under = (id, fallback) => { const e = w.get(id); return e ? +(e.lo[2] + 1).toFixed(2) : fallback; };
+  const LAV_IN = under('lav', D + 15), SINK_IN = under('sink', D + 12);
+
   // --- cold: tank -> pump -> trunk -> fixtures and heater ------------------
   const TEE = [70, 120, COLD];
   log.push(step(w, 'route', { system: 'water', run: 'cold.main', dia: 0.75,
     path: [[42, Y_TANK, D + 8.5], [70, Y_PUMP, D + 5], [70, bay(190), COLD], TEE] }, 'cold trunk forward in the joist bay'));
   log.push(step(w, 'route', { system: 'water', run: 'cold.sink', dia: 0.5,
-    path: [TEE, [86, 100, COLD], [86, Y_SINK, COLD], [86, Y_SINK, D + 12]] }, 'cold up to the galley sink'));
+    path: [TEE, [86, 100, COLD], [86, Y_SINK, COLD], [86, Y_SINK, SINK_IN]] }, 'cold up to the galley sink'));
   log.push(step(w, 'route', { system: 'water', run: 'cold.heater', dia: 0.5,
     path: [TEE, [94.5, 118, COLD], [94.5, 118, 42]] }, 'cold to the tankless heater'));
   const BATH_TEE = [42, Y_BATHTEE, COLD];
   log.push(step(w, 'route', { system: 'water', run: 'cold.bath', dia: 0.5,
-    path: [TEE, [70, 40, COLD], BATH_TEE, [42, Y_LAV, COLD], [42, Y_LAV, D + 15]] }, 'cold on to the vanity'));
+    path: [TEE, [70, 40, COLD], BATH_TEE, [42, Y_LAV, COLD], [42, Y_LAV, LAV_IN]] }, 'cold on to the vanity'));
   log.push(step(w, 'route', { system: 'water', run: 'cold.shower', dia: 0.5,
     path: [BATH_TEE, [95.5, SB.mid, COLD], [95.5, SB.mid, 44]] }, 'cold to the shower'));
 
   // --- hot: heater -> the three fixtures -----------------------------------
   log.push(step(w, 'route', { system: 'water', run: 'hot.sink', dia: 0.5,
-    path: [[94.5, 118, 50], [86, 100, 50], [86, Y_SINK, 50], [86, Y_SINK, D + 14]] }, 'hot back to the galley sink'));
+    path: [[94.5, 118, 50], [86, 100, 50], [86, Y_SINK, 50], [86, Y_SINK, SINK_IN]] }, 'hot back to the galley sink'));
   const HOT_TEE = [42, Y_BATHTEE, HOT];
   log.push(step(w, 'route', { system: 'water', run: 'hot.bath', dia: 0.5,
-    path: [[94.5, 118, 50], [94.5, 118, HOT], [60, 40, HOT], HOT_TEE, [42, Y_LAV, HOT], [42, Y_LAV, D + 15]] }, 'hot forward to the vanity'));
+    path: [[94.5, 118, 50], [94.5, 118, HOT], [60, 40, HOT], HOT_TEE, [42, Y_LAV, HOT], [42, Y_LAV, LAV_IN]] }, 'hot forward to the vanity'));
   log.push(step(w, 'route', { system: 'water', run: 'hot.shower', dia: 0.5,
     path: [HOT_TEE, [95.5, SB.mid, HOT], [95.5, SB.mid, 44]] }, 'hot to the shower'));
 
@@ -268,9 +303,9 @@ export function services(w, log = []) {
   log.push(step(w, 'route', { system: 'waste', run: 'drain.main', dia: 1.5,
     path: [[50, Y_SINK, MAIN_HI], [50, 22, MAIN_LO]] }, `main drain falling ${(60 * FALL).toFixed(2)} in through the joist bay`));
   log.push(step(w, 'route', { system: 'waste', run: 'drain.sink', dia: 1.5,
-    path: [[86, Y_SINK, D + 12], [86, Y_SINK, MAIN_HI], [50, Y_SINK, MAIN_HI]] }, 'galley sink down and across'));
+    path: [[86, Y_SINK, SINK_IN], [86, Y_SINK, MAIN_HI], [50, Y_SINK, MAIN_HI]] }, 'galley sink down and across'));
   log.push(step(w, 'route', { system: 'waste', run: 'drain.lav', dia: 1.25,
-    path: [[42, Y_LAV, D + 11], [42, Y_LAV, drainAt(Y_LAV, 22, MAIN_LO)], [50, 22, MAIN_LO]] }, 'vanity to the exit'));
+    path: [[42, Y_LAV, LAV_IN], [42, Y_LAV, drainAt(Y_LAV, 22, MAIN_LO)], [50, 22, MAIN_LO]] }, 'vanity to the exit'));
   log.push(step(w, 'route', { system: 'waste', run: 'drain.shower', dia: 1.5,
     path: [[80, Y_SHOWER, D], [80, Y_SHOWER, drainAt(80, 50, MAIN_LO)], [50, 22, MAIN_LO]] }, 'the shower pan is the lowest fixture on the trailer'));
 
@@ -334,8 +369,20 @@ export function venting(w, log = []) {
   for (const [t, host] of [['trap.sink', 'cab.galley'], ['trap.lav', 'lav.cab']]) {
     const el = w.get(t); if (el) el.meta.hostedBy = host;   // a trap under a sink is inside the cabinet
   }
-  log.push(step(w, 'vent', { near: 'trap.sink', id: 'vent.stack', at: [w.walls.E.at, 104], size: 2 },
+  // A stack in an open bay has nothing to strap to. It was asserted joined to the
+  // sheathing seven tenths of an inch away, which the support graph will not accept
+  // as contact, and correctly reported as held by nothing. Blocking through the bay
+  // does not work either — the stack runs up the middle of it and a block across
+  // that bay is a block through the pipe. What a plumber does is strap it to a stud,
+  // which is what `hanger` is for: it bridges without moving anything.
+  const VB = studBay(w, 'E', 104);
+  log.push(step(w, 'vent', { near: 'trap.sink', id: 'vent.stack', at: [w.walls.E.at, VB.mid], size: 2 },
     'the stack goes up the wall cavity, clear of the galley window header'));
+  const nearStud = w.all({ kind: ['stud', 'king', 'jack'] })
+    .filter(e => e.meta.wall === 'E')
+    .sort((a, b) => Math.abs((a.lo[1] + a.hi[1]) / 2 - VB.mid) - Math.abs((b.lo[1] + b.hi[1]) / 2 - VB.mid))[0];
+  if (nearStud) log.push(step(w, 'hanger', { id: 'vent.stack', to: nearStud.id },
+    'strapped to the stud beside it'));
   return log;
 }
 

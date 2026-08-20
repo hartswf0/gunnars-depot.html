@@ -40,7 +40,8 @@ export const CODE = {
   egressWindow:  { area: 5.0, least: 22, sill: 44, basis: 'NFPA 1192 6.3; IRC R310.2.1 for a dwelling' },
   toilet:        { front: 21, side: 15, basis: 'IRC R307.1' },
   lav:           { front: 21, basis: 'IRC R307.1' },
-  galley:        { front: 30, basis: 'working space at a counter, conventional' }
+  galley:        { front: 30, basis: 'working space at a counter, conventional' },
+  shower:        { front: 24, basis: 'IRC R307.1 — 24 in in front of a shower opening' }
 };
 
 const between = (v, a, b) => v >= a && v <= b;
@@ -258,7 +259,7 @@ export function egress(world) {
 export function clearances(world, { step = 2 } = {}) {
   const p = plan(world, { step });
   const want = { wc: CODE.toilet.front, lav: CODE.lav.front, sink: CODE.galley.front,
-                 fridge: CODE.galley.front, 'shower.pan': 30 };
+                 fridge: CODE.galley.front, 'shower.pan': CODE.shower.front };
   const out = [];
   for (const [key, need] of Object.entries(want)) {
     let el = world.get(key) || world.all().find(e => e.id === key || e.meta.role === key);

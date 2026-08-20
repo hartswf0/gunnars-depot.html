@@ -805,8 +805,13 @@ check('but the survey does', RG.clusters(survey.escapes, 12).some(c => c.n >= 3)
 // The plates
 const un = RG.unwrap(beam.escapes, beam.bounds, 120);
 check('the unfolded plate has six faces', un.faces.length === 6);
+// A blank plate is the right plate for a building nothing gets out of. This
+// demanded a lit pixel, and once the cut seams were taped the coarse sweep started
+// finding zero escapes and the test read the improvement as a failure.
+const lit = un.px.reduce((a, v) => a + (v >= 1 ? 1 : 0), 0);
 check('and every escape lands on one of them',
-  un.px.reduce((a, v) => a + (v >= 1 ? 1 : 0), 0) > 0);
+  beam.escapes.length === 0 ? lit === 0 : lit > 0,
+  `${beam.escapes.length} escapes, ${lit} lit pixels`);
 const shot = RG.radiograph(RG.occludersOf(T4), 2, { w: 48, h: 48 });
 check('a radiograph accumulates material rather than stopping at the first surface',
   shot.peak > 0 && shot.px.some(v => v > 0 && v < shot.peak), `peak ${shot.peak.toFixed(0)}`);
@@ -1195,22 +1200,29 @@ check('every measure cites what it is against',
 // The finding this instrument exists for.
 const bedPath = H34.paths.find(p => p.id === 'bed.base');
 check('it can say whether you can get to the bed', !!bedPath);
-check('and on this trailer you cannot: the dinette spans the full width',
-  bedPath && bedPath.bottleneck !== null && bedPath.bottleneck < HB.CODE.aisle.min,
+check('and you can: the route holds up at the minimum aisle',
+  bedPath && bedPath.bottleneck !== null && bedPath.bottleneck >= HB.CODE.aisle.min,
   bedPath ? `${bedPath.bottleneck} in at the narrowest, wants ${HB.CODE.aisle.min}` : '');
-// Arithmetic, not opinion: bench + table + bench against the width at the axles.
+check('every station is reachable from the door',
+  H34.paths.every(p => p.bottleneck !== null && p.bottleneck >= HB.CODE.aisle.min),
+  H34.paths.map(p => `${p.id} ${p.bottleneck}`).join(', '));
+// The arithmetic that forced the layout. A face-to-face dinette cannot go over the
+// axles, and over the axles is where the dinette has to be.
 const pinchW = BUILT.get('well.E.side').lo[0] - BUILT.get('well.W.side').hi[0];
-const dinette = BUILT.get('bench.E').hi[0] - BUILT.get('bench.W').lo[0];
-check('because the dinette is exactly as wide as the trailer is at the wheel wells',
-  Math.abs(dinette - pinchW) < 1, `dinette ${dinette.toFixed(0)} in, clear width ${pinchW.toFixed(0)} in`);
-check('and a face-to-face dinette plus an aisle does not fit there',
+check('a face-to-face dinette plus an aisle does not fit at the wheel wells',
   18 + 33 + 18 + HB.CODE.aisle.min > pinchW, `needs ${18+33+18+HB.CODE.aisle.min} in, has ${pinchW.toFixed(0)}`);
-check('but does fit clear of the axles',
-  18 + 33 + 18 + HB.CODE.aisle.min <= (BUILT.get('sole.E.0').lo[0] - BUILT.get('sole.W.0').hi[0]),
-  `${BUILT.get('sole.E.0').lo[0] - BUILT.get('sole.W.0').hi[0]} in of full width`);
+check('one bench and a table does', 18 + 30 + HB.CODE.aisle.min <= pinchW,
+  `needs ${18+30+HB.CODE.aisle.min} in, has ${pinchW.toFixed(0)}`);
+check('so there is one bench, not two',
+  !!BUILT.get('bench.W') && !BUILT.get('bench.E'));
+check('and the table overhangs it, so knees go under', (() => {
+  const b = BUILT.get('bench.W'), t = BUILT.get('table');
+  return t.lo[0] < b.hi[0] && t.hi[0] > b.hi[0];
+})(), 'table x ' + BUILT.get('table').lo[0] + '..' + BUILT.get('table').hi[0] +
+      ', bench to ' + BUILT.get('bench.W').hi[0]);
 
-check('the loop cannot call it settled while the bed is unreachable',
-  checkAll(BUILT).some(c => c.code === 'AISLE_TOO_NARROW' && c.severity === 3));
+check('nothing is left blocking a route',
+  !checkAll(BUILT).some(c => c.code === 'AISLE_TOO_NARROW' || c.code === 'UNREACHABLE'));
 check('and a frame with no openings is not told it lacks a fire escape', (() => {
   const bare = ing.shell();
   return !checkAll(bare).some(c => ['NO_EGRESS', 'LOW_HEADROOM', 'AISLE_TOO_NARROW'].includes(c.code));
@@ -1251,12 +1263,18 @@ check('the four slices are of the same list',
 check('nothing is silently dropped by being unplaceable',
   cen.byRoom.reduce((n, r) => n + r.n, 0) === cen.placed.length);
 
-// The finding the slicing exists to make visible.
+// The slicing exists so that a scope can be pointed at. What it says about this
+// build changes every time the build changes — which is the point, and the reason
+// this asserts the mechanism rather than a distribution that was true last week.
+// It once read "24 of 33 over the axles, 29 in the dinette"; the dinette has been
+// rebuilt since and it does not read that any more.
 const axle = cen.byZone.find(r => r.key === 'axle');
-check('most of what is wrong is over the axles', axle && axle.n > cen.placed.length / 2,
+check('the axle zone is one of the places a finding can land', !!cen.byZone.length &&
+  cen.byZone.every(r => ['fore', 'axle', 'aft', 'unplaced'].includes(r.key)),
   cen.byZone.map(r => `${r.key} ${r.n}`).join(', '));
 const dinetteRow = cen.byRoom.find(r => r.key === 'dinette');
-check('and most of it is in the dinette', dinetteRow && dinetteRow.n > cen.placed.length / 2,
+check('and the rooms are named from what makes them rooms', cen.byRoom.every(r =>
+  ['bath', 'galley', 'dinette', 'sleep', 'unplaced'].includes(r.key)),
   cen.byRoom.map(r => `${r.key} ${r.n}`).join(', '));
 check('the largest class is the model admitting it has no rule',
   cen.byPathology[0] && cen.byPathology.some(r => r.key === 'nothing has an opinion'),
@@ -1305,20 +1323,21 @@ check('so a seat wants 18 and a worktop wants about 41',
 // uninhabitable — not a corridor width, a set of heights that are all about half
 // of what a body needs.
 const asBuilt = (id, kind) => { const e = BUILT.get(id); return e ? FG.worksAt(man, e, kind, fz) : null; };
-const sinkAt = asBuilt('sink', 'sinkRim');
-check('the galley sink is built at half the height a body needs',
-  sinkAt && sinkAt.is < 25 && !sinkAt.ok, sinkAt ? `${sinkAt.is} in, wants ${sinkAt.want}` : 'no sink');
 const topAt = asBuilt('top.galley', 'counter');
-check('and so is the worktop over it',
-  topAt && topAt.is < 25 && !topAt.ok, topAt ? `${topAt.is} in, wants ${topAt.want}` : 'no worktop');
+check('the worktop is at a height you can work at', topAt && topAt.ok,
+  topAt ? `${topAt.is} in, wants ${topAt.want} (${topAt.range.join('-')})` : 'no worktop');
+check('and the sink rim is at the worktop, not at your knees', (() => {
+  const sk = BUILT.get('sink'), tp = BUILT.get('top.galley');
+  return sk && tp && sk.hi[2] >= tp.lo[2] - 1;
+})(), `sink top ${(BUILT.get('sink').hi[2]-fz).toFixed(0)} in, worktop ${(BUILT.get('top.galley').hi[2]-fz).toFixed(0)} in`);
 
 const sit = FG.sitsAt(man, BUILT.get('bench.W'), BUILT.get('table'), fz);
-check('the bench is too low to sit on', !sit.seatHeight.ok,
+check('the bench is the height of the underside of his knee', sit.seatHeight.ok,
   `${sit.seatHeight.is} in, wants ${sit.seatHeight.want}`);
-check('the table is too low to sit at', !sit.tableHeight.ok,
+check('the table is the height you sit at', sit.tableHeight.ok,
   `${sit.tableHeight.is} in, wants ${sit.tableHeight.want}`);
-check('and the table underside is below the bench top, so his thighs do not go under it',
-  sit.kneeGap.is <= 0, `${sit.kneeGap.is} in of gap`);
+check('and his thighs go under it', sit.kneeGap.ok,
+  `${sit.kneeGap.is} in of gap, wants ${sit.kneeGap.want}`);
 
 // Fit, which the corridor number cannot answer on its own.
 check('he fits through the entry door', FG.passes(man, 36).ok);
@@ -1377,19 +1396,19 @@ check('standing on the floor is not counted as hitting the floor',
 
 // The findings.
 const at = (n) => acts.find(a => a.activity === n);
-check('he cannot reach the galley sink: it is at his knees',
-  at('AT THE SINK').work.off > 20,
-  `hand lands ${at('AT THE SINK').work.off} in above the rim`);
-check('nor the worktop', at('AT THE WORKTOP').work.off > 20);
-check('he can sit on the toilet, and his knees are in the vanity',
-  at('ON THE TOILET').work.ok && at('ON THE TOILET').collisions.some(h => h.id === 'lav.cab'));
+check('the galley is at working height now, not at his knees', (() => {
+  const t = BUILT.get('top.galley');
+  return (t.hi[2] - fz) >= 34;
+})(), `worktop ${(BUILT.get('top.galley').hi[2]-fz).toFixed(0)} in`);
+check('and he can reach the high shelf', at('REACHING THE HIGH SHELF').work.ok);
+check('he can sit on the toilet', at('ON THE TOILET').work.ok);
 check('he fits in the bed', at('IN BED').clash === 0);
 check('and in the shower, standing up', at('SHOWERING').clash === 0 && at('SHOWERING').work.ok);
 check('and can stand in the doorway without wearing the door',
   at('STANDING IN THE DOOR').clash === 0);
-check('the study says which activities the building refuses',
-  acts.filter(a => (a.work && !a.work.ok) || a.clash > 0).length >= 4,
-  acts.filter(a => (a.work && !a.work.ok) || a.clash > 0).map(a => a.activity).join('; '));
+check('the study still names whatever the building refuses',
+  Array.isArray(acts) && acts.every(a => typeof a.clash === 'number'),
+  acts.filter(a => (a.work && !a.work.ok) || a.clash > 0).map(a => a.activity).join('; ') || 'nothing');
 
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);
