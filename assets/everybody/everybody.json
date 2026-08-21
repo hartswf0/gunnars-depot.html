@@ -6,29 +6,19 @@
     "work": {
       "bone": "rightHand",
       "want": "basin",
-      "handZ": 67,
-      "surfaceZ": 55,
-      "off": 12,
-      "ok": false
+      "at": [
+        83.3,
+        84,
+        56.8
+      ],
+      "reached": true,
+      "off": 0,
+      "effort": 0.74,
+      "ok": true
     },
-    "clash": 2,
-    "collisions": [
-      {
-        "bone": "leftLowerArm",
-        "id": "wall.bath.E",
-        "kind": "partition",
-        "layer": "interior",
-        "depth": 3.5
-      },
-      {
-        "bone": "leftHand",
-        "id": "wall.bath.E",
-        "kind": "partition",
-        "layer": "interior",
-        "depth": 2.6
-      }
-    ],
-    "ok": false,
+    "clash": 0,
+    "collisions": [],
+    "ok": true,
     "file": "at-the-sink.png"
   },
   {
@@ -38,57 +28,19 @@
     "work": {
       "bone": "rightHand",
       "want": "worktop",
-      "handZ": 68,
-      "surfaceZ": 59,
-      "off": 10,
-      "ok": false
+      "at": [
+        83.3,
+        104,
+        60.8
+      ],
+      "reached": true,
+      "off": 0,
+      "effort": 0.76,
+      "ok": true
     },
-    "clash": 7,
-    "collisions": [
-      {
-        "bone": "rightUpperArm",
-        "id": "chase.flue",
-        "kind": "chase",
-        "layer": "interior",
-        "depth": 6
-      },
-      {
-        "bone": "rightShoulder",
-        "id": "chase.flue",
-        "kind": "chase",
-        "layer": "interior",
-        "depth": 2.7
-      },
-      {
-        "bone": "rightLowerArm",
-        "id": "stud.E.113",
-        "kind": "stud",
-        "layer": "frame",
-        "depth": 1.5
-      },
-      {
-        "bone": "hips",
-        "id": "heater",
-        "kind": "fixture",
-        "layer": "interior",
-        "depth": 1.3
-      },
-      {
-        "bone": "rightUpperLeg",
-        "id": "heater",
-        "kind": "fixture",
-        "layer": "interior",
-        "depth": 0.8
-      },
-      {
-        "bone": "rightLowerLeg",
-        "id": "well.E.side",
-        "kind": "wellside",
-        "layer": "foundation",
-        "depth": 0.8
-      }
-    ],
-    "ok": false,
+    "clash": 0,
+    "collisions": [],
+    "ok": true,
     "file": "cooking.png"
   },
   {
@@ -98,14 +50,19 @@
     "work": {
       "bone": "rightHand",
       "want": "worktop",
-      "handZ": 67,
-      "surfaceZ": 57,
-      "off": 10,
-      "ok": false
+      "at": [
+        82.2,
+        91,
+        58.8
+      ],
+      "reached": true,
+      "off": 0,
+      "effort": 0.74,
+      "ok": true
     },
     "clash": 0,
     "collisions": [],
-    "ok": false,
+    "ok": true,
     "file": "at-the-worktop.png"
   },
   {
@@ -120,17 +77,9 @@
       "off": 0,
       "ok": true
     },
-    "clash": 1,
-    "collisions": [
-      {
-        "bone": "leftLowerArm",
-        "id": "lav.cab",
-        "kind": "fixture",
-        "layer": "interior",
-        "depth": 1.5
-      }
-    ],
-    "ok": false,
+    "clash": 0,
+    "collisions": [],
+    "ok": true,
     "file": "on-the-toilet.png"
   },
   {
@@ -170,18 +119,18 @@
   {
     "activity": "IN BED",
     "at": "mattress",
-    "headTop": 52,
+    "headTop": 59,
     "work": {
       "bone": "hips",
       "want": "mattress",
-      "handZ": 35,
+      "handZ": 41,
       "surfaceZ": 40,
-      "off": -5,
-      "ok": false
+      "off": 2,
+      "ok": true
     },
     "clash": 0,
     "collisions": [],
-    "ok": false,
+    "ok": true,
     "file": "in-bed.png"
   },
   {
@@ -204,26 +153,23 @@
   {
     "activity": "CLEANING THE FLOOR",
     "at": "deck.fore",
-    "headTop": 70,
+    "headTop": 53,
     "work": {
       "bone": "rightHand",
       "want": "the floor",
-      "handZ": 62,
-      "surfaceZ": 16,
-      "off": 47,
-      "ok": false
+      "at": [
+        60.5,
+        57.5,
+        17.8
+      ],
+      "reached": true,
+      "off": 0,
+      "effort": 0.91,
+      "ok": true
     },
-    "clash": 1,
-    "collisions": [
-      {
-        "bone": "rightUpperArm",
-        "id": "wall.bath.E",
-        "kind": "partition",
-        "layer": "interior",
-        "depth": 2.9
-      }
-    ],
-    "ok": false,
+    "clash": 0,
+    "collisions": [],
+    "ok": true,
     "file": "cleaning-the-floor.png"
   },
   {
@@ -233,9 +179,14 @@
     "work": {
       "bone": "rightHand",
       "want": "overhead",
-      "handZ": 74,
-      "surfaceZ": 79,
-      "off": -5,
+      "at": [
+        82.2,
+        91,
+        81.3
+      ],
+      "reached": true,
+      "off": 0,
+      "effort": 0.87,
       "ok": true
     },
     "clash": 0,
