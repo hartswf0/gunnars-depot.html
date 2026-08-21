@@ -237,11 +237,24 @@ const boxOf = (g) => ({
 const GROUND = new Set(['deck', 'joist', 'plate', 'chassis', 'wellcap']);
 const FEET = new Set(['leftFoot', 'rightFoot', 'leftLowerLeg', 'rightLowerLeg']);
 
+/**
+ * Everything a body can walk into — which is not `world.solids()`.
+ *
+ * `solids()` drops openings, ports and **runs**, and runs are the hundred and
+ * thirteen wires and pipes in this trailer. Every collision number in this project
+ * was computed against a building with its services deleted: a man could stand
+ * with his head through a water main and be reported clear. An opening is genuinely
+ * not there; a half-inch PEX line at shoulder height very much is.
+ */
+export function obstacles(world) {
+  return world.all().filter(e => e.kind !== 'opening' && e.kind !== 'port');
+}
+
 export function collisions(world, body, { ignore = new Set(), slack = 0.5 } = {}) {
   const hits = [];
   for (const g of body.segments) {
     const b = boxOf(g);
-    for (const e of world.solids()) {
+    for (const e of obstacles(world)) {
       if (ignore.has(e.id)) continue;
       // Standing on the floor is not a collision with the floor. Reported flat, a
       // seated figure with its feet on the deck came back clashing with the deck,

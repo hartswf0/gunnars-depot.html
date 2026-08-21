@@ -134,7 +134,11 @@ export function interior(w, log = []) {
   // across the bath, and a seated man's knees reach 24 in — straight into whatever
   // was beside it. Facing the length of the room, the knee room is open floor.
   put('wc',        'toilet',  [20, 18], 0,  [28, 20, 17],  { material: 'tile', why: 'composting head facing north, seat at 17 in, 24 in of knee room in front of it' });
-  put('lav.cab',   'cabinet', [46, 15], 0,  [20, 18, 30],  { hollow: true, why: 'vanity beside the head, not in front of it' });
+  // Set back on the axis you approach it from. Recessed in x while the vanity is
+  // walked up to from the north, the toe kick was three inches of nothing on a
+  // face nobody stands at.
+  put('kick.lav',  'plinth',  [46, 13.5], 0, [20, 15, 4], { why: 'plinth, set back 3 in from the face you stand at' });
+  put('lav.cab',   'cabinet', [46, 15], 4,  [20, 18, 26],  { hollow: true, why: 'vanity beside the head, on a toe-kick plinth' });
   put('lav',       'sink',    [46, 15], 21, [16, 14, 8],   { material: 'tile', system: 'water', host: 'lav.cab', why: 'basin undermounted, rim at 29 in' });
   put('shower.pan','shower',  [80, 22], 0,  [34, 32, 3],   { material: 'tile', system: 'waste', why: '34 x 32 pan: 32 deep leaves 26 in to dry off in' });
 
@@ -143,10 +147,16 @@ export function interior(w, log = []) {
   // puts light standing work two to six inches below the elbow, and this man's
   // elbow is at 45.4. A trailer built for one person is the one place there is no
   // argument for the median.
-  put('cab.galley','cabinet', [86, 91],  0,    [23, 46, 39.5], { hollow: true, why: '39.5 in carcass to a 41 in worktop: elbow less four' });
+  // A carcass on a plinth set back three inches. Without a toe kick you cannot get
+  // your feet under the front, so you stand back and lean over the work all day —
+  // the commonest reason a correct worktop height still hurts.
+  put('kick.galley','plinth', [87.5, 91], 0, [20, 46, 4], { kick: 'cab.galley', why: 'plinth, set back 3 in' });
+  put('cab.galley','cabinet', [86, 91],  4,    [23, 46, 35.5], { hollow: true, why: '39.5 in to a 41 in worktop, on a toe-kick plinth' });
   put('top.galley','counter', [86, 91],  39.5, [23, 46, 1.5],  { material: 'stone', why: 'worktop at 41 in — his elbow is at 45' });
   put('sink',      'sink',    [86, 84],  31,   [16, 20, 8],    { material: 'steel', system: 'water', host: 'cab.galley', why: 'undermounted, bowl in the carcass and not through the top' });
-  put('fridge',    'fridge',  [86, 104], 1,    [18, 16, 18],   { material: 'steel', system: 'power', host: 'cab.galley', why: '12 V drawer fridge, off-grid sized' });
+  // Above the knee. At 1 in off the floor you kneel to it every single time, and
+  // that is not a posture the design gets to assume — it is a fault it is hiding.
+  put('fridge',    'fridge',  [86, 104], 21,   [18, 16, 18],   { material: 'steel', system: 'power', host: 'cab.galley', why: '12 V drawer fridge, opening above knee height' });
   put('cooktop',   'range',   [86, 104], 41,   [16, 14, 2],    { material: 'steel', system: 'power', why: 'two burners set on the worktop' });
 
   // --- dinette, y 118..178, inboard of the wheel wells ---------------------
@@ -161,7 +171,12 @@ export function interior(w, log = []) {
   // what is left.
   put('bench.W',  'bench', [21, 148],   0,  [18, 60, 18], { hollow: true, why: 'seat at 18 in: the underside of a six foot man\'s knee' });
   put('table',    'table', [39, 148],   27, [30, 36, 2],  { why: 'top at 29 in, overhanging the bench 6 in so knees go under it' });
-  put('table.leg','leg',   [50, 148],   0,  [9, 9, 27],   { why: 'on the aisle edge, out of the knee space' });
+  // No floor leg. Buttock-knee is 24 in and the seat front is at x=30, so anything
+  // standing on the floor under this top is in the knee space by definition — the
+  // leg at x=50 left 15.5 in of shin room. Carried on a bracket off the bench
+  // instead, which is what a table this size is anyway.
+  put('table.bracket', 'bracket', [28, 148], 18, [10, 30, 9],
+    { why: 'off the bench top to the table underside, so there is nothing on the floor to kick' });
 
   // --- bed, y 184..236 -----------------------------------------------------
   put('bed.base', 'bed',      [50.5, 210], 0,  [75, 52, 16], { hollow: true, why: 'platform with storage under' });
@@ -526,14 +541,25 @@ export function electrical(w, log = []) {
   R('pv.string', [[26, 70, ROOF_TOP], [76, 70, ROOF_TOP], [76, 104.75, ROOF_TOP], [5, 104.75, ROOF_TOP], [5, 104.75, 82], [5, 112.75, 82]], 0.5, 17, '10', 'across both panels, then down through a rafter bay — dropped on the rafter line it bored 0.5 in from its edge');
   R('mppt.bank', [[5, 112.75, 82], [40, 226, D + 8]], 0.6, 30, '8', 'controller to the bank');
   R('bank.inverter', [[40, 226, D + 8], [62, 226, D + 8]], 1.0, 167, '8', 'bank to the inverter');
-  R('bank.dc', [[40, 226, D + 8], [5, 112.75, 60]], 0.6, 40, '8', 'bank to the fuse block');
-  R('inv.ac', [[62, 226, D + 8], [5, 112.75, 70]], 0.5, 17, '12', 'inverter to the breakers', 120);
+  R('bank.dc', [[40, 226, D + 8], [4.25, 226, D + 8], [4.25, 226, 60], [4.25, 112.75, 60], [5, 112.75, 60]],
+    0.6, 40, '8', 'bank to the fuse block, west along the bed base then up the wall');
+  // Against the wall and over your head, never across the room. Routed straight to
+  // the panel, `axial` broke the diagonal into a run at z=70 — fifty-four inches,
+  // chest height — strung across the middle of the trailer for nine feet. Seven
+  // square feet of floor where a standing body walks into a live conductor, and no
+  // collision test in this project could see it, because `solids()` drops runs.
+  R('inv.ac', [[62, 226, D + 8], [4.25, 226, D + 8], [4.25, 226, 70], [4.25, 112.75, 70], [5, 112.75, 70]],
+    0.5, 17, '12', 'inverter to the breakers, west along the bed base then up the wall', 120);
   R('dc.lights', [[5, 112.75, 60], [50.5, 208.75, 104], [50.5, 16.75, 104]], 0.3, 1.5, '18', 'one run down the centre for the pucks');
   R('dc.fridge', [[5, 112.75, 60], [86, 120, 100], [86, 104, D + 8]], 0.3, 3.8, '14', 'fridge circuit');
   R('dc.pumpfeed', [[5, 112.75, 60], [70, 196, D + 5]], 0.3, 5, '14', 'pump circuit');
   R('dc.fan', [[5, 112.75, 60], [80, 30, 100], [80, 16.75, 104]], 0.3, 1.3, '18', 'bath extract');
-  R('ac.outlets', [[5, 112.75, 70], [4.25, 192.75, D + 20], [4.25, 48.75, D + 20]], 0.3, 3, '14', 'outlet ring west, at socket height', 120);
-  R('ac.outlets.e', [[5, 112.75, 70], [96.75, 160.75, D + 20], [96.75, 144.75, D + 20]], 0.3, 3, '14', 'and east', 120);
+  R('ac.outlets', [[5, 112.75, 70], [4.25, 112.75, D + 20], [4.25, 192.75, D + 20], [4.25, 48.75, D + 20]],
+    0.3, 3, '14', 'outlet ring west: down the wall, then along it at socket height', 120);
+  // The one run that has to cross the trailer crosses it in the ceiling, where the
+  // lighting circuit already goes — a hundred inches, twelve above a six foot crown.
+  R('ac.outlets.e', [[5, 112.75, 70], [4.25, 112.75, 100], [96.75, 112.75, 100], [96.75, 160.75, D + 20], [96.75, 144.75, D + 20]],
+    0.3, 3, '14', 'and east, crossing overhead rather than through the room', 120);
   return log;
 }
 

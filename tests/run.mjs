@@ -956,8 +956,8 @@ const holesIn = (c) => c.findings().filter(f => f.kind === 'GAP' || f.kind === '
 // Determinism. Without it nothing below is a measurement — it is a mood.
 const antR1 = ANT.rng(7), antR2 = ANT.rng(7);
 check('the generator repeats for a seed', [0,1,2,3].every(() => antR1() === antR2()));
-const cA = colonise(copyOf(BUILT), { ticks: 140 });
-const cB = colonise(copyOf(BUILT), { ticks: 140 });
+const cA = colonise(copyOf(BUILT), { ticks: 400 });
+const cB = colonise(copyOf(BUILT), { ticks: 400 });
 check('and so does the whole colony',
   JSON.stringify(cA.findings()) === JSON.stringify(cB.findings()),
   `${cA.findings().length} vs ${cB.findings().length}`);
@@ -992,7 +992,9 @@ const antGone = antOpened.all({ kind: 'sheathing' })
   .filter(e => e.meta.wall === 'N')
   .sort((a, b) => (b.hi[0]-b.lo[0])*(b.hi[2]-b.lo[2]) - (a.hi[0]-a.lo[0])*(a.hi[2]-a.lo[2]))[0];
 antOpened.remove(antGone.id);
-const holed2 = holesIn(colonise(antOpened, { ticks: 140 }));
+// 140 ticks is below the colony's own corroboration threshold: intact 2, holed 3,
+// which is noise reported as a measurement. At 400 it is 3 against 13.
+const holed2 = holesIn(colonise(antOpened, { ticks: 400 }));
 check('taking a wall panel off makes the colony find more daylight',
   holed2 > antIntact, `intact ${antIntact}, holed ${holed2}`);
 // The floor, stated. An intact trailer is not silent — the wheel wells are boxes
@@ -1479,6 +1481,68 @@ check('a trailer you cannot do the errands in cannot settle', (() => {
     box: mkbox([50, 116, 60], [96, 4, 88]), meta: { role: 'partition' } }));
   return checkAll(blockedW).some(c => c.code === 'CANNOT_DO_IT' && c.severity === 3);
 })(), 'a slab across the aisle');
+
+// ------------------------------------------- 39. comfort, which is not fit
+group('could you bear to do it for twenty minutes');
+const CF = await import('../operative/comfort.js');
+const fmc = IH.fitMap(BUILT);
+const cf = CF.comfort(BUILT, { fitMap: fmc });
+
+check('every task is judged by a number, not an adjective',
+  cf.tasks.every(t => !t.tests || t.tests.every(x => x.want !== undefined && x.basis)));
+const at39 = (n) => cf.tasks.find(t => t.task === n);
+
+const tab = at39('sit at the table');
+check('you can sit at the table', tab.ok, (tab.failed || []).map(f => `${f.id} ${f.is}`).join(', '));
+check('and there is nothing on the floor under it to kick',
+  tab.tests.find(x => x.id === 'knee room forward').is >= FG.figure(72).buttockKnee,
+  `${tab.tests.find(x => x.id === 'knee room forward').is} in of shin room`);
+check('and room for your elbows', tab.tests.find(x => x.id === 'elbow room each').ok);
+
+const loo = at39('sit on the toilet');
+check('you can sit on the toilet', loo.ok, (loo.failed || []).map(f => `${f.id} ${f.is}`).join(', '));
+check('with the clearances the code asks for',
+  loo.tests.filter(x => /IRC R307/.test(x.basis)).every(x => x.ok));
+
+check('you can use the sink', at39('use the sink').ok,
+  (at39('use the sink').failed || []).map(f => `${f.id} ${f.is}`).join(', '));
+check('you can cook', at39('cook').ok,
+  (at39('cook').failed || []).map(f => `${f.id} ${f.is}`).join(', '));
+check('and both have a toe kick, so you stand at the work instead of leaning over it',
+  CF.toeKick(BUILT, 'cab.galley').depth >= 2.5 && CF.toeKick(BUILT, 'lav.cab').depth >= 2.5,
+  `galley ${CF.toeKick(BUILT, 'cab.galley').depth} in, vanity ${CF.toeKick(BUILT, 'lav.cab').depth} in`);
+check('and the toe kick is measured at the carcass, not at the basin in it',
+  CF.toeKick(BUILT, 'cab.galley').plinth === 'kick.galley');
+
+const fr = at39('use the fridge');
+check('you do not kneel on the floor to open the fridge', fr.ok,
+  (fr.failed || []).map(f => `${f.id} ${f.is}`).join(', '));
+check('nobody has to crouch for something they open every day',
+  fr.tests.some(x => x.id === 'opens above knee height' && x.ok));
+check('but a cupboard under a worktop is not held to that',
+  !at39('use the galley cupboard').tests.some(x => x.id === 'opens above knee height'));
+
+// The services are in the room.
+check('the collision test sees the services at all',
+  EB.obstacles(BUILT).length > BUILT.solids().length,
+  `${EB.obstacles(BUILT).length} obstacles vs ${BUILT.solids().length} solids`);
+check('and runs are among them', EB.obstacles(BUILT).some(e => e.kind === 'run'));
+check('nothing is strung across the room at body height', cf.sweep.strung.length === 0,
+  cf.sweep.strung.map(h => `${h.id} at z ${h.z[0]}-${h.z[1]}`).join(', '));
+check('the sweep stood a body on every square foot it could',
+  cf.sweep.stood > 40, `${cf.sweep.stood} sq ft`);
+check('and a wire clipped to a wall is not reported as one strung through the air',
+  cf.sweep.services.length > cf.sweep.strung.length,
+  `${cf.sweep.services.length} touched, ${cf.sweep.strung.length} in open air`);
+
+// It notices when something is put back in the way.
+check('a conductor run across the room at chest height is caught', (() => {
+  const w39 = copyOf(BUILT);
+  const t = w39.get('table');
+  w39.add(new (t.constructor)({ id: 'test.strung', kind: 'run', layer: 'services', material: 'copper',
+    box: mkbox([50, 150, 54], [80, 0.5, 0.5]), meta: { role: 'conductor' } }));
+  return CF.sweep(w39, { fitMap: fmc }).strung.some(h => h.id === 'test.strung');
+})(), 'a wire at 54 in across the middle');
 
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);
