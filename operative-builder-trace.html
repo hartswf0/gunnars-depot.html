@@ -2,183 +2,251 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0d1014">
-<title>Operative Builder Trace — Gunnar's Depot</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#080a0d">
+<title>OPERATIVE BUILDER TRACE — FUCKED UNTIL PROVEN OTHERWISE</title>
 <link rel="icon" href="assets/branding/favicon.svg">
 <style>
-  :root{ --bg:#0d1014; --pane:#0f151c; --ink:#e8edf3; --dim:#8b97a6; --faint:#5d6975;
-         --line:#1e2732; --hot:#38bdf8; --bad:#ef4444; --warn:#f97316; --good:#86efac;
-         --add:#2de2d0; --chg:#facc15; --rem:#ef4444; --safe-b:env(safe-area-inset-bottom,0px); }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);overflow:hidden;
-    font:13px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  code,pre,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+/* The viewer wears the builder's clothes on purpose. Somebody who has run the loop
+   should recognise this instantly: same monospace, same ink, same world-on-top /
+   correspondence-below, same floating reference card with the suck score on it.
+   The only difference is that nothing here is live — every number is read out of
+   the file. */
+:root{--bg:#080a0d;--panel:#101419f2;--line:#303842;--fg:#edf1f4;--dim:#8f99a3;
+      --hot:#ff5b57;--warn:#efbd4d;--ok:#5fd28b;--cyan:#2de2d0}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 
-  /* ---- frame ---- */
-  #app{display:grid;height:100%;
-    grid-template-columns:212px minmax(0,1fr) 372px;
-    grid-template-rows:auto minmax(0,1fr) auto;
-    grid-template-areas:"head head head" "rail stage talk" "foot foot foot"}
-  header{grid-area:head;display:flex;gap:12px;align-items:baseline;padding:10px 14px;
-    border-bottom:1px solid var(--line);background:#0b1016;flex-wrap:wrap}
-  header b{font-size:12px;letter-spacing:.16em;text-transform:uppercase}
-  header .meta{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
-  header .spacer{flex:1}
-  #rail{grid-area:rail;border-right:1px solid var(--line);overflow:auto;background:#0b1016}
-  #stage{grid-area:stage;position:relative;overflow:hidden;display:flex;flex-direction:column;min-width:0}
-  #talk{grid-area:talk;border-left:1px solid var(--line);overflow:auto;background:#0b1016;min-width:0}
-  footer{grid-area:foot;border-top:1px solid var(--line);background:#0b1016;
-    padding:9px 14px calc(9px + var(--safe-b));display:flex;gap:10px;align-items:center}
+/* ---------- world ---------- */
+#world{position:absolute;inset:0 0 43vh;background:#9fb5c7;overflow:hidden}
+#world canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#shade{position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(#05070a55,transparent 24%,transparent 74%,#05070aaa)}
 
-  /* ---- rail ---- */
-  .railhead{padding:9px 12px 4px;font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint)}
-  .cyc{display:block;width:100%;text-align:left;background:none;border:0;border-left:2px solid transparent;
-    color:#c3ccd6;font:inherit;padding:8px 12px;cursor:pointer}
-  .cyc:hover{background:#141d27}
-  .cyc.on{background:#12242f;border-left-color:var(--hot);color:#fff}
-  .cyc .t{display:flex;gap:8px;align-items:baseline}
-  .cyc .n{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
-  .cyc .s{margin-left:auto;font-size:11px;font-weight:700}
-  .cyc .d{font-size:10px;color:var(--faint);margin-top:2px}
-  .bar{height:3px;background:#1b2530;border-radius:2px;margin-top:5px;overflow:hidden}
-  .bar i{display:block;height:100%;background:linear-gradient(90deg,#f97316,#ef4444)}
+/* the reference is pinned, always, because the whole argument is about it */
+#refCard{position:absolute;z-index:20;top:max(8px,env(safe-area-inset-top));left:8px;width:136px;
+  padding:7px;border:1px solid #404954;border-radius:14px;background:#080a0dea;box-shadow:0 8px 28px #0007}
+#refName{font-size:7px;letter-spacing:.12em;color:var(--dim);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;margin-bottom:5px}
+#refCard img{display:block;width:100%;height:84px;object-fit:cover;border:1px solid #2e353d;
+  border-radius:9px;background:#111;cursor:zoom-in}
+#scoreCap{font-size:7px;letter-spacing:.1em;color:var(--dim);margin-top:7px}
+#worldScore{font-size:34px;font-weight:900;line-height:.95;color:var(--hot)}
+#settled{font-size:7px;margin-top:4px;color:var(--warn);letter-spacing:.08em}
 
-  /* ---- stage ---- */
-  #tabs{display:flex;gap:0;border-bottom:1px solid var(--line);background:#0b1016;flex-wrap:wrap}
-  .tab{background:none;border:0;border-bottom:2px solid transparent;color:var(--dim);font:inherit;
-    font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:8px 12px;cursor:pointer}
-  .tab:hover{color:var(--ink)}
-  .tab.on{color:var(--ink);border-bottom-color:var(--hot)}
-  #panes{flex:1;position:relative;min-height:0;background:#080b0e}
-  .pane{position:absolute;inset:0;display:none}
-  .pane.on{display:block}
-  #gl{width:100%;height:100%;display:block;touch-action:none;cursor:grab}
-  .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;padding:12px;
-    height:100%;overflow:auto;align-content:start}
-  .shot{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#101419}
-  .shot img{width:100%;display:block;background:#080b0e}
-  .shot .cap{padding:6px 9px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
-  .refwrap{height:100%;overflow:auto;padding:12px;display:grid;place-items:center}
-  .refwrap img{max-width:100%;max-height:100%;border:1px solid var(--line);border-radius:8px}
-  #legend{position:absolute;left:10px;bottom:10px;background:#0b1016dd;border:1px solid var(--line);
-    border-radius:8px;padding:7px 10px;font-size:10px;letter-spacing:.06em;color:var(--dim)}
-  #legend s{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
-  #stageNote{position:absolute;right:10px;top:10px;max-width:46%;background:#0b1016dd;
-    border:1px solid var(--line);border-radius:8px;padding:8px 11px;font-size:11px;color:#c3ccd6}
+#stateCard{position:absolute;z-index:18;right:8px;top:max(8px,env(safe-area-inset-top));
+  max-width:calc(100vw - 160px);padding:8px 10px;border:1px solid #3a434d;border-radius:12px;
+  background:#080a0ddd;font-size:7px;line-height:1.5;color:var(--dim);text-transform:uppercase}
+#stateCard b{color:var(--fg)}
+.ok{color:var(--ok)!important}.bad{color:var(--hot)!important}
+.warn{color:var(--warn)!important}.cyan{color:var(--cyan)!important}
 
-  /* ---- transcript ---- */
-  .turn{border-bottom:1px solid var(--line);padding:10px 13px}
-  .turn.now{background:#101c26;box-shadow:inset 2px 0 0 var(--hot)}
-  .who{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);
-    display:flex;gap:7px;align-items:baseline;margin-bottom:5px}
-  .who b{letter-spacing:.16em}
-  .who .t{margin-left:auto;font-size:9px;color:#3f4a56}
-  .who.prompt b{color:#7dd3fc} .who.reply b{color:#86efac}
-  .who.receipt b{color:#facc15} .who.critic b{color:#fca5a5} .who.err b{color:var(--bad)}
-  .body{white-space:pre-wrap;word-break:break-word;font-size:12px;line-height:1.5;color:#c8d2dc}
-  .body.mono{font-size:11px;line-height:1.45}
-  .fold{max-height:8.4em;overflow:hidden;position:relative}
-  .fold:after{content:"";position:absolute;left:0;right:0;bottom:0;height:2.6em;
-    background:linear-gradient(#0b101600,#0b1016)}
-  .turn.now .fold:after{background:linear-gradient(#101c2600,#101c26)}
-  .more{background:none;border:0;color:var(--hot);font:inherit;font-size:10px;letter-spacing:.1em;
-    text-transform:uppercase;padding:5px 0 0;cursor:pointer}
-  .score{font-size:22px;font-weight:800;line-height:1}
-  .rowsplit{display:flex;gap:10px;align-items:flex-start}
-  .pill{display:inline-block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;
-    padding:2px 7px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}
-  .pill.ok{border-color:#1d4d31;color:var(--good)} .pill.no{border-color:#5b1d1d;color:#fca5a5}
+/* what the critic was actually shown — on the glass, never behind a tab */
+#shots{position:absolute;z-index:19;left:8px;bottom:96px;display:flex;gap:6px;
+  max-width:calc(100vw - 16px);overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
+#shots::-webkit-scrollbar{display:none}
+.shot{flex:0 0 118px;scroll-snap-align:start}
+.shot img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;
+  border:1px solid #343d47;background:#111;cursor:zoom-in}
+.shot span{display:block;margin-top:3px;color:var(--dim);font-size:6.5px;letter-spacing:.08em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-  /* ---- transport ---- */
-  button.ctl{background:#16202c;border:1px solid #263445;color:var(--ink);font:inherit;font-size:12px;
-    padding:6px 11px;border-radius:8px;cursor:pointer}
-  button.ctl:hover{background:#1c2836}
-  button.ctl.on{background:#16334a;border-color:#2f6d96}
-  #scrub{flex:1;-webkit-appearance:none;appearance:none;height:24px;background:transparent;min-width:60px}
-  #scrub::-webkit-slider-runnable-track{height:3px;background:#243141;border-radius:2px}
-  #scrub::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;
-    background:var(--hot);margin-top:-6px}
-  #scrub::-moz-range-track{height:3px;background:#243141;border-radius:2px}
-  #scrub::-moz-range-thumb{width:15px;height:15px;border:0;border-radius:50%;background:var(--hot)}
-  #pos{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
-  select,input[type=file]{background:#16202c;border:1px solid #263445;color:var(--ink);font:inherit;
-    font-size:11px;padding:5px 8px;border-radius:7px}
+#empty{position:absolute;z-index:16;left:50%;top:46%;transform:translate(-50%,-50%);display:none;
+  text-align:center;font-size:11px;letter-spacing:.2em;color:#3d4a52}
+#empty.on{display:block}
+#empty span{display:block;max-width:300px;margin:7px auto 0;font-size:7px;letter-spacing:.06em;
+  line-height:1.6;color:#4d5a63;text-transform:none}
+#nowCard{position:absolute;z-index:19;left:152px;right:8px;top:max(84px,calc(env(safe-area-inset-top) + 76px));
+  border:1px solid #3a434d;border-radius:12px;background:#080a0de8;padding:8px 10px;pointer-events:none}
+#phaseLabel{display:block;font-size:8px;letter-spacing:.16em;color:var(--cyan);margin-bottom:3px}
+#phaseText{display:block;font-size:9px;line-height:1.4;color:#e7edf2;max-height:3.9em;overflow:hidden}
 
-  /* ---- docs ---- */
-  #docs{position:fixed;inset:0;z-index:30;background:#080b0ef2;overflow:auto;display:none;padding:40px 20px}
-  #docs.on{display:block}
-  .sheet{max-width:860px;margin:0 auto;background:var(--pane);border:1px solid var(--line);
-    border-radius:12px;padding:26px 30px}
-  .sheet h2{font-size:15px;letter-spacing:.1em;text-transform:uppercase;margin:0 0 4px}
-  .sheet h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);
-    margin:24px 0 7px;border-top:1px solid var(--line);padding-top:16px}
-  .sheet p{color:#c3ccd6;margin:0 0 10px}
-  .sheet pre{background:#0a0e13;border:1px solid var(--line);border-radius:8px;padding:12px;
-    overflow:auto;font-size:11px;color:#a7b4c0;margin:0 0 10px}
-  .sheet li{color:#c3ccd6;margin-bottom:5px}
-  .sheet a{color:var(--hot)}
-  #boot{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:var(--bg);
-    color:var(--dim);font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+#makingBar{position:absolute;z-index:18;left:8px;right:8px;bottom:54px;display:grid;
+  grid-template-columns:36px minmax(0,1fr) 78px;grid-template-rows:24px 18px;gap:3px 7px;
+  align-items:center;padding:5px 7px;border:1px solid #39424d;border-radius:11px;
+  background:#080a0de8;backdrop-filter:blur(8px)}
+#makingNote{grid-column:1/-1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  color:#c6ced5;font-size:7px;letter-spacing:.05em}
+#tracePlay{grid-row:2;min-height:18px;border:0;background:transparent;color:var(--fg);font-size:10px;padding:0}
+#traceScrub{grid-row:2;width:100%;height:18px;accent-color:var(--cyan)}
+#traceTick{grid-row:2;text-align:right;color:var(--dim);font-size:7px;font-variant-numeric:tabular-nums}
 
-  @media (max-width:1080px){
-    #app{grid-template-columns:1fr;grid-template-rows:auto auto minmax(0,1.1fr) minmax(0,1fr) auto;
-      grid-template-areas:"head" "rail" "stage" "talk" "foot"}
-    #rail{border-right:0;border-bottom:1px solid var(--line);display:flex;overflow-x:auto;max-height:none}
-    #rail .railhead{display:none}
-    .cyc{min-width:132px;border-left:0;border-bottom:2px solid transparent}
-    .cyc.on{border-left:0;border-bottom-color:var(--hot)}
-    #talk{border-left:0;border-top:1px solid var(--line)}
-  }
+#worldButtons{position:absolute;z-index:18;right:8px;bottom:8px;display:flex;gap:5px}
+.wbtn{min-height:36px;padding:0 10px;border:1px solid #39424d;border-radius:10px;
+  background:#101419e8;color:var(--fg);font-size:8px}
+.wbtn.on{background:var(--cyan);border-color:var(--cyan);color:#061210}
+#diffLegend{position:absolute;z-index:17;left:8px;bottom:8px;padding:6px 8px;border:1px solid #39424d;
+  border-radius:9px;background:#080a0ddd;font-size:7px;letter-spacing:.08em}
+#diffLegend .a{color:var(--cyan)}#diffLegend .c{color:var(--warn)}#diffLegend .r{color:var(--hot)}
+
+/* ---------- correspondence ---------- */
+#console{position:absolute;left:0;right:0;bottom:0;height:43vh;background:#080a0df8;
+  border-top:1px solid #313943;display:grid;grid-template-rows:31px minmax(0,1fr);
+  padding-bottom:env(safe-area-inset-bottom)}
+#ledger{display:flex;gap:12px;align-items:center;padding:0 9px;border-bottom:1px solid #252c34;
+  overflow:auto;white-space:nowrap;font-size:7px;color:var(--dim);text-transform:uppercase}
+#ledger b{color:var(--fg)}
+#ledger select{background:#151a20;border:1px solid #39424d;border-radius:8px;color:var(--fg);
+  font-size:7px;padding:3px 6px;text-transform:none}
+#ledger button,#ledger label.btn{background:#151a20;border:1px solid #39424d;border-radius:8px;
+  color:var(--fg);font-size:7px;padding:4px 8px;cursor:pointer}
+#agents{display:grid;grid-template-columns:1fr 1fr;min-height:0}
+.agent{display:grid;grid-template-rows:26px minmax(0,1fr);min-width:0}
+.agent:first-child{border-right:1px solid #252c34}
+.agentHead{padding:7px 8px;border-bottom:1px solid #252c34;font-size:8px;letter-spacing:.14em}
+.log{overflow:auto;padding:6px}
+.msg{padding:6px;margin-bottom:6px;border:1px solid #2b333c;border-radius:8px;background:#101419;
+  font-size:7.5px;line-height:1.42;white-space:pre-wrap;word-break:break-word;cursor:pointer}
+.msg .r{display:block;color:var(--dim);font-size:6.5px;letter-spacing:.12em;margin-bottom:3px}
+.msg.critic{border-color:#573030}
+.msg.bridge{border-color:#62502e;border-style:dashed}
+.msg.receipt{border-style:dashed;color:#b4bdc5}
+.msg.err{border-color:#7a3232;color:#ffb0ad}
+.msg.now{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan) inset}
+.msg .sc{float:right;font-size:15px;font-weight:900;line-height:1;margin-left:6px}
+.msg .pill{display:inline-block;font-size:6.5px;letter-spacing:.08em;padding:1px 5px;border-radius:99px;
+  border:1px solid #39424d;color:var(--dim);margin:3px 3px 0 0}
+.msg .pill.y{border-color:#2f5b3f;color:var(--ok)}
+.msg .pill.n{border-color:#5b2f2f;color:var(--hot)}
+.clip{max-height:9.6em;overflow:hidden}
+.mobileHint{display:none;color:var(--cyan)}
+
+/* ---------- overlays ---------- */
+#lightbox{position:fixed;z-index:200;inset:0;background:#05070af5;display:none;
+  place-items:center;padding:20px;cursor:zoom-out}
+#lightbox.on{display:grid}
+#lightbox img{max-width:100%;max-height:100%;border:1px solid #3b4650;border-radius:12px}
+#lightbox b{position:fixed;top:14px;left:50%;transform:translateX(-50%);font-size:8px;
+  letter-spacing:.14em;color:var(--dim)}
+#docs{position:fixed;z-index:210;inset:4vh 8px 8px;background:#080a0df7;border:1px solid #3b4650;
+  border-radius:16px;box-shadow:0 18px 70px #000c;display:none;grid-template-rows:50px minmax(0,1fr);
+  overflow:hidden}
+#docs.on{display:grid}
+#docsHead{display:flex;align-items:center;justify-content:space-between;padding:0 12px;
+  border-bottom:1px solid var(--line);font-size:10px;letter-spacing:.12em}
+#docsHead button{min-height:34px;border:1px solid #39424d;border-radius:9px;background:#151a20;
+  color:var(--fg);font-size:7px;padding:0 10px}
+#docsBody{overflow:auto;padding:14px}
+#docsBody h3{font-size:8px;letter-spacing:.15em;color:var(--warn);margin:18px 0 6px}
+#docsBody p,#docsBody li{font-size:8.5px;line-height:1.6;color:#b8c1c9;margin:0 0 8px}
+#docsBody pre{background:#0a0e13;border:1px solid var(--line);border-radius:9px;padding:10px;
+  overflow:auto;font-size:7.5px;line-height:1.5;color:#a7b4c0;white-space:pre-wrap}
+#docsBody a{color:var(--cyan)}
+#boot{position:fixed;z-index:300;inset:0;display:grid;place-items:center;background:var(--bg);
+  color:var(--dim);font-size:9px;letter-spacing:.14em;text-transform:uppercase;text-align:center;padding:20px}
+
+/* ---------- mobile: model on top, chat underneath ---------- */
+@media(max-width:600px){
+  html,body{height:auto;min-height:100%;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:auto}
+  #world{position:relative;inset:auto;height:70svh;min-height:500px}
+  #console{position:relative;left:auto;right:auto;bottom:auto;height:auto;min-height:60svh;display:block;
+    padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+  #refCard{width:104px;padding:6px;border-radius:12px}
+  #refCard img{height:60px}
+  #refName,#scoreCap,#settled{font-size:6.5px}
+  #worldScore{font-size:28px}
+  #stateCard{left:120px;right:8px;max-width:none;font-size:6.6px;line-height:1.4;max-height:64px;
+    overflow:hidden;padding:6px 8px}
+  /* Stacked from the bottom edge up, in this order and with no overlaps:
+     buttons 8 · bar 54 · shots 100 · phase 186. Laid out by eye instead, the phase
+     card sat underneath the three captures and neither could be read. */
+  #nowCard{left:8px;right:8px;top:auto;bottom:186px;padding:6px 8px}
+  #phaseLabel{font-size:7px}
+  #phaseText{max-height:2.7em;font-size:8.5px;line-height:1.35}
+  #shots{left:8px;right:8px;bottom:100px;max-width:none}
+  .shot{flex:0 0 29vw}
+  .shot span{font-size:6px}
+  #makingBar{bottom:58px;grid-template-columns:38px minmax(0,1fr) 74px;padding:6px 8px}
+  #makingNote{font-size:7.5px}
+  .wbtn{min-height:42px;padding:0 8px;font-size:7.2px}
+  #diffLegend{font-size:6.5px;max-width:150px}
+  #ledger{height:38px;position:sticky;top:0;z-index:30;background:#080a0dfb;font-size:7.5px}
+  /* the two correspondents become swipeable full-width columns, as in the builder */
+  #agents{height:auto;display:flex;grid-template-columns:none;overflow-x:auto;
+    scroll-snap-type:x mandatory;scrollbar-width:none}
+  #agents::-webkit-scrollbar{display:none}
+  .agent{flex:0 0 92vw;min-width:92vw;height:56svh;min-height:400px;
+    grid-template-rows:34px minmax(0,1fr);scroll-snap-align:start}
+  .agentHead{padding:10px 11px;font-size:9px}
+  .mobileHint{display:inline}
+  .log{padding:9px 10px}
+  .msg{padding:10px;margin-bottom:10px;border-radius:10px;font-size:10.5px;line-height:1.52}
+  .msg .r{font-size:7.5px;margin-bottom:5px}
+  .msg .sc{font-size:20px}
+  .clip{max-height:11em}
+}
 </style>
 </head>
 <body>
 <div id="boot">reading the trace…</div>
-<div id="app">
-  <header>
-    <b>Operative Builder Trace</b>
-    <span class="meta" id="hIntent">—</span>
-    <span class="meta" id="hModel">—</span>
-    <span class="meta" id="hCount">—</span>
-    <span class="spacer"></span>
-    <select id="pick" title="which run"></select>
-    <label class="ctl" style="cursor:pointer;padding:5px 9px;font-size:11px">open a trace…
-      <input id="file" type="file" accept="application/json" hidden></label>
-    <button class="ctl" id="docsBtn">how to read this</button>
-  </header>
 
-  <nav id="rail"><div class="railhead">cycles</div><div id="cycles"></div></nav>
+<div id="world">
+  <canvas id="gl"></canvas>
+  <div id="shade"></div>
 
-  <section id="stage">
-    <div id="tabs">
-      <button class="tab on" data-pane="world">world · rebuilt</button>
-      <button class="tab" data-pane="shots">what it saw</button>
-      <button class="tab" data-pane="ref">the reference</button>
-    </div>
-    <div id="panes">
-      <div class="pane on" data-pane="world"><canvas id="gl"></canvas>
-        <div id="legend"><s style="background:var(--add)"></s>added
-          <s style="background:var(--chg);margin-left:9px"></s>changed
-          <s style="background:#3a4653;margin-left:9px"></s>kept</div>
-        <div id="stageNote"></div>
-      </div>
-      <div class="pane" data-pane="shots"><div class="shots" id="shots"></div></div>
-      <div class="pane" data-pane="ref"><div class="refwrap"><img id="refimg" alt="reference"></div></div>
-    </div>
-  </section>
+  <div id="refCard">
+    <div id="refName">—</div>
+    <img id="refimg" alt="the reference">
+    <div id="scoreCap">SUCK SCORE</div>
+    <div id="worldScore">—</div>
+    <div id="settled">FUCKED UNTIL PROVEN OTHERWISE</div>
+  </div>
 
-  <aside id="talk"></aside>
+  <div id="stateCard">—</div>
 
-  <footer>
-    <button class="ctl" id="play">▶ play</button>
-    <button class="ctl" id="prev">←</button>
-    <button class="ctl" id="next">→</button>
-    <input id="scrub" type="range" min="0" max="0" value="0">
-    <span id="pos">—</span>
-  </footer>
+  <div id="nowCard">
+    <span id="phaseLabel">—</span>
+    <span id="phaseText">—</span>
+  </div>
+
+  <div id="empty">NOTHING WAS BUILT<span>the world rejected every operation — the blank captures below are the truth, not a fault in this page</span></div>
+
+  <div id="shots"></div>
+
+  <div id="makingBar">
+    <div id="makingNote">—</div>
+    <button id="tracePlay">▶</button>
+    <input id="traceScrub" type="range" min="0" max="0" value="0">
+    <div id="traceTick">—</div>
+  </div>
+
+  <div id="diffLegend"><span class="a">■</span> ADDED &nbsp;<span class="c">■</span> CHANGED
+    &nbsp;<span class="r">■</span> REMOVED</div>
+  <div id="worldButtons">
+    <button class="wbtn" id="spinBtn">SPIN</button>
+    <button class="wbtn" id="docsBtn">READ ME</button>
+  </div>
 </div>
 
-<div id="docs"><div class="sheet" id="docsBody"></div></div>
+<div id="console">
+  <div id="ledger">
+    <span>TRACE <b id="lIntent">—</b></span>
+    <span>MODEL <b id="lModel">—</b></span>
+    <span>CYCLE <b id="lCycle">—</b></span>
+    <span>OBJECTS <b id="lObjects">—</b></span>
+    <span>Δ <b id="lDiff">—</b></span>
+    <select id="pick"></select>
+    <label class="btn">OPEN A TRACE<input id="file" type="file" accept="application/json" hidden></label>
+  </div>
+  <div id="agents">
+    <div class="agent">
+      <div class="agentHead">BUILDER <span style="color:var(--dim)">— answers only in JSON</span><span class="mobileHint"> · SWIPE FOR THE CRITIC →</span></div>
+      <div class="log" id="builderLog"></div>
+    </div>
+    <div class="agent">
+      <div class="agentHead" style="color:var(--hot)">CRITIC <span style="color:var(--dim)">— fucked until proven otherwise</span></div>
+      <div class="log" id="criticLog"></div>
+    </div>
+  </div>
+</div>
+
+<div id="lightbox"><b id="lbCap"></b><img id="lbImg" alt=""></div>
+<div id="docs">
+  <div id="docsHead"><span>HOW TO READ A TRACE</span><button id="docsClose">CLOSE</button></div>
+  <div id="docsBody"></div>
+</div>
 
 <script type="importmap">
 { "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/" } }
@@ -186,79 +254,67 @@
 <script type="module">
 import * as THREE from 'three';
 
-// ---------------------------------------------------------------- the trace
+// OPERATIVE_BUILDER_TRACE_V1 — a complete record of one argument. A reference
+// photograph is pinned; a BUILDER may answer only in JSON operations on a world of
+// primitives; a CRITIC is told the building is fucked until proven otherwise, is
+// shown the render against the reference, and returns a suck score and one concrete
+// accusation. The accusation becomes the next prompt.
 //
-// OPERATIVE_BUILDER_TRACE_V1 is a complete record of one correspondence: a
-// reference photograph, a BUILDER that may only answer in JSON operations, a
-// CRITIC that is told the building is fucked until proven otherwise, and the
-// argument between them until somebody stops.
-//
-// Everything below is read out of the file. Nothing is re-run and nothing is
-// re-scored — this is a viewer, not a judge — with one exception that is not a
-// judgement: the world is rebuilt in 3D from the object list each cycle carries,
-// because a 36 kB thumbnail of a castle is not a castle you can walk round.
+// Nothing here is re-run and nothing is re-scored. This is a reader, not a judge —
+// with one exception that is not a judgement: the world is rebuilt in 3D from the
+// object list each cycle carries, because a 36 kB thumbnail of a castle is not a
+// castle you can turn round.
 
 const $ = (s) => document.querySelector(s);
-const INDEX = 'assets/traces/index.json';
-let idx = null, trace = null, moments = [], at = 0, playing = false, timer = null;
+const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const clock = (ts) => new Date(ts).toISOString().slice(11, 19);
+let idx = null, trace = null, moments = [], at = 0, playing = false, timer = null, spin = true;
 
-// ------------------------------------------------------------ the timeline
-//
-// The file keeps four parallel logs — builder turns, critic turns, per-cycle
-// history, and events — each independently timestamped. Read separately they are
-// four accounts of the same argument; interleaved by their own clocks they are the
-// argument. That interleaving is the whole point of this page, so it is done once,
-// here, and everything else just renders a moment.
+// --------------------------------------------------------------- timeline
+// The file keeps four independently timestamped logs — builder turns, critic turns,
+// per-cycle history, events. Read separately they are four accounts of the same
+// argument; interleaved by their own clocks they are the argument.
 function timeline(t) {
-  const out = [];
   const T = (s) => (s ? Date.parse(s) : 0);
   const cycleOf = (ts) => {
     let c = t.history[0] ? t.history[0].cycle : 1;
     for (const h of t.history) if (T(h.ts) <= ts + 1) c = h.cycle;
     return c;
   };
+  const out = [];
   for (const b of t.builder_log || []) {
     const ts = T(b.ts);
-    const kind = b.cls === 'receipt' ? 'receipt'
-      : b.cls === 'bridge' ? 'bridge'
-      : b.role === 'error' ? 'error'
-      : b.role === 'assistant' ? 'reply' : 'prompt';
-    out.push({ ts, cycle: cycleOf(ts), kind, who: kind === 'bridge' ? 'critic → builder' : 'builder', text: b.text });
+    const kind = b.cls === 'receipt' ? 'receipt' : b.cls === 'bridge' ? 'bridge'
+      : b.role === 'error' ? 'error' : b.role === 'assistant' ? 'reply' : 'prompt';
+    out.push({ ts, cycle: cycleOf(ts), side: kind === 'bridge' ? 'critic' : 'builder', kind, text: b.text });
   }
   for (const c of t.critic_log || []) {
     const ts = T(c.ts);
-    out.push({ ts, cycle: cycleOf(ts), who: 'critic',
+    out.push({ ts, cycle: cycleOf(ts), side: 'critic',
       kind: c.role === 'assistant' ? 'verdict' : 'observe', text: c.text });
   }
-  // The render belongs to the moment the cycle closed: that is when the shots were
-  // taken and when the world the critic is about to look at came into being.
   for (const h of t.history)
-    out.push({ ts: T(h.ts), cycle: h.cycle, who: 'world', kind: 'render', history: h,
-      text: h.summary || '' });
+    out.push({ ts: T(h.ts), cycle: h.cycle, side: 'builder', kind: 'render', history: h, text: h.summary || '' });
   out.sort((a, b) => a.ts - b.ts || (a.kind === 'render' ? -1 : 0));
   return out;
 }
+const worldAt = (i) => { for (let k = i; k >= 0; k--) if (moments[k].kind === 'render') return moments[k].history; return null; };
 
-/** The last cycle record at or before this moment — what is standing right now. */
-function worldAt(i) {
-  for (let k = i; k >= 0; k--) if (moments[k].kind === 'render') return moments[k].history;
-  return null;
-}
-
-// ------------------------------------------------------------ the rebuild
+// --------------------------------------------------------------- the rebuild
 const renderer = new THREE.WebGLRenderer({ canvas: $('#gl'), antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x080b0e);
-const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 800);
-scene.add(new THREE.HemisphereLight(0xdfe9f5, 0x141a20, 1.1));
-const sun = new THREE.DirectionalLight(0xffffff, 1.0); sun.position.set(24, 40, 22); scene.add(sun);
-const rim = new THREE.DirectionalLight(0x9fc6ff, .35); rim.position.set(-30, 16, -26); scene.add(rim);
-const worldGroup = new THREE.Group(); scene.add(worldGroup);
-const grid = new THREE.GridHelper(80, 40, 0x1e2732, 0x141c25);
-grid.material.transparent = true; grid.material.opacity = .5; scene.add(grid);
+scene.background = new THREE.Color(0x9fb5c7);            // the builder's own sky
+const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 900);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x6d7a84, 1.15));
+const sun = new THREE.DirectionalLight(0xfff6e8, 1.05); sun.position.set(26, 42, 20); scene.add(sun);
+const rim = new THREE.DirectionalLight(0xbcd6f5, .4); rim.position.set(-30, 18, -26); scene.add(rim);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400),
+  new THREE.MeshStandardMaterial({ color: 0x8fa392, roughness: 1 }));
+ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; scene.add(ground);
+const worldGroup = new THREE.Group(), rings = new THREE.Group(); scene.add(worldGroup, rings);
 
-const orbit = { az: -0.72, el: 0.42, dist: 46, target: new THREE.Vector3(0, 3, 0) };
+const orbit = { az: -0.75, el: 0.36, dist: 46, target: new THREE.Vector3(0, 3, 0) };
 function placeCamera() {
   const c = Math.cos(orbit.el);
   camera.position.set(orbit.target.x + orbit.dist * Math.cos(orbit.az) * c,
@@ -267,14 +323,8 @@ function placeCamera() {
   camera.lookAt(orbit.target);
 }
 
-/**
- * One trace object → one mesh.
- *
- * The five primitives the BUILDER is allowed are box, cylinder, cone, sphere and
- * gable. Four are stock three.js; a gable is not, so it is built as a prism —
- * which is what the builder means by it and what it was rendered as when the
- * critic looked.
- */
+/** The five primitives the builder is allowed. A gable is a prism, which is what it
+ *  means by it and what it was rendered as when the critic looked. */
 function meshFor(o) {
   const [sx, sy, sz] = o.size || [1, 1, 1];
   let g;
@@ -284,353 +334,317 @@ function meshFor(o) {
   else if (o.primitive === 'gable') {
     const s = new THREE.Shape();
     s.moveTo(-sx / 2, -sy / 2); s.lineTo(sx / 2, -sy / 2); s.lineTo(0, sy / 2); s.closePath();
-    g = new THREE.ExtrudeGeometry(s, { depth: sz, bevelEnabled: false });
-    g.translate(0, 0, -sz / 2);
+    g = new THREE.ExtrudeGeometry(s, { depth: sz, bevelEnabled: false }); g.translate(0, 0, -sz / 2);
   } else g = new THREE.BoxGeometry(sx, sy, sz);
   const metal = o.material === 'metal';
-  const m = new THREE.MeshStandardMaterial({ color: new THREE.Color(o.color || '#9aa3ad'),
-    roughness: metal ? .35 : .88, metalness: metal ? .6 : .04 });
-  const mesh = new THREE.Mesh(g, m);
+  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({
+    color: new THREE.Color(o.color || '#9aa3ad'), roughness: metal ? .35 : .9, metalness: metal ? .6 : .04 }));
   const [px, py, pz] = o.position || [0, 0, 0];
-  mesh.position.set(px, py, pz);
-  mesh.rotation.y = o.rotation_y || 0;
-  const [ax, ay, az] = o.scale || [1, 1, 1];
-  mesh.scale.set(ax, ay, az);
-  mesh.userData = o;
-  return mesh;
-}
-
-const outlines = new THREE.Group(); scene.add(outlines);
-function drawWorld(h) {
-  worldGroup.clear(); outlines.clear();
-  if (!h) return;
-  const objs = h.afterWorld && h.afterWorld.length ? h.afterWorld : [];
-  const added = new Set((h.diff && h.diff.added) || []);
-  const changed = new Set((h.diff && h.diff.changed) || []);
-  for (const o of objs) {
-    const m = meshFor(o);
-    worldGroup.add(m);
-    // What this move did, shown on the thing it did it to. The trace's own diff —
-    // not a re-derivation, so the ring is around exactly what the critic was told
-    // had changed.
-    const ring = added.has(o.id) ? 0x2de2d0 : changed.has(o.id) ? 0xfacc15 : null;
-    if (ring) {
-      const box = new THREE.Box3().setFromObject(m);
-      const hx = new THREE.Box3Helper(box, new THREE.Color(ring));
-      hx.material.transparent = true; hx.material.opacity = .95; hx.material.depthTest = false;
-      hx.renderOrder = 5; outlines.add(hx);
-    }
-  }
-  frame(objs);
+  m.position.set(px, py, pz); m.rotation.y = o.rotation_y || 0;
+  const [ax, ay, az] = o.scale || [1, 1, 1]; m.scale.set(ax, ay, az);
+  return m;
 }
 
 let framed = null;
-function frame(objs) {
-  if (!objs || !objs.length) return;
-  const b = new THREE.Box3().setFromObject(worldGroup);
-  if (!b.isEmpty()) {
-    const c = b.getCenter(new THREE.Vector3()), s = b.getSize(new THREE.Vector3());
-    orbit.target.copy(c);
-    const want = Math.max(s.x, s.y, s.z) * 1.5 + 8;
-    // Hold the framing steady across a run so the eye can see the castle change
-    // rather than the camera move. It only opens out, never in.
-    orbit.dist = framed ? Math.max(framed, want) : want;
-    framed = orbit.dist;
+function drawWorld(h) {
+  worldGroup.clear(); rings.clear();
+  if (!h) return;
+  const objs = (h.afterWorld && h.afterWorld.length) ? h.afterWorld : [];
+  const added = new Set((h.diff && h.diff.added) || []);
+  const changed = new Set((h.diff && h.diff.changed) || []);
+  for (const o of objs) {
+    const m = meshFor(o); worldGroup.add(m);
+    // What this move did, ringed on the thing it did it to — taken from the trace's
+    // own diff, not re-derived, so it marks exactly what the critic was told changed.
+    const col = added.has(o.id) ? 0x2de2d0 : changed.has(o.id) ? 0xefbd4d : null;
+    if (col) {
+      const hx = new THREE.Box3Helper(new THREE.Box3().setFromObject(m), new THREE.Color(col));
+      hx.material.depthTest = false; hx.material.transparent = true; hx.renderOrder = 5; rings.add(hx);
+    }
+  }
+  if (objs.length) {
+    const b = new THREE.Box3().setFromObject(worldGroup);
+    if (!b.isEmpty()) {
+      orbit.target.copy(b.getCenter(new THREE.Vector3()));
+      const s = b.getSize(new THREE.Vector3());
+      // A phone is portrait and a castle is wide, so the horizontal fit is the one
+      // that decides. Framed on the largest dimension alone, the whole thing came
+      // back cropped to two towers on any screen narrower than it was tall.
+      const aspect = Math.max(0.35, camera.aspect || 1);
+      const span = Math.max(s.x, s.z);
+      const fitH = (span / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2) * aspect);
+      const fitV = (Math.max(s.y, span * 0.6) / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+      const want = Math.max(fitH, fitV) * 1.35 + 6;
+      // Held steady across a run, and only ever opened out, so the eye watches the
+      // castle change rather than the camera move.
+      orbit.dist = framed ? Math.max(framed, want) : want; framed = orbit.dist;
+    }
   }
 }
 
-// ---------------------------------------------------------------- rendering
-const fold = (text, cls = '') => {
-  const long = text.length > 320 || (text.match(/\n/g) || []).length > 5;
-  const id = 'f' + Math.random().toString(36).slice(2, 8);
-  return `<div class="body ${cls} ${long ? 'fold' : ''}" id="${id}">${esc(text)}</div>` +
-         (long ? `<button class="more" data-fold="${id}">show all</button>` : '');
+// --------------------------------------------------------------- the console
+const HEAD = {
+  prompt:  ['WHAT THE BUILDER WAS ASKED', ''],
+  reply:   ['WHAT THE BUILDER SAID', ''],
+  render:  ['WHAT GOT BUILT', ''],
+  receipt: ['WHAT THE WORLD ACCEPTED', 'receipt'],
+  error:   ['THE LOOP FELL OVER', 'err'],
+  bridge:  ['THE ACCUSATION, PASSED BACK', 'bridge'],
+  observe: ['WHAT THE CRITIC WAS SHOWN', 'critic'],
+  verdict: ['WHAT THE CRITIC SAID', 'critic']
 };
-const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-const clock = (ts) => new Date(ts).toISOString().slice(11, 19);
+const scoreColour = (n) => n == null ? 'var(--dim)'
+  : n >= 85 ? 'var(--hot)' : n >= 70 ? 'var(--warn)' : n >= 50 ? '#d8d264' : 'var(--ok)';
 
-const LABEL = { prompt: ['what the builder was asked', 'prompt'], reply: ['what the builder said', 'reply'],
-  receipt: ['what the world accepted', 'receipt'], bridge: ['the accusation, passed on', 'critic'],
-  observe: ['what the critic was shown', 'critic'], verdict: ['what the critic said', 'critic'],
-  render: ['what got built', 'reply'], error: ['the loop fell over', 'err'] };
-
-function renderTalk() {
-  const host = $('#talk');
-  host.innerHTML = moments.map((m, i) => {
-    const [title, cls] = LABEL[m.kind] || [m.kind, ''];
-    let inner;
-    if (m.kind === 'render') {
-      const h = m.history, d = h.diff || {};
-      const ok = (h.receipts || []).filter(r => !/^REJECT/.test(r)).length;
-      const no = (h.receipts || []).length - ok;
-      inner = fold(m.text) +
-        `<div style="margin-top:7px">
-           <span class="pill ok">${ok} accepted</span>
-           ${no ? `<span class="pill no">${no} rejected</span>` : ''}
-           <span class="pill">+${(d.added || []).length} ~${(d.changed || []).length} −${(d.removed || []).length}</span>
-           <span class="pill">${(h.afterWorld || []).length} objects</span>
-         </div>`;
-    } else if (m.kind === 'verdict') {
-      const s = /SUCK SCORE:\s*(\d+)/.exec(m.text);
-      const n = s ? +s[1] : null;
-      const rest = m.text.replace(/SUCK SCORE:\s*\d+\s*/, '').replace(/^WHAT SUCKS:\s*/, '');
-      inner = `<div class="rowsplit"><div class="score" style="color:${scoreColour(n)}">${n ?? '—'}</div>
-                 <div style="flex:1">${fold(rest)}</div></div>`;
-    } else inner = fold(m.text, m.kind === 'receipt' || m.kind === 'prompt' ? 'mono' : '');
-    return `<div class="turn" data-i="${i}">
-        <div class="who ${cls}"><b>${title}</b><span>cycle ${m.cycle}</span>
-          <span class="t">${clock(m.ts)}</span></div>${inner}</div>`;
-  }).join('');
+function card(m, i) {
+  const [title, cls] = HEAD[m.kind] || [m.kind, ''];
+  let body;
+  if (m.kind === 'render') {
+    const h = m.history, d = h.diff || {};
+    const ok = (h.receipts || []).filter(r => !/^REJECT/.test(r)).length;
+    const no = (h.receipts || []).length - ok;
+    body = esc(m.text) +
+      `<div><span class="pill ${ok ? 'y' : ''}">${ok} ACCEPTED</span>` +
+      (no ? `<span class="pill n">${no} REJECTED</span>` : '') +
+      `<span class="pill">+${(d.added || []).length} ~${(d.changed || []).length} −${(d.removed || []).length}</span>` +
+      `<span class="pill">${(h.afterWorld || []).length} OBJECTS</span></div>`;
+  } else if (m.kind === 'verdict') {
+    const s = /SUCK SCORE:\s*(\d+)/.exec(m.text);
+    const n = s ? +s[1] : null;
+    body = `<span class="sc" style="color:${scoreColour(n)}">${n ?? '—'}</span>` +
+      esc(m.text.replace(/SUCK SCORE:\s*\d+\s*/, '').replace(/^WHAT SUCKS:\s*/, ''));
+  } else body = esc(m.text);
+  return `<div class="msg ${cls}" data-i="${i}"><span class="r">${title} · CYCLE ${m.cycle} · ${clock(m.ts)}</span>` +
+         `<div class="clip">${body}</div></div>`;
 }
 
-const scoreColour = (n) => n == null ? 'var(--dim)'
-  : n >= 85 ? '#ef4444' : n >= 70 ? '#f97316' : n >= 50 ? '#facc15' : '#86efac';
-
-function renderRail() {
-  $('#cycles').innerHTML = trace.history.map((h, i) => {
-    const c = h.critiques && h.critiques[0];
-    const s = c ? c.score : null;
-    return `<button class="cyc" data-cyc="${i}">
-      <div class="t"><span class="n">cycle ${h.cycle}</span>
-        <span class="s" style="color:${scoreColour(s)}">${s ?? '—'}</span></div>
-      <div class="d">${(h.afterWorld || []).length} objects · +${(h.diff.added || []).length} ~${(h.diff.changed || []).length} −${(h.diff.removed || []).length}</div>
-      <div class="bar"><i style="width:${s ?? 0}%"></i></div></button>`;
-  }).join('');
+function renderLogs() {
+  $('#builderLog').innerHTML = moments.map((m, i) => m.side === 'builder' ? card(m, i) : '').join('');
+  $('#criticLog').innerHTML  = moments.map((m, i) => m.side === 'critic'  ? card(m, i) : '').join('');
 }
 
 function renderShots(h) {
   const cards = [];
-  if (h) for (const [k, cap] of [['beforeShot', 'before this move'], ['afterShot', 'after this move'],
-                                 ['diffShot', 'geometry diff — cyan added, yellow changed, red removed']])
-    if (h[k]) cards.push(`<div class="shot"><img src="${h[k]}" alt="${cap}"><div class="cap">${cap}</div></div>`);
-  $('#shots').innerHTML = cards.join('') ||
-    '<div class="cap" style="color:var(--dim);padding:10px">no captures on this cycle</div>';
+  const bare = h && !(h.afterWorld && h.afterWorld.length);
+  if (h) for (const [k, cap] of [['beforeShot', 'BEFORE'], ['afterShot', 'AFTER'], ['diffShot', 'GEOMETRY DIFF']])
+    if (h[k]) cards.push(`<div class="shot"><img src="${h[k]}" data-cap="${cap} · CYCLE ${h.cycle}" alt="${cap}">` +
+      `<span>${cap}${bare && k !== 'beforeShot' ? ' · BLANK' : ''}</span></div>`);
+  $('#shots').innerHTML = cards.join('');
+  // A capture of an empty world is a white frame. Shown without a word it reads as a
+  // broken image, when it is in fact the most important thing in the file.
+  $('#empty').classList.toggle('on', !!bare);
 }
 
 function show(i, { scroll = true } = {}) {
   at = Math.max(0, Math.min(moments.length - 1, i));
-  const m = moments[at];
-  const h = worldAt(at);
+  const m = moments[at], h = worldAt(at);
   if (h !== show._h) { drawWorld(h); renderShots(h); show._h = h; }
-  for (const el of $('#talk').querySelectorAll('.turn.now')) el.classList.remove('now');
-  const node = $('#talk').querySelector(`.turn[data-i="${at}"]`);
-  if (node) { node.classList.add('now'); if (scroll) node.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
-  for (const b of $('#cycles').querySelectorAll('.cyc')) b.classList.remove('on');
-  const ci = trace.history.findIndex(x => x.cycle === m.cycle);
-  const cb = $('#cycles').querySelector(`.cyc[data-cyc="${ci}"]`);
-  if (cb) cb.classList.add('on');
-  $('#scrub').value = String(at);
-  $('#pos').textContent = `${at + 1} / ${moments.length} · cycle ${m.cycle}`;
+
   const c = h && h.critiques && h.critiques[0];
-  $('#stageNote').innerHTML = h
-    ? `<b>cycle ${h.cycle}</b> — ${esc(h.summary || '')}` +
-      (c ? `<div style="margin-top:5px;color:${scoreColour(c.score)}">suck score ${c.score}</div>` : '')
-    : 'nothing built yet';
+  const score = c ? c.score : null;
+  $('#worldScore').textContent = score ?? '—';
+  $('#worldScore').style.color = scoreColour(score);
+  $('#settled').textContent = score == null ? 'FUCKED UNTIL PROVEN OTHERWISE'
+    : score === 0 ? 'THIS VIEW FOUND NOTHING — NOT FINISHED' : 'FUCKED UNTIL PROVEN OTHERWISE';
+
+  const d = h ? (h.diff || {}) : {};
+  $('#lCycle').textContent = m.cycle;
+  $('#lObjects').textContent = h ? (h.afterWorld || []).length : 0;
+  $('#lDiff').textContent = h ? `+${(d.added || []).length} ~${(d.changed || []).length} −${(d.removed || []).length}` : '—';
+  $('#stateCard').innerHTML = h
+    ? `CYCLE <b>${h.cycle}</b> · WORLD v<b>${h.worldVersion}</b><br>OBJECTS <b>${(h.afterWorld || []).length}</b>` +
+      ` · Δ <b class="cyan">+${(d.added || []).length}</b> <b class="warn">~${(d.changed || []).length}</b> <b class="bad">−${(d.removed || []).length}</b>` +
+      `<br>VIEW <b>${h.repairView || 'FRONT'}</b>`
+    : 'NOTHING BUILT YET';
+
+  const [title] = HEAD[m.kind] || [m.kind];
+  $('#phaseLabel').textContent = `${title} · CYCLE ${m.cycle}`;
+  $('#phaseText').textContent = m.kind === 'verdict'
+    ? m.text.replace(/SUCK SCORE:\s*\d+\s*/, '').replace(/^WHAT SUCKS:\s*/, '')
+    : (m.kind === 'render' ? m.text : m.text.slice(0, 400));
+  $('#makingNote').textContent = h ? `CYCLE ${h.cycle} — ${h.summary || ''}` : 'NOTHING BUILT YET';
+  $('#traceScrub').value = String(at);
+  $('#traceTick').textContent = `${at + 1}/${moments.length}`;
+
+  for (const el of document.querySelectorAll('.msg.now')) el.classList.remove('now');
+  const node = document.querySelector(`.msg[data-i="${at}"]`);
+  if (node) {
+    node.classList.add('now');
+    // Scroll the column, never the document. `scrollIntoView` walks every scrollable
+    // ancestor, and on a phone the outermost one is the page — so following the
+    // argument quietly dragged the model, the reference and the score off the top of
+    // the screen, which is the one thing this layout exists to prevent.
+    if (scroll) {
+      const log = node.closest('.log');
+      if (log) log.scrollTo({ top: node.offsetTop - log.clientHeight / 2 + node.offsetHeight / 2,
+                              behavior: 'smooth' });
+    }
+  }
 }
 
-// ---------------------------------------------------------------- transport
-function play() {
-  playing = true; $('#play').textContent = '❚❚ pause'; $('#play').classList.add('on');
-  clearInterval(timer);
-  timer = setInterval(() => {
-    if (at >= moments.length - 1) return stop();
-    show(at + 1);
-  }, 1500);
-}
-function stop() { playing = false; $('#play').textContent = '▶ play'; $('#play').classList.remove('on'); clearInterval(timer); }
-$('#play').onclick = () => playing ? stop() : play();
-$('#prev').onclick = () => { stop(); show(at - 1); };
-$('#next').onclick = () => { stop(); show(at + 1); };
-$('#scrub').oninput = (e) => { stop(); show(+e.target.value); };
+// --------------------------------------------------------------- transport
+function play() { playing = true; $('#tracePlay').textContent = '❚❚'; clearInterval(timer);
+  timer = setInterval(() => { if (at >= moments.length - 1) return stop(); show(at + 1); }, 1600); }
+function stop() { playing = false; $('#tracePlay').textContent = '▶'; clearInterval(timer); }
+$('#tracePlay').onclick = () => playing ? stop() : play();
+$('#traceScrub').oninput = e => { stop(); show(+e.target.value); };
 addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
   if (e.key === ' ') { e.preventDefault(); playing ? stop() : play(); }
   if (e.key === 'ArrowRight') { stop(); show(at + 1); }
   if (e.key === 'ArrowLeft') { stop(); show(at - 1); }
 });
-
-$('#talk').addEventListener('click', e => {
-  const f = e.target.closest('[data-fold]');
-  if (f) { document.getElementById(f.dataset.fold).classList.toggle('fold'); f.textContent =
-      document.getElementById(f.dataset.fold).classList.contains('fold') ? 'show all' : 'show less'; return; }
-  const t = e.target.closest('.turn');
-  if (t) { stop(); show(+t.dataset.i, { scroll: false }); }
+document.addEventListener('click', e => {
+  const msg = e.target.closest('.msg');
+  if (msg) { stop(); show(+msg.dataset.i, { scroll: false });
+    msg.querySelector('.clip').classList.toggle('clip'); return; }
+  const img = e.target.closest('#shots img, #refCard img');
+  if (img) { $('#lbImg').src = img.src; $('#lbCap').textContent = img.dataset.cap || 'THE REFERENCE';
+    $('#lightbox').classList.add('on'); }
 });
-$('#cycles').addEventListener('click', e => {
-  const b = e.target.closest('.cyc'); if (!b) return;
-  stop();
-  const cyc = trace.history[+b.dataset.cyc].cycle;
-  // Land on the prompt that opened the cycle, not on its result, because the
-  // question is the part that explains the answer.
-  let i = moments.findIndex(m => m.cycle === cyc && m.kind === 'prompt');
-  if (i < 0) i = moments.findIndex(m => m.cycle === cyc);
-  show(i);
-});
-for (const t of document.querySelectorAll('.tab')) t.onclick = () => {
-  for (const o of document.querySelectorAll('.tab')) o.classList.remove('on');
-  for (const p of document.querySelectorAll('.pane')) p.classList.remove('on');
-  t.classList.add('on');
-  document.querySelector(`.pane[data-pane="${t.dataset.pane}"]`).classList.add('on');
-  resize();
-};
+$('#lightbox').onclick = () => $('#lightbox').classList.remove('on');
+$('#spinBtn').onclick = () => { spin = !spin; $('#spinBtn').classList.toggle('on', spin); };
+$('#docsBtn').onclick = () => $('#docs').classList.add('on');
+$('#docsClose').onclick = () => $('#docs').classList.remove('on');
 
 // orbit
 let drag = null;
 const gl = $('#gl');
-gl.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; gl.setPointerCapture(e.pointerId); });
+gl.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; spin = false;
+  $('#spinBtn').classList.remove('on'); gl.setPointerCapture(e.pointerId); });
 gl.addEventListener('pointerup', () => { drag = null; });
-gl.addEventListener('pointermove', e => {
-  if (!drag) return;
+gl.addEventListener('pointermove', e => { if (!drag) return;
   orbit.az -= (e.clientX - drag.x) * .007;
-  orbit.el = Math.max(-.2, Math.min(1.45, orbit.el + (e.clientY - drag.y) * .006));
-  drag = { x: e.clientX, y: e.clientY };
-});
+  orbit.el = Math.max(-.05, Math.min(1.4, orbit.el + (e.clientY - drag.y) * .006));
+  drag = { x: e.clientX, y: e.clientY }; });
 gl.addEventListener('wheel', e => { e.preventDefault();
-  orbit.dist = Math.max(8, Math.min(300, orbit.dist * (1 + Math.sign(e.deltaY) * .12))); framed = orbit.dist; },
+  orbit.dist = Math.max(8, Math.min(320, orbit.dist * (1 + Math.sign(e.deltaY) * .12))); framed = orbit.dist; },
   { passive: false });
 
 function resize() {
-  const r = $('#panes').getBoundingClientRect();
+  const r = $('#world').getBoundingClientRect();
   if (!r.width || !r.height) return;
   renderer.setSize(r.width, r.height, false);
+  const was = camera.aspect;
   camera.aspect = r.width / r.height; camera.updateProjectionMatrix();
+  // Turning a phone changes which dimension has to fit, so the framing is thrown
+  // away and taken again rather than kept from the shape the screen used to be.
+  if (Math.abs((was || 0) - camera.aspect) > 0.01) { framed = null; drawWorld(show._h); }
 }
 addEventListener('resize', resize);
-(function tick() { placeCamera(); renderer.render(scene, camera); requestAnimationFrame(tick); })();
+let last = performance.now();
+(function tick(now) {
+  const dt = Math.min(.05, ((now || 0) - last) / 1000); last = now || 0;
+  if (spin) orbit.az += dt * 0.12;
+  placeCamera(); renderer.render(scene, camera); requestAnimationFrame(tick);
+})();
 
-// ---------------------------------------------------------------- loading
-async function open(t, { autoplay = false } = {}) {
-  trace = t;
-  moments = timeline(t);
-  framed = null; show._h = undefined;
-  $('#hIntent').textContent = `intent: ${t.intent}`;
-  $('#hModel').textContent = `model: ${t.model}`;
-  $('#hCount').textContent = `${t.history.length} cycles · ${t.current_world.length} objects · ${moments.length} moments`;
+// --------------------------------------------------------------- loading
+function curtain(msg) { const b = $('#boot'); if (!b) return;
+  b.style.display = msg ? 'grid' : 'none'; if (msg) b.textContent = msg; }
+
+function open(t, { autoplay = false } = {}) {
+  trace = t; moments = timeline(t); framed = null; show._h = undefined;
+  $('#lIntent').textContent = t.intent;
+  $('#lModel').textContent = t.model;
+  $('#refName').textContent = t.reference_name || 'REFERENCE';
   $('#refimg').src = t.reference || '';
-  $('#scrub').max = String(moments.length - 1);
-  renderRail(); renderTalk(); resize();
-  show(0, { scroll: false });
+  $('#traceScrub').max = String(moments.length - 1);
+  renderLogs(); resize(); show(0, { scroll: false });
   if (autoplay) play();
 }
 
-// The curtain is hidden, never removed. Removed, this handler threw on the second
-// trace anyone tried to open — so the switcher looked like it did nothing at all.
-function curtain(msg) {
-  const b = $('#boot');
-  if (!b) return;
-  b.style.display = msg ? 'grid' : 'none';
-  if (msg) b.textContent = msg;
-}
-$('#pick').onchange = async (e) => {
-  stop();
-  const f = e.target.value;
-  if (!f) return;
+$('#pick').onchange = async e => {
+  stop(); const f = e.target.value; if (!f) return;
   curtain('reading the trace…');
-  try {
-    const t = await (await fetch('assets/traces/' + f)).json();
-    curtain(null);
-    open(t, { autoplay: true });
-  } catch (err) { curtain('could not read that trace: ' + ((err && err.message) || err)); }
+  try { const t = await (await fetch('assets/traces/' + f)).json(); curtain(null); open(t, { autoplay: true }); }
+  catch (err) { curtain('could not read that trace: ' + ((err && err.message) || err)); }
 };
-$('#file').onchange = async (e) => {
-  const f = e.target.files[0]; if (!f) return;
-  stop();
+$('#file').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return; stop();
   try {
     const t = JSON.parse(await f.text());
     if (t.format !== 'OPERATIVE_BUILDER_TRACE_V1') throw new Error('not an OPERATIVE_BUILDER_TRACE_V1 file');
-    $('#pick').value = '';
     open(t, { autoplay: false });
   } catch (err) { alert('could not read that trace: ' + err.message); }
 };
-$('#docsBtn').onclick = () => $('#docs').classList.toggle('on');
-$('#docs').onclick = (e) => { if (e.target.id === 'docs') $('#docs').classList.remove('on'); };
 
 function renderDocs() {
   $('#docsBody').innerHTML = `
-    <h2>How to read this</h2>
-    <p>A trace is the complete record of one argument. A reference photograph is
-    pinned. A <b>builder</b> may answer only in JSON operations on a world of
-    primitives. A <b>critic</b> is told the building is fucked until proven
-    otherwise, is shown the render against the reference, and returns a suck score
-    and one concrete accusation. The accusation becomes the next prompt. That is
-    the whole loop.</p>
-    <p>The score is a <em>suck</em> score, so it falls as the building improves,
-    and a zero would mean only that this view failed to find a discrepancy — never
-    that the thing is finished.</p>
+  <p>A trace is the complete record of one argument. A reference photograph is
+  pinned — it is the card at the top left, and it never leaves the screen. A
+  <b>BUILDER</b> may answer only in JSON operations on a world of primitives. A
+  <b>CRITIC</b> is told the building is fucked until proven otherwise, is shown the
+  render against that reference, and returns a suck score and one concrete
+  accusation. The accusation becomes the next prompt. That is the whole loop.</p>
+  <p>It is a <b>suck</b> score, so it falls as the building improves, and zero would
+  mean only that this view failed to find a discrepancy — never that the thing is
+  finished.</p>
 
-    <h3>The three panes</h3>
-    <ul>
-      <li><b>world · rebuilt</b> — the object list for that cycle, rebuilt in 3D
-      here so you can orbit it. Rings mark what that move touched: cyan added,
-      yellow changed, taken from the trace's own diff, not re-derived.</li>
-      <li><b>what it saw</b> — the actual captures the critic was handed: before,
-      after, and the geometry diff.</li>
-      <li><b>the reference</b> — the photograph the whole argument is about.</li>
-    </ul>
+  <h3>WHAT YOU ARE LOOKING AT</h3>
+  <ul>
+    <li><b>The world</b> is rebuilt here in 3D from the object list that cycle
+    carries. Rings mark what the move touched: cyan added, amber changed, taken from
+    the trace's own diff rather than re-derived. Drag to turn it; SPIN puts it back.</li>
+    <li><b>The three shots</b> along the bottom are the captures the critic was
+    actually handed — before, after, and the geometry diff. Tap to enlarge.</li>
+    <li><b>The two columns</b> are the correspondence, interleaved by the file's own
+    clocks. Tap any card to jump the world to that moment and to unclip the text.</li>
+  </ul>
 
-    <h3>Where the loop shows its seams</h3>
-    <p>In both castle runs, cycle 1 proposed forty objects and the world rejected
-    every one of them — <span class="mono">ADD missing id</span> — so nothing was
-    built. The critic, looking at an empty stage, scored it 100 and said so. The
-    builder read that accusation and rebuilt. Nothing hides this; it is in the
-    receipts, and it is the clearest thing in the file.</p>
-    <p>The six-cycle run also carries six <span class="mono">Failed to fetch</span>
-    errors between cycles 5 and 12 — the loop kept retrying a dead connection.
-    That is why its last cycle is numbered 12 and not 6.</p>
+  <h3>WHERE THE LOOP SHOWS ITS SEAMS</h3>
+  <p>In both castle runs, cycle 1 proposed forty objects and the world rejected every
+  one of them — <b>ADD missing id</b> — so nothing was built. The critic, looking at
+  an empty stage, scored it 100 and said so. The builder read that accusation and
+  rebuilt. Nothing hides this; it is in the receipts.</p>
+  <p>The six-cycle run also carries six <b>Failed to fetch</b> errors between cycles
+  5 and 12, where the loop kept retrying a dead connection. That is why its last
+  cycle is numbered 12 and not 6.</p>
 
-    <h3>The two rules the models were under</h3>
-    <p class="mono" style="color:var(--dim);font-size:10px;letter-spacing:.12em;text-transform:uppercase">builder</p>
-    <pre>${esc((idx && idx.prompts && idx.prompts.builder) || '—')}</pre>
-    <p class="mono" style="color:var(--dim);font-size:10px;letter-spacing:.12em;text-transform:uppercase">critic</p>
-    <pre>${esc((idx && idx.prompts && idx.prompts.critic) || '—')}</pre>
+  <h3>THE TWO RULES THE MODELS WERE UNDER</h3>
+  <p style="color:var(--dim)">BUILDER</p><pre>${esc((idx && idx.prompts && idx.prompts.builder) || '—')}</pre>
+  <p style="color:var(--dim)">CRITIC</p><pre>${esc((idx && idx.prompts && idx.prompts.critic) || '—')}</pre>
 
-    <h3>The file</h3>
-    <pre>{
+  <h3>THE FILE</h3>
+  <pre>{
   "format": "OPERATIVE_BUILDER_TRACE_V1",
   "intent": "Castle",              // what was asked for
   "reference": "data:image/…",     // the photograph, embedded
   "model": "gpt-5.6-sol",
   "current_world": [ {id, primitive, role, position, size, rotation_y, color, material, scale} ],
-  "history": [ {                   // one entry per cycle
+  "history": [ {
     cycle, worldVersion, summary,
     operations: [ {op, object} ],  // what the builder asked for
     receipts:   [ "ADD keep_main", "REJECT ? · ADD missing id" ],
-    beforeWorld, afterWorld,       // full object lists, so this page can rebuild them
+    beforeWorld, afterWorld,       // full object lists — this page rebuilds them
     diff: {added, changed, removed},
-    beforeShot, afterShot, diffShot,   // jpeg data URIs
+    beforeShot, afterShot, diffShot,
     critiques: [ {view, score, criticism} ]
   } ],
-  "builder_log": [ {role, text, cls, ts} ],   // every prompt and reply, verbatim
+  "builder_log": [ {role, text, cls, ts} ],
   "critic_log":  [ {role, text, cls, ts} ],
   "events":      [ {type, data, ts, cycle} ]
 }</pre>
-    <p>The four logs are timestamped independently. This page interleaves them by
-    their own clocks, which is what turns four accounts of an argument back into
-    the argument.</p>
 
-    <h3>Making your own</h3>
-    <p>Run <a href="operative-builder-scan.html">the operative builder</a>, pin a
-    reference, let the loop run, then export. Drop the file on <b>open a trace…</b>
-    above and it plays here — nothing is uploaded and no key is needed to read one.</p>
-    <p style="margin-top:18px"><button class="ctl" onclick="document.getElementById('docs').classList.remove('on')">close</button></p>`;
+  <h3>MAKING YOUR OWN</h3>
+  <p>Run <a href="operative-builder-scan.html">the operative builder</a>, pin a
+  reference, let the loop go, then export. Drop the file on <b>OPEN A TRACE</b> and
+  it plays here. Nothing is uploaded and no key is needed to read one.</p>`;
 }
 
 (async () => {
   try {
-    idx = await (await fetch(INDEX)).json();
+    idx = await (await fetch('assets/traces/index.json')).json();
     $('#pick').innerHTML = idx.traces.map(t =>
-      `<option value="${t.file}">${t.intent} · ${t.cycles} cycles · ${t.note}</option>`).join('');
+      `<option value="${t.file}">${t.intent.toUpperCase()} · ${t.cycles} CYCLES · ${t.note}</option>`).join('');
     renderDocs();
-    // Straight into the longest run, playing. The list of runs is a control in the
-    // corner, not a front door: what somebody opening this needs to see first is
-    // the thing happening, not a menu asking which thing.
-    const first = idx.traces[0];
-    const t = await (await fetch('assets/traces/' + first.file)).json();
+    $('#spinBtn').classList.add('on');
+    // Straight into the longest run, playing. The list of runs is a control on the
+    // ledger, not a front door.
+    const t = await (await fetch('assets/traces/' + idx.traces[0].file)).json();
     curtain(null);
-    await open(t, { autoplay: true });
-  } catch (e) {
-    curtain('could not read the traces: ' + ((e && e.message) || e));
-  }
+    open(t, { autoplay: true });
+  } catch (e) { curtain('could not read the traces: ' + ((e && e.message) || e)); }
 })();
 </script>
 </body>
