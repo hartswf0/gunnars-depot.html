@@ -8,6 +8,7 @@ import { separation, overlapVolume, aabb, containsFully } from './poly.js';
 import { referenceConditions } from './reference.js';
 import { scheduleFor, required, joinKey, scheduleForPair, sortOf } from './joints.js';
 import { habitat, CODE as HABIT } from './habitat.js';
+import { fitMap, errands as bodyErrands } from './inhabit.js';
 import { floorUnder, mountsFor, workspaceOf, intrusion, blockage, daylightOf, CLEARANCE } from './gravity.js';
 import { shake } from './loads.js';
 import { rain, MIN_SLOPE, MIN_OVERHANG } from './weather.js';
@@ -625,6 +626,27 @@ export function checkAll(world) {
       for (const c of h.clearances) if (!c.ok) out.push(cond('NO_CLEARANCE', SEVERITY.serious,
         `${c.clear} in of floor in front of ${c.id}; ${c.need} in is the minimum`,
         [c.id], { clear: c.clear, wants: c.need, basis: c.basis }, null));
+      // A body moving through it, not a body posed in it. Standing room is not the
+      // question a plan has to answer — turning round is, and so is whether the
+      // errand can be done at all once you get there.
+      const fm = fitMap(world);
+      const cannotTurn = +(fm.area.STAND - fm.area.TURN).toFixed(1);
+      if (fm.area.TURN < fm.area.STAND * 0.55 && cannotTurn > 6) out.push(cond('CANNOT_TURN', SEVERITY.serious,
+        `${cannotTurn} of ${fm.area.STAND} sq ft you can stand in, you cannot turn round in`,
+        [], { stand: fm.area.STAND, turn: fm.area.TURN,
+              basis: 'shoulder breadth swept as a circle; NFPA 1192 4.5 for the aisle it implies',
+              resolution: 'a 2 in grid, and a body that turns to suit the corridor' }, null));
+      for (const e of bodyErrands(world).errands) {
+        if (e.ok) continue;
+        // A trailer with no sink in it yet cannot be blamed for your not being able
+        // to wash up. That the fixture is missing is the brief's business; this
+        // check is about whether a body can use the ones that are there.
+        if (!world.get(e.at)) continue;
+        out.push(cond('CANNOT_DO_IT', SEVERITY.blocking,
+          `you cannot ${e.id}: ${e.why}`, [e.at],
+          { errand: e.id, at: e.at, posture: e.posture, room: e.room,
+            basis: 'the body has to get there, fit there, and reach it' }, null));
+      }
       if (!h.egress.ok) out.push(cond('NO_EGRESS', SEVERITY.blocking,
         h.egress.door && h.egress.door.ok
           ? 'no window big enough or low enough to climb out of'

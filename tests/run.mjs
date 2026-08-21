@@ -1410,6 +1410,76 @@ check('the study still names whatever the building refuses',
   Array.isArray(acts) && acts.every(a => typeof a.clash === 'number'),
   acts.filter(a => (a.work && !a.work.ok) || a.clash > 0).map(a => a.activity).join('; ') || 'nothing');
 
+// ------------------------------------------- 38. a body moving through it
+group('can a person move around in it');
+const IH = await import('../operative/inhabit.js');
+
+const ical = IH.calibrate({ World: WD.World, Element: WD.Element, box: GM.box });
+check('the instrument can tell a room you can move around in from one you cannot',
+  ical.ok, ical.verdict);
+check('and an empty room is mostly standable and mostly turnable',
+  ical.stand > ical.exact * 0.55 && ical.turn > ical.exact * 0.45,
+  `${ical.stand} standable, ${ical.turn} turnable of ${ical.exact} sq ft`);
+check('and a post in the middle of it takes floor away',
+  ical.withPost < ical.stand, `${ical.stand} -> ${ical.withPost} sq ft`);
+
+const post = IH.postures(72);
+check('every posture is derived from the body, not typed in',
+  post.STAND.h === FG.figure(72).stature && post.REACH.h === FG.figure(72).overheadReach);
+check('and a taller body needs more room', (() => {
+  const a = IH.postures(66), b = IH.postures(78);
+  return b.STAND.h > a.STAND.h && b.STAND.w > a.STAND.w;
+})());
+
+const fm38 = IH.fitMap(BUILT);
+check('there is floor you can stand on', fm38.area.STAND > 30, `${fm38.area.STAND} sq ft`);
+check('edging sideways always fits where standing does',
+  fm38.area.PASS >= fm38.area.STAND, `pass ${fm38.area.PASS}, stand ${fm38.area.STAND}`);
+check('and turning round needs more room than standing still',
+  fm38.area.TURN <= fm38.area.STAND, `turn ${fm38.area.TURN}, stand ${fm38.area.STAND}`);
+check('the trailer has somewhere you can stand but not turn round',
+  fm38.area.STAND - fm38.area.TURN > 0,
+  `${(fm38.area.STAND - fm38.area.TURN).toFixed(1)} sq ft`);
+
+const er = IH.errands(BUILT);
+check('every errand in the brief can be done', er.done === er.of,
+  er.errands.filter(e => !e.ok).map(e => `${e.id}: ${e.why}`).join('; ') || `${er.done}/${er.of}`);
+check('and every one of them is a walk, not a squeeze',
+  er.errands.every(e => e.route.ok && e.route.tightest !== 'PASS'),
+  er.errands.filter(e => e.route.tightest === 'PASS').map(e => e.id).join(', ') || 'all walkable');
+check('a thing you get into is not asked whether you can reach it',
+  er.errands.find(e => e.id === 'shower').reach.slack === null);
+check('and a drawer in a carcass is reached at the carcass',
+  er.errands.find(e => e.id === 'get in the fridge').ok);
+
+// The colony, carrying a person.
+const bc = IH.bodyColony(BUILT, { n: 30, ticks: 700, seed: 7 });
+check('ants carrying a body cover the floor they can stand on',
+  bc.reached > 70, `${bc.covered} of ${bc.standable} sq ft, ${bc.reached}%`);
+check('the trail repels rather than attracts, or they never leave the door',
+  bc.covered > 20, `${bc.covered} sq ft covered`);
+check('what they forage for is a person, not a fault',
+  bc.findings.every(f => f.kind in IH.BODY_KINDS));
+check('the margin around every object is counted and set aside, not reported',
+  bc.margin > 0 && !bc.findings.some(f => f.kind === 'IN_THE_WAY'),
+  `${bc.margin} margin cells set aside`);
+check('and what is left describes what a body cannot do',
+  bc.findings.every(f => ['CANT_TURN', 'SQUEEZE', 'DEAD_END', 'LOW_CEILING', 'CANT_REACH'].includes(f.kind)),
+  [...new Set(bc.findings.map(f => f.kind))].join(', '));
+check('every finding was corroborated by at least two independent ants',
+  bc.findings.every(f => f.ants >= 2));
+
+// The check refuses a plan a body cannot use.
+check('a trailer you cannot do the errands in cannot settle', (() => {
+  const blockedW = copyOf(BUILT);
+  const bench = blockedW.get('bench.W');
+  // wall the galley off with a slab across the aisle
+  blockedW.add(new (bench.constructor)({
+    id: 'test.barricade', kind: 'partition', layer: 'interior', material: 'ply',
+    box: mkbox([50, 116, 60], [96, 4, 88]), meta: { role: 'partition' } }));
+  return checkAll(blockedW).some(c => c.code === 'CANNOT_DO_IT' && c.severity === 3);
+})(), 'a slab across the aisle');
+
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
