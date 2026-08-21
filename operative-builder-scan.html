@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>OPERATIVE BUILDER — MEDICAL IMAGING / FUCKED UNTIL PROVEN OTHERWISE</title>
+<style>
+:root{--bg:#080a0d;--panel:#101419f2;--line:#303842;--fg:#edf1f4;--dim:#8f99a3;--hot:#ff5b57;--warn:#efbd4d;--ok:#5fd28b;--cyan:#2de2d0}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;-webkit-font-smoothing:antialiased}button,input,textarea{font:inherit}.hidden{display:none!important}button,label.btn{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#world{position:absolute;inset:0 0 43vh;background:#9fb5c7;overflow:hidden}#world canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}#worldFallback{position:absolute;inset:0;display:grid;place-items:center;color:#334;font-size:12px;text-align:center;padding:30px}#shade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(#05070a55,transparent 24%,transparent 78%,#05070a80)}
+#refCard{position:absolute;z-index:20;top:max(8px,env(safe-area-inset-top));left:8px;width:136px;padding:7px;border:1px solid #404954;border-radius:14px;background:#080a0dea;box-shadow:0 8px 28px #0007}#refCard img{display:block;width:100%;height:84px;object-fit:cover;border:1px solid #2e353d;border-radius:9px;background:#111}#refName{font-size:7px;letter-spacing:.12em;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px}#scoreCap{font-size:7px;letter-spacing:.1em;color:var(--dim);margin-top:7px}#worldScore{font-size:34px;font-weight:900;line-height:.95;color:var(--hot)}#settled{font-size:7px;margin-top:4px;color:var(--warn);letter-spacing:.08em}
+#stateCard{position:absolute;z-index:18;right:8px;top:max(8px,env(safe-area-inset-top));max-width:calc(100vw - 160px);padding:8px 10px;border:1px solid #3a434d;border-radius:12px;background:#080a0ddd;font-size:7px;line-height:1.5;color:var(--dim);text-transform:uppercase}#stateCard b{color:var(--fg)}.ok{color:var(--ok)!important}.bad{color:var(--hot)!important}.warn{color:var(--warn)!important}.cyan{color:var(--cyan)!important}
+#makingBar{position:absolute;z-index:18;left:8px;right:8px;bottom:54px;display:grid;grid-template-columns:36px minmax(0,1fr) 58px;grid-template-rows:24px 18px;gap:3px 7px;align-items:center;padding:5px 7px;border:1px solid #39424d;border-radius:11px;background:#080a0de8;backdrop-filter:blur(8px)}#makingNote{grid-column:1/-1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#c6ced5;font-size:7px;letter-spacing:.05em}#tracePlay{grid-row:2;min-height:18px;border:0;background:transparent;color:var(--fg);font-size:10px;padding:0}#traceScrub{grid-row:2;width:100%;height:18px;accent-color:var(--cyan)}#traceTick{grid-row:2;text-align:right;color:var(--dim);font-size:7px;font-variant-numeric:tabular-nums}#makingBar.reviewing{border-color:var(--cyan)}#makingBar.reviewing #makingNote{color:var(--cyan)}
+#worldButtons{position:absolute;z-index:18;right:8px;bottom:8px;display:flex;gap:5px}.wbtn{min-height:36px;padding:0 10px;border:1px solid #39424d;border-radius:10px;background:#101419e8;color:var(--fg);font-size:8px}.wbtn.on{background:var(--cyan);border-color:var(--cyan);color:#061210}#diffLegend{position:absolute;z-index:17;left:8px;bottom:8px;display:none;padding:6px 8px;border:1px solid #39424d;border-radius:9px;background:#080a0ddd;font-size:7px;letter-spacing:.08em}#diffLegend.show{display:block}#diffLegend .a{color:#2de2d0}#diffLegend .c{color:#efbd4d}#diffLegend .r{color:#ff5b57}
+#console{position:absolute;left:0;right:0;bottom:0;height:43vh;background:#080a0df8;border-top:1px solid #313943;display:grid;grid-template-rows:31px minmax(0,1fr) 59px;padding-bottom:env(safe-area-inset-bottom)}#ledger{display:flex;gap:12px;align-items:center;padding:0 9px;border-bottom:1px solid #252c34;overflow:auto;white-space:nowrap;font-size:7px;color:var(--dim);text-transform:uppercase}#ledger b{color:var(--fg)}#agents{display:grid;grid-template-columns:1fr 1fr;min-height:0}.agent{display:grid;grid-template-rows:26px minmax(0,1fr);min-width:0}.agent:first-child{border-right:1px solid #252c34}.agentHead{padding:7px 8px;border-bottom:1px solid #252c34;font-size:8px;letter-spacing:.14em}.log{overflow:auto;padding:6px}.msg{padding:6px;margin-bottom:6px;border:1px solid #2b333c;border-radius:8px;background:#101419;font-size:7.5px;line-height:1.42;white-space:pre-wrap;word-break:break-word}.msg .r{display:block;color:var(--dim);font-size:6.5px;letter-spacing:.12em;margin-bottom:3px}.msg.critic{border-color:#573030}.msg.bridge{border-color:#62502e;border-style:dashed}.msg.receipt{border-style:dashed;color:#b4bdc5}
+#composer{display:grid;grid-template-columns:minmax(0,1fr) 50px 50px 50px;gap:5px;padding:6px 8px;border-top:1px solid #252c34}#composer textarea{height:45px;resize:none;border:1px solid #343d47;border-radius:10px;background:#11161b;color:var(--fg);padding:8px;font-size:8px;outline:none}#composer button{border:1px solid #37414b;border-radius:10px;background:#151a20;color:var(--fg);font-size:7px}#stepBtn{color:var(--warn)!important;border-color:#7a6231!important}#loopBtn.on{background:var(--cyan);color:#061210;border-color:var(--cyan)}
+#setup{position:fixed;z-index:100;inset:0;background:#05070aee;display:grid;place-items:center;padding:16px;overflow:auto}#setupBox{width:min(680px,100%);max-height:calc(100vh - 32px);overflow:auto;background:#101419;border:1px solid #3b444f;border-radius:20px;padding:16px;box-shadow:0 18px 60px #000a}h1{font-size:21px;letter-spacing:.08em;margin:0 0 6px}#setupLead{font-size:9px;line-height:1.5;color:var(--dim);margin-bottom:13px}.field{margin-bottom:13px}.field>label.cap{display:block;font-size:7px;letter-spacing:.15em;color:#a6afb8;margin-bottom:6px}.field textarea,.field input{width:100%;border:1px solid #35404a;border-radius:11px;background:#151a20;color:var(--fg);padding:11px;outline:none}.field textarea{min-height:86px;resize:vertical}.refRow{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:center}.refPreview{width:120px;height:96px;object-fit:cover;border-radius:11px;border:1px solid #35404a;background:#080a0d}.btn,.bigBtn{display:grid;place-items:center;width:100%;min-height:50px;border:1px solid #3b4650;border-radius:11px;background:#171c22;color:var(--fg);text-align:center;text-transform:uppercase;cursor:pointer}.apiRow{display:grid;grid-template-columns:minmax(0,1fr) 130px;gap:7px}.status{font-size:8px;line-height:1.45;min-height:15px;margin-top:6px}.beginRow{display:flex;gap:7px;justify-content:flex-end}.beginRow button{min-height:50px;padding:0 22px;border-radius:11px;border:1px solid #3c4650;background:#171c22;color:var(--fg)}#beginBtn{background:var(--warn);border-color:var(--warn);color:#17120a;font-weight:900}.notice{font-size:7.5px;line-height:1.5;border:1px solid #4c3b32;background:#201510;color:#dcb4aa;padding:8px;border-radius:9px;margin-bottom:12px}#bootStatus{font-size:8px;color:var(--ok);margin-bottom:10px}
+#fatal{position:fixed;z-index:999;left:8px;right:8px;top:8px;padding:10px;border:1px solid #7a3232;border-radius:10px;background:#2a1010;color:#ffb0ad;font-size:9px;white-space:pre-wrap;display:none}#toast{position:fixed;z-index:500;left:50%;top:10px;transform:translate(-50%,-150%);max-width:90vw;padding:9px 11px;background:#11161c;border:1px solid #3b4650;border-radius:10px;font-size:8px;transition:.18s}#toast.show{transform:translate(-50%,0)}#traceDrawer{position:fixed;z-index:95;inset:5vh 8px 8px;background:#080a0df7;border:1px solid #3b4650;border-radius:16px;box-shadow:0 18px 70px #000c;display:grid;grid-template-rows:50px auto minmax(0,1fr);overflow:hidden}#traceHead{display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid #303842;font-size:10px;letter-spacing:.12em}#traceHead>div{display:flex;gap:6px}#traceHead button{min-height:34px;border:1px solid #39424d;border-radius:9px;background:#151a20;color:var(--fg);font-size:7px;padding:0 10px}#traceSummary{padding:8px 12px;border-bottom:1px solid #252c34;color:var(--dim);font-size:8px;line-height:1.5}#traceList{overflow:auto;padding:10px}.traceCard{border:1px solid #303842;border-radius:12px;background:#101419;margin-bottom:10px;padding:9px}.traceTitle{display:flex;justify-content:space-between;gap:8px;font-size:8px;letter-spacing:.08em;margin-bottom:6px}.traceTitle b{color:var(--warn)}.traceText{font-size:8px;line-height:1.45;color:#b8c1c9;white-space:pre-wrap;margin-bottom:7px}.traceMedia{display:flex;gap:6px;overflow-x:auto;scroll-snap-type:x mandatory}.traceShot{flex:0 0 min(42vw,220px);scroll-snap-align:start}.traceShot img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;border:1px solid #343d47;background:#111}.traceShot span{display:block;margin-top:3px;color:var(--dim);font-size:6.5px;letter-spacing:.08em}.mobileHint{display:none}
+@media(max-width:600px){
+html,body{height:auto;min-height:100%;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:auto}
+#world{position:relative;inset:auto;height:72svh;min-height:540px}
+#console{position:relative;left:auto;right:auto;bottom:auto;height:auto;min-height:70svh;display:block;padding-bottom:calc(68px + env(safe-area-inset-bottom))}
+#refCard{position:fixed;width:118px;top:max(8px,env(safe-area-inset-top));left:8px}#refCard img{height:70px}#worldScore{font-size:32px}
+#stateCard{top:8px;right:8px;max-width:calc(100vw - 142px);font-size:7.5px;line-height:1.55;max-height:98px;overflow:hidden}
+#worldButtons{right:8px;bottom:8px;gap:4px}.wbtn{min-height:42px;padding:0 8px;font-size:7.2px}#makingBar{left:8px;right:8px;bottom:58px;grid-template-columns:38px minmax(0,1fr) 62px;padding:6px 8px}#makingNote{font-size:7.5px}
+#diffLegend{position:absolute;left:8px;bottom:8px;font-size:6.5px;max-width:152px}
+#ledger{height:38px;position:sticky;top:0;z-index:30;background:#080a0dfb;font-size:7.5px}.mobileHint{display:inline;color:var(--cyan)}
+#agents{height:58svh;min-height:430px;display:flex;grid-template-columns:none;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}#agents::-webkit-scrollbar{display:none}
+.agent{flex:0 0 92vw;min-width:92vw;height:100%;grid-template-rows:34px minmax(0,1fr);scroll-snap-align:start}.agent:first-child{border-right:1px solid #252c34}.agentHead{padding:10px 11px;font-size:9px}.log{padding:9px 10px}.msg{padding:10px;margin-bottom:10px;border-radius:10px;font-size:10.8px;line-height:1.52}.msg .r{font-size:7.5px;margin-bottom:5px}
+#composer{position:sticky;bottom:0;z-index:40;grid-template-columns:minmax(0,1fr) 52px 52px 52px;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:#080a0dfb}#composer textarea{height:52px;font-size:10px}#composer button{font-size:7.5px}
+#setupBox{padding:13px}.apiRow{grid-template-columns:1fr 105px}.refRow{grid-template-columns:105px 1fr}.refPreview{width:105px;height:86px}
+#traceDrawer{inset:4vh 6px 6px}.traceShot{flex-basis:72vw}.traceText{font-size:9px}#traceSummary{font-size:8.5px}
+}
+
+/* v0.4 — MOBILE CORRESPONDENCE PASS
+   The world stays primary; logs become secondary; touch controls are first-class. */
+#nowCard{
+  position:absolute;z-index:19;left:50%;top:max(112px,calc(env(safe-area-inset-top) + 76px));
+  transform:translateX(-50%);width:min(520px,calc(100vw - 32px));
+  border:1px solid #3a434d;border-radius:12px;background:#080a0de8;
+  padding:8px 10px;pointer-events:none;box-shadow:0 8px 26px #0004
+}
+#phaseLabel{display:block;font-size:8px;letter-spacing:.16em;color:var(--cyan);margin-bottom:3px}
+#phaseText{display:block;font-size:9px;line-height:1.35;color:#e7edf2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#mobileTabs{display:none}#liveAgent{display:none}
+.zoomBtn{min-width:42px;font-size:14px!important;font-weight:900}
+#recordChip{color:var(--cyan)}
+.msg.compactReceipt{color:#aeb8c1}
+#liveLog .msg.builderTurn{border-color:#355465}
+#liveLog .msg.criticTurn{border-color:#5a3333}
+#liveLog .msg.bridgeTurn{border-color:#6e5930;border-style:dashed}
+@media(max-width:600px){
+  #world{height:76svh;min-height:560px}
+  #refCard{width:104px;padding:6px;border-radius:12px}
+  #refCard img{height:60px}
+  #refName,#scoreCap,#settled{font-size:6.5px}
+  #worldScore{font-size:28px}
+  #stateCard{left:120px;right:8px;max-width:none;top:max(8px,env(safe-area-inset-top));font-size:6.6px;line-height:1.35;max-height:54px;padding:6px 8px}
+  #stateCard br:nth-of-type(1),#stateCard br:nth-of-type(2){display:none}
+  #differenceChip{display:none}
+  #nowCard{top:max(72px,calc(env(safe-area-inset-top) + 62px));width:calc(100vw - 24px);padding:7px 9px}
+  #phaseLabel{font-size:7px}
+  #phaseText{font-size:9.5px}
+  #makingBar{bottom:58px;left:8px;right:8px;grid-template-columns:30px minmax(0,1fr) 48px;grid-template-rows:18px 18px;padding:5px 7px}
+  #makingNote{font-size:6.8px}
+  #worldButtons{left:8px;right:8px;bottom:8px;justify-content:flex-end;overflow-x:auto;scrollbar-width:none}
+  #worldButtons::-webkit-scrollbar{display:none}
+  .wbtn{min-height:42px;min-width:46px;padding:0 8px;font-size:7px;flex:0 0 auto}
+  #diffLegend{display:none!important}
+  #console{min-height:60svh;padding-bottom:calc(74px + env(safe-area-inset-bottom))}
+  #ledger{height:34px;font-size:7px;gap:10px}
+  #ledger .mobileHint{display:none}
+  #mobileTabs{display:grid;grid-template-columns:1fr 1fr 1fr;position:sticky;top:34px;z-index:35;background:#080a0dfc;border-bottom:1px solid #252c34;padding:5px 8px;gap:5px}
+  #mobileTabs button{height:34px;border:1px solid #303842;border-radius:9px;background:#101419;color:var(--dim);font-size:7.5px;letter-spacing:.08em}
+  #mobileTabs button.on{background:#17242a;color:var(--cyan);border-color:#315c5a}
+  #liveAgent.active{display:grid}
+  #agents{height:54svh;min-height:390px;display:block;overflow:hidden}
+  .agent{display:none;width:100%;min-width:0;height:100%;grid-template-rows:32px minmax(0,1fr)}
+  .agent.active{display:grid}
+  .agent:first-child{border-right:0}
+  .agentHead{font-size:8.5px}
+  .log{padding:8px}
+  .msg{font-size:10.5px;line-height:1.48;padding:9px;margin-bottom:8px}
+  #composer{grid-template-columns:minmax(0,1fr) 48px 48px 48px}
+  #composer textarea{font-size:10.5px}
+}
+
+
+
+/* v0.5 — WORLD-FIRST MOBILE + BLUEPRINT CORRESPONDENCE */
+#selectionCard{
+  position:absolute;z-index:21;left:50%;top:84px;transform:translateX(-50%);
+  display:none;max-width:70vw;padding:7px 10px;border:1px solid #315d6a;border-radius:999px;
+  background:#081117e8;color:#7fe7f2;font-size:7px;letter-spacing:.1em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  pointer-events:none
+}
+body.blueprint-mode #selectionCard{display:block}
+#designHint{
+  position:absolute;z-index:18;left:50%;bottom:120px;transform:translateX(-50%);display:none;
+  max-width:calc(100vw - 28px);padding:7px 10px;border:1px solid #2c6473;border-radius:9px;
+  background:#06141ddd;color:#76dce9;font-size:7px;letter-spacing:.08em;text-align:center;pointer-events:none
+}
+body.blueprint-mode #designHint{display:block}
+#sheetToggle{margin-left:auto;border:1px solid #303b45;border-radius:8px;background:#121820;color:#dce5ec;min-height:25px;padding:0 8px;font-size:7px}
+body.blueprint-mode #shade{background:linear-gradient(#04111a44,transparent 22%,transparent 82%,#04111a88)}
+body.blueprint-mode #nowCard{border-color:#2d6772;background:#06141de8}
+body.blueprint-mode #makingBar{border-color:#2d6772}
+
+@media(max-width:600px){
+  html,body{height:100%;min-height:100%;overflow:hidden;overscroll-behavior:none;background:#080a0d}
+  #world{position:fixed;inset:0;height:100svh;min-height:0;background:#526b7b}
+  #console{
+    position:fixed;z-index:50;left:0;right:0;bottom:0;height:17svh;min-height:124px;
+    display:block;padding-bottom:env(safe-area-inset-bottom);overflow:hidden;
+    border:1px solid #303944;border-bottom:0;border-radius:18px 18px 0 0;
+    background:#080a0df4;box-shadow:0 -12px 34px #0008;transition:height .2s ease
+  }
+  #console.open{height:62svh}
+  #console:not(.open) #mobileTabs,#console:not(.open) #agents{display:none!important}
+  #console:not(.open) #ledger{height:32px;border-bottom:0}
+  #console:not(.open) #composer{position:absolute;left:0;right:0;bottom:0}
+  #console.open #agents{display:block;height:calc(62svh - 34px - 44px - 68px);min-height:0}
+  #console.open #mobileTabs{display:grid;position:relative;top:auto}
+  #console.open .agent.active{height:100%}
+  #ledger{position:relative;top:auto;height:34px;font-size:6.8px;gap:9px;padding:0 8px;overflow-x:auto}
+  #ledger span:nth-of-type(n+4){display:none}
+  #sheetToggle{display:block;flex:0 0 auto}
+  #composer{position:relative;bottom:auto;z-index:40;grid-template-columns:minmax(0,1fr) 50px 50px 50px;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:#080a0dfb}
+  #composer textarea{height:48px}
+  #refCard{position:absolute;width:98px;top:max(7px,env(safe-area-inset-top));left:7px;padding:5px;background:#070b0edc}
+  #refCard img{height:58px}
+  #worldScore{font-size:26px}
+  #stateCard{left:112px;right:7px;top:max(7px,env(safe-area-inset-top));max-width:none;height:31px;max-height:31px;overflow:hidden;padding:5px 7px;font-size:6.3px;white-space:nowrap}
+  #stateCard br,#differenceChip{display:none!important}
+  #nowCard{top:max(45px,calc(env(safe-area-inset-top) + 39px));width:calc(100vw - 126px);left:auto;right:7px;transform:none;padding:5px 7px;border-radius:9px}
+  #phaseLabel{font-size:6.4px;margin-bottom:1px}
+  #phaseText{font-size:8px;line-height:1.2}
+  #selectionCard{top:max(82px,calc(env(safe-area-inset-top) + 76px));max-width:78vw;font-size:6.8px}
+  #worldButtons{left:7px;right:7px;bottom:calc(17svh + 8px);justify-content:flex-end;overflow-x:auto;gap:4px;transition:bottom .2s ease}
+  body.sheet-open #worldButtons{bottom:calc(62svh + 8px)}
+  .wbtn{min-height:44px;min-width:48px;border-radius:12px;font-size:7.2px}
+  .zoomBtn{min-width:44px;font-size:16px!important}
+  #makingBar{left:7px;right:7px;bottom:calc(17svh + 58px);transition:bottom .2s ease;grid-template-columns:28px minmax(0,1fr) 44px;grid-template-rows:16px 16px;padding:4px 6px;border-radius:10px}
+  body.sheet-open #makingBar{bottom:calc(62svh + 58px)}
+  #makingNote{font-size:6.3px}
+  #traceTick{font-size:6px}
+  #designHint{bottom:calc(17svh + 110px);font-size:6.6px}
+  body.sheet-open #designHint{bottom:calc(62svh + 110px)}
+  #agents{overflow:hidden}
+  .log{overscroll-behavior:contain}
+  .msg{font-size:10.5px;line-height:1.46}
+}
+
+
+/* MEDICAL IMAGING / FLY-EYE DIAGNOSTIC LAB — sits on top of the existing builder. */
+#diagDrawer{position:fixed;z-index:96;inset:8px;background:#070a0df8;border:1px solid #3b4650;border-radius:16px;box-shadow:0 18px 70px #000d;display:grid;grid-template-rows:50px auto auto minmax(0,1fr);overflow:hidden}
+#diagHead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 11px;border-bottom:1px solid #303842;font-size:9px;letter-spacing:.1em}
+#diagHead>div{display:flex;gap:5px;overflow-x:auto}#diagHead button,#diagControls button{min-height:34px;border:1px solid #39424d;border-radius:9px;background:#151a20;color:var(--fg);font-size:7px;padding:0 9px;white-space:nowrap}#injectDiagBtn.on{background:var(--cyan);border-color:var(--cyan);color:#061210}
+#diagControls{display:flex;gap:6px;overflow-x:auto;padding:7px;border-bottom:1px solid #252c34}#scanAllBtn{border-color:#766331!important;color:var(--warn)!important}
+#diagStatus{padding:7px 10px;border-bottom:1px solid #252c34;color:#aab4bd;font-size:7.5px;line-height:1.45;white-space:pre-wrap}
+#diagBody{overflow:auto;padding:9px}.diagMetrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:8px}.diagMetric{border:1px solid #303842;border-radius:9px;background:#101419;padding:7px;font-size:7px;color:var(--dim)}.diagMetric b{display:block;color:var(--fg);font-size:13px;margin-top:2px}.diagMetric.hot b{color:var(--hot)}.diagMetric.warn b{color:var(--warn)}.diagMetric.ok b{color:var(--ok)}
+#diagSummaryText{border:1px solid #303842;border-radius:10px;background:#101419;padding:8px;font-size:8px;line-height:1.5;white-space:pre-wrap;color:#c0c8cf;margin-bottom:8px}
+#diagImages{display:grid;grid-template-columns:minmax(0,2fr) minmax(240px,1fr);gap:8px;align-items:start}.diagMain,.diagPanel{border:1px solid #303842;border-radius:10px;background:#0d1115;padding:6px}.diagMain img,.diagPanel img{display:block;width:100%;height:auto;border-radius:6px;background:#080a0d}.diagCap{font-size:6.5px;color:var(--dim);letter-spacing:.08em;padding:5px 2px 1px}.diagSide{display:grid;gap:8px}.nativeLoad{cursor:pointer}
+#loadStatus{margin-top:5px}
+@media(max-width:600px){
+ #diagDrawer{inset:0;border:0;border-radius:0;grid-template-rows:44px auto auto minmax(0,1fr);padding-top:env(safe-area-inset-top)}
+ #diagHead{font-size:7.2px;padding:0 7px}#diagHead button,#diagControls button{min-height:38px;font-size:6.8px;padding:0 8px}
+ #diagControls{padding:6px;gap:4px}#diagStatus{font-size:7px;padding:6px 8px}.diagMetrics{grid-template-columns:repeat(2,minmax(0,1fr))}.diagMetric b{font-size:14px}
+ #diagImages{display:block}.diagMain,.diagPanel{margin-bottom:8px}.diagSide{display:block}.diagPanel{margin-top:8px}
+ #worldButtons label.wbtn{display:grid;place-items:center}
+}
+
+
+/* REGISTERED SCAN STAGE v07 — all diagnostics occupy one shared world coordinate system. */
+#scanHUD{display:none;position:absolute;z-index:31;right:8px;top:max(86px,calc(env(safe-area-inset-top) + 78px));width:min(330px,62vw);padding:9px;border:1px solid #40505d;border-radius:12px;background:#070b0edb;box-shadow:0 8px 28px #0009;font-size:7px;line-height:1.4;pointer-events:auto}
+#scanHUD b{color:var(--cyan);letter-spacing:.12em}#scanStageStatus{display:block;margin:4px 0 7px;color:#c2cbd2;white-space:normal}.scanLayerRow{display:flex;gap:4px;overflow-x:auto}.scanLayerRow button{min-height:34px;min-width:48px;padding:0 8px;border:1px solid #394650;border-radius:8px;background:#11171c;color:#aab4bc;font-size:6.5px}.scanLayerRow button.on{background:#16363a;border-color:#2de2d0;color:#c9fffa}
+body.scan-stage #scanHUD{display:block}body.scan-stage #world{inset:0!important}body.scan-stage #console{display:none!important}body.scan-stage #diagDrawer{inset:auto 8px 8px;height:min(36svh,330px);border-radius:16px;grid-template-rows:44px auto auto minmax(0,1fr)}body.scan-stage #diagBody{display:none}body.scan-stage #diagHead{min-height:44px}
+#scanStageBtn.on{background:#16363a!important;border-color:#2de2d0!important;color:#c9fffa!important}.diagPanel.selectable{cursor:pointer}.diagPanel.selectable:active{transform:scale(.995)}
+@media(max-width:600px){#scanHUD{left:150px;right:7px;top:max(78px,calc(env(safe-area-inset-top) + 70px));width:auto;padding:7px;font-size:6.4px}.scanLayerRow button{min-height:38px;min-width:45px;font-size:6px;padding:0 6px}body.scan-stage #diagDrawer{inset:auto 0 0;height:32svh;border-radius:14px 14px 0 0;padding-top:0}body.scan-stage #diagStatus{max-height:54px;overflow:auto}body.scan-stage #refCard{opacity:.82;transform:scale(.9);transform-origin:top left}}
+
+</style>
+<!-- Three.js is loaded asynchronously AFTER the UI is wired, so a CDN failure cannot kill the controls. -->
+</head>
+<body>
+<div id="fatal"></div>
+<div id="world"><div id="worldFallback">3D ENGINE LOADING…<br>Setup and API controls remain usable even if Three.js fails.</div><div id="shade"></div>
+  <div id="refCard"><div id="refName">REFERENCE · NONE</div><img id="refImg"><div id="scoreCap">HOW MUCH IT SUCKS</div><div id="worldScore">—</div><div id="settled">UNSETTLED</div></div>
+  <div id="stateCard">UI <b id="uiChip" class="ok">READY</b> · 3D <b id="threeChip" class="warn">CHECKING</b> · API <b id="apiChip" class="bad">NOT TESTED</b><br>CYCLE <b id="cycleChip">0</b> · VIEW <b id="viewChip" class="cyan">FRONT</b> · NEXT <b id="nextChip">BUILD</b><br><span id="differenceChip">NO OBSERVATION YET</span></div>
+  <div id="nowCard"><b id="phaseLabel">READY · REC 0</b><span id="phaseText">Load/build/scan offline. API is only for Builder/Critic.</span></div>
+  <div id="selectionCard">PLAN · NOTHING SELECTED</div>
+  <div id="scanHUD"><b>REGISTERED SCAN STAGE</b><span id="scanStageStatus">WORLD_TRUE + WORLD_SEEN share coordinates.</span><div class="scanLayerRow"><button id="scanTrueBtn" class="on">TRUE</button><button id="scanSeenBtn" class="on">SEEN</button><button id="scanCamsBtn" class="on">CAMS</button><button id="scanRaysBtn" class="on">RAYS</button><button id="scanSliceBtn" class="on">SLICE</button></div></div>
+  <div id="designHint">PLAN · TAP A PART · DRAG IT · PINCH + PAN · SEND LANGUAGE ABOUT THE SELECTED PART</div>
+  <div id="makingBar"><div id="makingNote">LIVE · no Builder moves recorded yet</div><button id="tracePlay">▶</button><input id="traceScrub" type="range" min="0" max="0" value="0" step="1"><span id="traceTick">LIVE</span></div>
+  <div id="diffLegend"><span class="a">+ ADDED</span> · <span class="c">~ CHANGED</span> · <span class="r">− OLD/REMOVED</span></div><div id="worldButtons"><button class="wbtn zoomBtn" id="zoomOutBtn">−</button><button class="wbtn zoomBtn" id="zoomInBtn">+</button><button class="wbtn" id="fitBtn">FIT</button><button class="wbtn" id="viewBtn">VIEW</button><button class="wbtn" id="blueprintBtn">PLAN</button><button class="wbtn" id="diffBtn">Δ GEO</button><button class="wbtn" id="scanBtn">SCAN</button><label class="wbtn nativeLoad" for="loadFile" id="loadBtn">LOAD</label><button class="wbtn" id="traceBtn">TRACE</button><button class="wbtn" id="setupBtn">SETUP</button></div>
+</div>
+<div id="console">
+  <div id="ledger"><span>WORLD <b id="worldVersion">0</b></span><span>Δ <b id="geoDelta">+0 ~0 −0</b></span><span>HARD FAIL <b id="hardFail">0</b></span><span>LOW VIEWS <b id="lowViews">0/6</b></span><span>BUILDER CTX <b id="builderCtx">~0</b></span><span>CRITIC CTX <b id="criticCtx">~0</b></span><span>API TOKENS <b id="apiUsage">0/0</b></span><span class="mobileHint">SWIPE CHATS ↔</span><button id="sheetToggle">CHAT ↑</button></div>
+  <div id="mobileTabs"><button id="tabLive" class="on">LIVE LOOP</button><button id="tabBuilder">BUILDER</button><button id="tabCritic">CRITIC</button></div>
+  <div id="agents">
+    <section id="liveAgent" class="agent active"><div class="agentHead">LIVE CORRESPONDENCE · WHAT IS HAPPENING</div><div id="liveLog" class="log"></div></section>
+    <section id="builderAgent" class="agent"><div class="agentHead">BUILDER · OWN CONTEXT</div><div id="builderLog" class="log"></div></section>
+    <section id="criticAgent" class="agent"><div class="agentHead">CRITIC · OWN CONTEXT</div><div id="criticLog" class="log"></div></section>
+  </div>
+  <div id="composer"><textarea id="userInput" placeholder="Tell Builder what changed…"></textarea><button id="sendBtn">SEND</button><button id="stepBtn">STEP</button><button id="loopBtn">LOOP</button></div>
+</div>
+
+<div id="traceDrawer" class="hidden"><div id="traceHead"><b>BUILD TRACE · WHAT ACTUALLY CHANGED</b><div><button id="exportTraceBtn">EXPORT JSON</button><button id="closeTraceBtn">CLOSE</button></div></div><div id="traceSummary">Every Builder move is recorded automatically: world before/after, operations, actual geometry delta, before/after image, geometry-diff image, Critic observations, and medical scans.</div><div id="traceList"></div></div>
+
+<div id="diagDrawer" class="hidden">
+ <div id="diagHead"><b>MEDICAL IMAGING · IS THE BUILDING FUCKED, OR ARE OUR EYES FUCKED?</b><div><button id="injectDiagBtn">API LENS OFF</button><button id="exportDiagBtn">EXPORT SHEET</button><button id="closeDiagBtn">CLOSE</button></div></div>
+ <div id="diagControls"><button id="scanAllBtn">SCAN ALL</button><button id="scanStageBtn">LIVE STAGE</button><button id="flyEyeBtn">FLY EYE</button><button id="sphereBtn">360° EYE</button><button id="cameraMapBtn">CAMERAS</button><button id="ctBtn">CT</button><button id="laserBtn">LASER / LEAK</button><button id="photoBtn">PHOTO CLOUD</button></div>
+ <div id="diagStatus">OFFLINE DIAGNOSTIC LAB · no API required. SCAN ALL builds one compact evidence sheet from the exact current world. API LENS is OFF by default so scans do not spend credits.</div>
+ <div id="diagBody"><div id="diagMetrics" class="diagMetrics"></div><div id="diagSummaryText">NO SCAN YET.</div><div id="diagImages"><div id="diagMain" class="diagMain"><div class="diagCap">MEDICAL SHEET</div></div><div id="diagSide" class="diagSide"></div></div></div>
+</div>
+
+<div id="setup">
+ <div id="setupBox">
+  <h1>WHAT DO YOU WANT TO BUILD?</h1>
+  <div id="setupLead">OPEN OFFLINE WITH NO API to inspect or scan an existing building. API is only required for STEP / LOOP. On phone: drag to orbit, pinch to zoom, double-tap to fit.</div>
+  <div id="bootStatus">UI SELF-TEST: STARTING…</div>
+  <div class="notice">PERSONAL BROWSER MODE. Your key is held only in page memory and is not saved/exported. OpenAI recommends keeping API keys out of browser/client code, so do not publish this page with a key embedded in it.</div>
+  <div class="field"><label class="cap">BUILD INTENT</label><textarea id="intentInput" placeholder="Build a three-tier pagoda house matching this reference. Keep the entry connected. Every elevation must survive inspection."></textarea></div>
+  <div class="field"><label class="cap">REFERENCE IMAGE</label><div class="refRow"><img id="setupRef" class="refPreview"><div><label for="refFile" class="btn" id="uploadLabel">UPLOAD REFERENCE</label><input id="refFile" type="file" accept="image/*" style="position:absolute;left:-9999px"><div id="refMeta" class="status">NO REFERENCE</div></div></div></div>
+  <div class="field"><label class="cap">LOAD EXISTING BUILD / TRACE — OFFLINE</label><label for="loadFile" class="btn">IMPORT TRACE OR WORLD JSON</label><input id="loadFile" type="file" accept="application/json,.json" style="position:absolute;left:-9999px"><div id="loadStatus" class="status">NO BUILD LOADED</div></div>
+  <div class="field"><label class="cap">OPENAI API KEY — NOT SAVED</label><input id="keyInput" type="password" autocomplete="off" placeholder="sk-…"></div>
+  <div class="field"><label class="cap">MODEL</label><div class="apiRow"><input id="modelInput" value="gpt-5.6-sol"><button class="bigBtn" id="testApiBtn">TEST API</button></div><div id="apiStatus" class="status">NOT TESTED</div></div>
+  <div class="beginRow"><button id="resetBtn">RESET</button><button id="beginBtn">OPEN WORLD</button></div>
+ </div>
+</div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+/* EARLY ERROR SURFACE — if anything below dies, the user sees why. */
+window.addEventListener('error',function(e){var f=document.getElementById('fatal');if(f){f.style.display='block';f.textContent='RUNTIME ERROR: '+(e.message||e.error||'unknown')+(e.lineno?'\nline '+e.lineno:'');}});
+window.addEventListener('unhandledrejection',function(e){var f=document.getElementById('fatal');if(f){f.style.display='block';f.textContent='PROMISE ERROR: '+((e.reason&&e.reason.message)||e.reason||'unknown');}});
+
+(function(){
+const $=id=>document.getElementById(id);
+const CORE_VIEWS=['FRONT','BACK','LEFT','RIGHT','TOP','ENTRY'];
+const STRESS_VIEWS=['FRONT_3Q','REAR_3Q','LOW_FRONT','LOW_REAR','HIGH_LEFT','HIGH_RIGHT'];
+const ALL_VIEWS=CORE_VIEWS.concat(STRESS_VIEWS);
+const LOW_THRESHOLD=15;
+let API_KEY='';
+let apiTested=false;
+let busy=false;
+let looping=false;
+let renderer=null,scene=null,camera=null,worldGroup=null,diffGroup=null,ground=null,planGrid=null,raycaster=null,scanOverlayRoot=null,scanPointGroup=null,scanRayGroup=null,scanCamGroup=null,scanPlaneGroup=null,scanAnimToken=0;
+let orbit={az:3.85,pol:.95,rad:42,target:null};
+let pointers=new Map();let designDrag=null;
+let manualViewIndex=0;
+let reviewMode=false,reviewIndex=0,reviewPlaying=false,reviewTimer=null;
+const state={intent:'',reference:null,referenceName:'',model:'gpt-5.6-sol',cycle:0,worldVersion:0,world:[],viewScores:{},builderLog:[],criticLog:[],events:[],history:[],snapshotsByView:{},needBuild:true,lastCriticism:'',lastCriticView:'FRONT',lastBuild:null,showDiff:false,phase:'READY',phaseText:'Open offline, load a build, scan it, or connect API to build.',highStreak:0,forcedView:null,blueprintMode:false,selectedId:null,diagnostics:[],latestDiagnostic:null,injectDiagnostic:false,scanStage:false,scanLayers:{trueWorld:true,seen:true,cams:true,rays:true,slice:true},usage:{calls:0,input:0,output:0,cached:0}};
+
+function toast(s,ms){$('toast').textContent=s;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),ms||2500)}
+function esc(s){return String(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function setPhase(label,text){
+  state.phase=String(label||'READY');state.phaseText=String(text||'');
+  const a=$('phaseLabel'),b=$('phaseText');
+  if(a)a.textContent=state.phase+' · REC '+state.history.length;
+  if(b)b.textContent=state.phaseText;
+}
+function renderLiveLog(){
+  const n=$('liveLog');if(!n)return;
+  const rows=[];
+  state.builderLog.forEach(m=>{
+    if(m.role==='assistant')rows.push({ts:m.ts,who:'BUILDER',text:m.text,cls:'builderTurn'});
+    else if(m.role==='critic → builder')rows.push({ts:m.ts,who:'CRITIC → BUILDER',text:m.text,cls:'bridgeTurn'});
+    else if(m.role==='user override')rows.push({ts:m.ts,who:'YOU → BUILDER',text:m.text,cls:'bridgeTurn'});
+    else if(m.role==='system')rows.push({ts:m.ts,who:'LOOP',text:m.text,cls:'bridgeTurn'});
+  });
+  state.criticLog.forEach(m=>{if(m.role==='assistant')rows.push({ts:m.ts,who:'CRITIC',text:m.text,cls:'criticTurn'});});
+  rows.sort((a,b)=>Date.parse(a.ts)-Date.parse(b.ts));
+  const tail=rows.slice(-18);
+  n.innerHTML=tail.map(m=>'<div class="msg '+m.cls+'"><span class="r">'+esc(m.who)+' · '+new Date(m.ts).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})+'</span>'+esc(m.text)+'</div>').join('')||'<div class="msg"><span class="r">LIVE LOOP</span>Nothing has happened yet.</div>';
+  n.scrollTop=n.scrollHeight;
+}
+
+function addLog(which,role,text,cls){const m={role,text:String(text||''),cls:cls||'',ts:new Date().toISOString()};state[which+'Log'].push(m);renderLogs();renderLiveLog();}
+function event(type,data){state.events.push({type,data:data||{},ts:new Date().toISOString(),cycle:state.cycle,worldVersion:state.worldVersion});}
+function cloneJSON(v){return JSON.parse(JSON.stringify(v));}
+function geomSig(o){return JSON.stringify({primitive:o.primitive,role:o.role,position:o.position,size:o.size,rotation_y:o.rotation_y,color:o.color,material:o.material,scale:o.scale});}
+function geometryDiff(before,after){const a=new Map((before||[]).map(o=>[o.id,o])),b=new Map((after||[]).map(o=>[o.id,o])),added=[],removed=[],changed=[];b.forEach((o,id)=>{if(!a.has(id))added.push(id);else if(geomSig(a.get(id))!==geomSig(o))changed.push(id);});a.forEach((o,id)=>{if(!b.has(id))removed.push(id);});return {added,changed,removed};}
+function diffLabel(d){d=d||{added:[],changed:[],removed:[]};return '+'+d.added.length+' ~'+d.changed.length+' −'+d.removed.length;}
+function renderTrace(){updateMakingBar();$('geoDelta').textContent=state.lastBuild?diffLabel(state.lastBuild.diff):'+0 ~0 −0';$('diffBtn').classList.toggle('on',!!state.showDiff);$('diffLegend').classList.toggle('show',!!state.showDiff&&!!state.lastBuild);const list=$('traceList');if(!list)return;const hs=state.history.slice().reverse();if(!hs.length){list.innerHTML='<div class="traceText">NO BUILDS RECORDED YET.</div>';return;}list.innerHTML=hs.map(r=>{const last=(r.critiques||[]).slice(-1)[0];const media=[['BEFORE',r.beforeShot],['AFTER',r.afterShot],['Δ GEOMETRY',r.diffShot]].filter(x=>x[1]).map(x=>'<div class="traceShot"><img src="'+x[1]+'"><span>'+x[0]+'</span></div>').join('');return '<div class="traceCard"><div class="traceTitle"><span>CYCLE '+r.cycle+' · WORLD '+r.worldVersion+'</span><b>Δ '+diffLabel(r.diff)+(last?' · SUCK '+last.score:'')+'</b></div><div class="traceText">'+esc(r.summary||'Builder move')+'\n'+esc(((r.receipts||[]).slice(0,10).join(' · '))+((r.receipts||[]).length>10?' · … +'+((r.receipts||[]).length-10)+' more':''))+(last?'\n\n'+esc(last.view+': '+last.criticism):'')+'</div><div class="traceMedia">'+media+'</div></div>';}).join('');}
+function renderSnapshotWorld(snapshot){
+  if(!worldGroup)return;
+  while(worldGroup.children.length)worldGroup.remove(worldGroup.children[0]);
+  (snapshot||[]).forEach(o=>worldGroup.add(meshFor(o)));
+  renderNow();
+}
+function updateMakingBar(){
+  const n=state.history.length, s=$('traceScrub');if(!s)return;
+  s.max=String(n); if(!reviewMode)s.value=String(n);
+  $('traceTick').textContent=reviewMode?(reviewIndex+'/'+n):('LIVE '+n);
+  $('makingBar').classList.toggle('reviewing',reviewMode);
+  if(reviewMode){
+    const r=reviewIndex>0?state.history[reviewIndex-1]:null;
+    $('makingNote').textContent=r?('REVIEW · CYCLE '+r.cycle+' · '+diffLabel(r.diff)+' · '+(r.summary||'Builder move')):'REVIEW · BEFORE FIRST BUILD';
+  }else{
+    const r=state.lastBuild;
+    $('makingNote').textContent=r?('LIVE · CYCLE '+r.cycle+' · '+diffLabel(r.diff)+' · '+(r.summary||'Builder move')):'LIVE · no Builder moves recorded yet';
+  }
+  $('tracePlay').textContent=reviewPlaying?'❚❚':'▶';
+}
+function stopReviewPlayback(){reviewPlaying=false;clearInterval(reviewTimer);reviewTimer=null;updateMakingBar();}
+function showBuildFrame(i){
+  const n=state.history.length;i=Math.max(0,Math.min(n,Number(i)||0));reviewIndex=i;
+  if(i===n){reviewMode=false;rebuildWorld();if(state.lastBuild)rebuildDiffOverlay(state.lastBuild);if(diffGroup)diffGroup.visible=!!state.showDiff;renderNow();}
+  else{
+    reviewMode=true;
+    const snapshot=i===0?(state.history[0]?state.history[0].beforeWorld:[]):state.history[i-1].afterWorld;
+    renderSnapshotWorld(snapshot);
+    const rec=i>0?state.history[i-1]:null;
+    if(rec){rebuildDiffOverlay(rec);if(diffGroup)diffGroup.visible=true;}else if(diffGroup){while(diffGroup.children.length)diffGroup.remove(diffGroup.children[0]);diffGroup.visible=false;}
+    renderNow();
+  }
+  updateMakingBar();
+}
+function playBuildTrace(){
+  if(reviewPlaying){stopReviewPlayback();return;}
+  if(!state.history.length){toast('NO BUILDS RECORDED YET');return;}
+  reviewPlaying=true;if(!reviewMode||reviewIndex>=state.history.length)reviewIndex=0;showBuildFrame(reviewIndex);updateMakingBar();
+  reviewTimer=setInterval(()=>{if(reviewIndex>=state.history.length){stopReviewPlayback();showBuildFrame(state.history.length);return;}showBuildFrame(reviewIndex+1);},650);
+}
+$('traceScrub').addEventListener('input',e=>{stopReviewPlayback();showBuildFrame(+e.target.value);});
+$('tracePlay').addEventListener('click',playBuildTrace);
+
+function exportTrace(){const payload={format:'OPERATIVE_BUILDER_TRACE_V2_MEDICAL',exported_at:new Date().toISOString(),intent:state.intent,reference_name:state.referenceName,reference:state.reference,model:state.model,current_world:state.world,current_world_version:state.worldVersion,view_scores:state.viewScores,history:state.history,builder_log:state.builderLog,critic_log:state.criticLog,events:state.events,diagnostics:state.diagnostics,usage:state.usage};const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='operative-builder-trace-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);}
+
+function ctxEstimate(log){return '~'+Math.round(log.slice(-30).reduce((n,m)=>n+m.text.length,0)/4);}
+function renderLogs(){['builder','critic'].forEach(which=>{const el=$(which+'Log');el.innerHTML=state[which+'Log'].slice(-100).map(m=>'<div class="msg '+esc(m.cls)+'"><span class="r">'+esc(m.role.toUpperCase())+' · '+new Date(m.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})+'</span>'+esc(m.text)+'</div>').join('');el.scrollTop=el.scrollHeight;});$('builderCtx').textContent=ctxEstimate(state.builderLog);$('criticCtx').textContent=ctxEstimate(state.criticLog);}
+function renderReference(){if(state.reference){$('refImg').src=state.reference;$('setupRef').src=state.reference;$('refName').textContent='REFERENCE · '+state.referenceName;$('refMeta').textContent=state.referenceName+' · PINNED';$('refMeta').className='status ok';}else{$('refImg').removeAttribute('src');$('setupRef').removeAttribute('src');$('refName').textContent='REFERENCE · NONE';$('refMeta').textContent='NO REFERENCE';$('refMeta').className='status';}}
+function currentScore(){const vals=Object.values(state.viewScores).filter(v=>v.worldVersion===state.worldVersion).map(v=>v.score);return vals.length?Math.max.apply(null,vals):null;}
+function runLinters(){
+  const out=[];
+  const roles=state.world.map(o=>(o.role||'').toLowerCase());
+  if(state.world.length===0)out.push({severity:'high',code:'EMPTY_WORLD',message:'No building geometry exists.'});
+  if(state.world.length&& !roles.some(r=>r.includes('door')))out.push({severity:'high',code:'NO_DOOR',message:'No object has semantic role door.'});
+  if(roles.some(r=>r.includes('door'))&&!roles.some(r=>/stair|path|landing|porch/.test(r)))out.push({severity:'high',code:'NO_ARRIVAL',message:'Door exists without stair/path/landing/porch.'});
+  return out;
+}
+function criticLinterText(){const xs=runLinters();return xs.length?xs.slice(0,6).map(x=>x.code+': '+x.message).join('\n'):'NONE';}
+function settledStatus(){const hard=runLinters().filter(x=>x.severity==='high'||x.severity==='critical').length;const low=CORE_VIEWS.filter(v=>state.viewScores[v]&&state.viewScores[v].worldVersion===state.worldVersion&&state.viewScores[v].score<LOW_THRESHOLD).length;return low===CORE_VIEWS.length&&hard===0?'NOT CURRENTLY FUCKED':'UNSETTLED';}
+function renderState(){const s=currentScore();$('worldScore').textContent=s==null?'—':String(s).padStart(2,'0');$('worldScore').style.color=s==null?'var(--dim)':s>=60?'var(--hot)':s>=20?'var(--warn)':'var(--ok)';$('settled').textContent=settledStatus();$('apiChip').textContent=apiTested?'CONNECTED':'NOT TESTED';$('apiChip').className=apiTested?'ok':'bad';$('cycleChip').textContent=state.cycle;$('viewChip').textContent=state.lastCriticView||'FRONT';$('nextChip').textContent=state.needBuild?'BUILD':'LOOK';$('differenceChip').textContent=(state.lastCriticism||'NO OBSERVATION YET').slice(0,100);$('worldVersion').textContent=state.worldVersion;$('hardFail').textContent=runLinters().filter(x=>x.severity==='high'||x.severity==='critical').length;$('lowViews').textContent=CORE_VIEWS.filter(v=>state.viewScores[v]&&state.viewScores[v].worldVersion===state.worldVersion&&state.viewScores[v].score<LOW_THRESHOLD).length+'/6';if($('apiUsage'))$('apiUsage').textContent=(state.usage.input||0)+'/'+(state.usage.output||0)+(state.usage.cached?(' C'+state.usage.cached):'');setPhase(state.phase,state.phaseText);renderLogs();renderLiveLog();renderTrace();}
+
+/* Native file input: works without Three.js. */
+$('refFile').addEventListener('change',async function(){const f=this.files&&this.files[0];if(!f)return;try{state.reference=await fileToImageData(f);state.referenceName=f.name;state.viewScores={};state.needBuild=true;renderReference();renderState();renderTrace();toast('REFERENCE PINNED');event('reference_changed',{name:f.name,size:f.size});}catch(e){toast('IMAGE FAILED: '+e.message,4000);}});
+function readTextFile(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onerror=()=>reject(new Error('Could not read file'));r.onload=()=>resolve(String(r.result||''));r.readAsText(file);});}
+function importBuildPayload(j,name){
+  const world=Array.isArray(j)?j:(Array.isArray(j.current_world)?j.current_world:(Array.isArray(j.world)?j.world:null));
+  if(!world)throw new Error('No current_world/world array found. Import an OPERATIVE BUILDER trace or plain world array.');
+  state.world=cloneJSON(world);state.intent=String((j&&j.intent)||state.intent||'');state.reference=(j&&j.reference)||state.reference;state.referenceName=String((j&&j.reference_name)||state.referenceName||'');state.model=String((j&&j.model)||state.model||'gpt-5.6-sol');
+  state.history=Array.isArray(j&&j.history)?j.history:[];state.builderLog=Array.isArray(j&&j.builder_log)?j.builder_log:[];state.criticLog=Array.isArray(j&&j.critic_log)?j.critic_log:[];state.events=Array.isArray(j&&j.events)?j.events:[];state.viewScores=(j&&j.view_scores)||{};
+  state.diagnostics=Array.isArray(j&&j.diagnostics)?j.diagnostics:[];state.latestDiagnostic=state.diagnostics.length?state.diagnostics[state.diagnostics.length-1]:null;
+  state.usage=(j&&j.usage&&typeof j.usage==='object')?j.usage:{calls:0,input:0,output:0,cached:0};
+  state.worldVersion=Number((j&&j.current_world_version)||(j&&j.worldVersion)||(state.history.length?state.history[state.history.length-1].worldVersion:1))||1;
+  state.cycle=Number((j&&j.cycle)||(state.history.length?state.history[state.history.length-1].cycle:0))||0;state.lastBuild=state.history.length?state.history[state.history.length-1]:null;state.lastCriticism='';
+  if(state.lastBuild&&state.lastBuild.critiques&&state.lastBuild.critiques.length)state.lastCriticism=String(state.lastBuild.critiques[state.lastBuild.critiques.length-1].criticism||'');
+  state.needBuild=false;state.showDiff=false;state.selectedId=null;reviewMode=false;reviewIndex=state.history.length;stopReviewPlayback();
+  if($('intentInput')&&state.intent)$('intentInput').value=state.intent;if($('modelInput'))$('modelInput').value=state.model;
+  renderReference();rebuildWorld();if(state.lastBuild)rebuildDiffOverlay(state.lastBuild);renderState();renderDiagnostics();setPhase('BUILD LOADED',state.world.length+' parts · diagnostics work offline.');fitCamera(true);event('build_imported',{name:name||'world.json',objects:state.world.length,history:state.history.length});
+}
+$('loadFile').addEventListener('change',async function(){const f=this.files&&this.files[0];if(!f)return;const st=$('loadStatus');st.textContent='LOADING…';st.className='status warn';try{const txt=await readTextFile(f),j=JSON.parse(txt);importBuildPayload(j,f.name);st.textContent='LOADED · '+f.name+' · '+state.world.length+' PARTS';st.className='status ok';$('setup').classList.add('hidden');toast('BUILD LOADED · SCAN WORKS OFFLINE');}catch(e){st.textContent='FAILED · '+e.message;st.className='status bad';toast('LOAD FAILED: '+e.message,5000);}});
+
+function fileToImageData(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onerror=()=>reject(new Error('Could not read file'));r.onload=()=>{const im=new Image();im.onerror=()=>reject(new Error('Could not decode image'));im.onload=()=>{const max=1200,sc=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*sc));c.height=Math.max(1,Math.round(im.height*sc));c.getContext('2d').drawImage(im,0,0,c.width,c.height);resolve(c.toDataURL('image/jpeg',.86));};im.src=r.result;};r.readAsDataURL(file);});}
+
+function recordApiUsage(data){
+  const u=data&&data.usage;if(!u)return;
+  const inp=Number(u.input_tokens||0),out=Number(u.output_tokens||0),cached=Number((u.input_tokens_details&&u.input_tokens_details.cached_tokens)||0);
+  state.usage.calls=(state.usage.calls||0)+1;state.usage.input=(state.usage.input||0)+inp;state.usage.output=(state.usage.output||0)+out;state.usage.cached=(state.usage.cached||0)+cached;
+  event('api_usage',{model:state.model,input_tokens:inp,output_tokens:out,cached_tokens:cached,phase:state.phase});
+}
+function outputText(data){if(data&&typeof data.output_text==='string')return data.output_text;let s='';(data.output||[]).forEach(item=>(item.content||[]).forEach(c=>{if(c.type==='output_text'&&c.text)s+=c.text;}));return s;}
+async function apiFetch(payload,retries){let last;for(let i=0;i<=(retries||0);i++){const ctl=new AbortController();const tm=setTimeout(()=>ctl.abort(),45000);try{const res=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+API_KEY},body:JSON.stringify(payload),signal:ctl.signal});clearTimeout(tm);const raw=await res.text();let data;try{data=JSON.parse(raw);}catch(_){data={raw};}if(!res.ok){const msg=(data.error&&data.error.message)||raw||('HTTP '+res.status);const err=new Error('HTTP '+res.status+' · '+msg);err.status=res.status;if((res.status===429||res.status>=500)&&i<(retries||0)){last=err;await new Promise(r=>setTimeout(r,700*Math.pow(2,i)));continue;}throw err;}recordApiUsage(data);return data;}catch(e){clearTimeout(tm);last=e;if(i<(retries||0)&&(/Abort|network|fetch/i.test(String(e)))){await new Promise(r=>setTimeout(r,700*Math.pow(2,i)));continue;}throw e;}}throw last;}
+$('testApiBtn').addEventListener('click',async function(){API_KEY=$('keyInput').value.trim();state.model=$('modelInput').value.trim()||'gpt-5.6-sol';const st=$('apiStatus');apiTested=false;renderState();if(!API_KEY){st.textContent='ENTER A KEY';st.className='status bad';return;}st.textContent='TESTING…';st.className='status warn';this.disabled=true;try{const d=await apiFetch({model:state.model,input:'Reply exactly API_OK.',max_output_tokens:20,store:false},1);const t=outputText(d).trim();if(!/API_OK/i.test(t))throw new Error('Unexpected response: '+t.slice(0,100));apiTested=true;st.textContent='CONNECTED · '+state.model;st.className='status ok';event('api_test_ok',{model:state.model});}catch(e){let msg=e.message||String(e);if(e instanceof TypeError||/Failed to fetch/i.test(msg))msg='NETWORK/CORS: this browser blocked the direct request to api.openai.com. UI is working; the API transport is blocked in this origin.';st.textContent='FAILED · '+msg;st.className='status bad';event('api_test_fail',{message:msg});}finally{this.disabled=false;renderState();}});
+
+/* Three.js world. Failure here does NOT kill setup/API controls. */
+function initThree(){if(!window.THREE){$('threeChip').textContent='FAILED';$('threeChip').className='bad';$('worldFallback').textContent='THREE.JS DID NOT LOAD.\nUpload + API test still work.\nConnect to internet or serve this HTML from HTTPS.';return false;}try{const THREE=window.THREE;scene=new THREE.Scene();scene.background=new THREE.Color(0x526b7b);camera=new THREE.PerspectiveCamera(40,1,.1,500);renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.45));renderer.shadowMap.enabled=true;renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.74;const world=$('world');world.insertBefore(renderer.domElement,world.firstChild);$('worldFallback').style.display='none';worldGroup=new THREE.Group();scene.add(worldGroup);diffGroup=new THREE.Group();diffGroup.visible=false;scene.add(diffGroup);scanOverlayRoot=new THREE.Group();scanOverlayRoot.visible=false;scene.add(scanOverlayRoot);scanPointGroup=new THREE.Group();scanRayGroup=new THREE.Group();scanCamGroup=new THREE.Group();scanPlaneGroup=new THREE.Group();scanOverlayRoot.add(scanPointGroup,scanRayGroup,scanCamGroup,scanPlaneGroup);scene.add(new THREE.HemisphereLight(0xc9d9e3,0x343d35,.78));const sun=new THREE.DirectionalLight(0xffe4bc,1.15);sun.position.set(-30,45,35);sun.castShadow=true;scene.add(sun);ground=new THREE.Mesh(new THREE.PlaneGeometry(160,160),new THREE.MeshStandardMaterial({color:0x767a68,roughness:1}));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);planGrid=new THREE.GridHelper(160,80,0x62d9e8,0x285464);planGrid.position.y=.025;planGrid.material.transparent=true;planGrid.material.opacity=.38;planGrid.visible=false;scene.add(planGrid);raycaster=new THREE.Raycaster();orbit.target=new THREE.Vector3(0,4,0);resizeThree();window.addEventListener('resize',resizeThree);wireOrbit();rebuildWorld();renderNow();$('threeChip').textContent='READY';$('threeChip').className='ok';return true;}catch(e){$('threeChip').textContent='FAILED';$('threeChip').className='bad';$('worldFallback').textContent='3D INIT FAILED: '+e.message;return false;}}
+function resizeThree(){if(!renderer||!camera)return;const r=$('world').getBoundingClientRect();renderer.setSize(Math.max(1,r.width),Math.max(1,r.height),false);camera.aspect=Math.max(.1,r.width/Math.max(1,r.height));camera.updateProjectionMatrix();renderNow();}
+function renderNow(){if(!renderer||!scene||!camera)return;const t=orbit.target||new THREE.Vector3();camera.position.set(t.x+orbit.rad*Math.sin(orbit.pol)*Math.sin(orbit.az),t.y+orbit.rad*Math.cos(orbit.pol),t.z+orbit.rad*Math.sin(orbit.pol)*Math.cos(orbit.az));camera.lookAt(t);renderer.render(scene,camera);}
+function matFor(o){const c=new THREE.Color(o.color||'#d8c8a9');return new THREE.MeshStandardMaterial({color:c,roughness:o.material==='metal'?.5:.9,metalness:o.material==='metal'?.35:.01});}
+function blueprintColor(o){if(o.id===state.selectedId)return 0xefbd4d;const r=String(o.role||'').toLowerCase();if(/door|entry|stair|path|landing/.test(r))return 0xffc85b;if(/roof/.test(r))return 0x8ed9ff;if(/window/.test(r))return 0x8ff0df;if(/support|foundation/.test(r))return 0xa7b6c1;return 0x42d7e8;}
+function meshFor(o){const THREE=window.THREE;const s=o.size||[1,1,1];let g;if(o.primitive==='sphere')g=new THREE.SphereGeometry(Math.max(.05,s[0]/2),16,12);else if(o.primitive==='cylinder')g=new THREE.CylinderGeometry(Math.max(.05,s[0]/2),Math.max(.05,s[0]/2),Math.max(.05,s[1]),16);else if(o.primitive==='cone')g=new THREE.ConeGeometry(Math.max(.05,s[0]/2),Math.max(.05,s[1]),16);else if(o.primitive==='gable'){const sh=new THREE.Shape();sh.moveTo(-s[0]/2,-s[1]/2);sh.lineTo(0,s[1]/2);sh.lineTo(s[0]/2,-s[1]/2);sh.closePath();g=new THREE.ExtrudeGeometry(sh,{depth:Math.max(.05,s[2]),bevelEnabled:false});g.translate(0,0,-s[2]/2);}else g=new THREE.BoxGeometry(Math.max(.05,s[0]),Math.max(.05,s[1]),Math.max(.05,s[2]));const material=state.blueprintMode?new THREE.MeshBasicMaterial({color:blueprintColor(o),wireframe:true,transparent:true,opacity:o.id===state.selectedId?1:.78,depthTest:true}):matFor(o);const m=new THREE.Mesh(g,material);m.position.fromArray(o.position||[0,0,0]);m.rotation.y=Number(o.rotation_y)||0;m.scale.fromArray(o.scale||[1,1,1]);m.castShadow=true;m.receiveShadow=true;m.userData.objectId=o.id;return m;}
+function diffMeshFor(o,color,opacity){const m=meshFor(o);if(m.material&&m.material.dispose)m.material.dispose();m.material=new THREE.MeshBasicMaterial({color:new THREE.Color(color),wireframe:true,transparent:true,opacity:opacity==null?.92:opacity,depthTest:false});m.castShadow=false;m.receiveShadow=false;m.renderOrder=999;return m;}
+function rebuildDiffOverlay(record){if(!diffGroup)return;while(diffGroup.children.length)diffGroup.remove(diffGroup.children[0]);if(!record){diffGroup.visible=false;return;}const before=new Map((record.beforeWorld||[]).map(o=>[o.id,o])),after=new Map((record.afterWorld||[]).map(o=>[o.id,o]));
+  (record.diff.added||[]).forEach(id=>{const o=after.get(id);if(o)diffGroup.add(diffMeshFor(o,'#2de2d0',.98));});
+  /* Changed geometry shows only the CURRENT shape. Old positions belong in BEFORE, not piled on top of the live world. */
+  (record.diff.changed||[]).slice(-16).forEach(id=>{const now=after.get(id);if(now)diffGroup.add(diffMeshFor(now,'#efbd4d',.92));});
+  (record.diff.removed||[]).forEach(id=>{const o=before.get(id);if(o)diffGroup.add(diffMeshFor(o,'#ff5b57',.86));});
+  diffGroup.visible=!!state.showDiff;}
+function setDiffVisible(on){state.showDiff=!!on;if(diffGroup)diffGroup.visible=!!on&&!!state.lastBuild;renderTrace();renderNow();}
+function flashDiffOverlay(ms){if(!diffGroup||!state.lastBuild||state.blueprintMode)return;diffGroup.visible=true;renderNow();setTimeout(()=>{if(!state.showDiff&&diffGroup){diffGroup.visible=false;renderNow();}},ms||1200);}
+
+function rebuildWorld(preserveCamera){if(!worldGroup)return;while(worldGroup.children.length)worldGroup.remove(worldGroup.children[0]);state.world.forEach(o=>worldGroup.add(meshFor(o)));if(!preserveCamera)fitCamera(false);renderNow();}
+function bounds(){if(!worldGroup||!worldGroup.children.length)return {center:new THREE.Vector3(0,3,0),size:new THREE.Vector3(12,8,12)};const b=new THREE.Box3().setFromObject(worldGroup),c=new THREE.Vector3(),s=new THREE.Vector3();b.getCenter(c);b.getSize(s);return {center:c,size:s};}
+function fittedRadius(mult){
+  const b=bounds(),vf=THREE.MathUtils.degToRad(camera.fov),hf=2*Math.atan(Math.tan(vf/2)*Math.max(.12,camera.aspect));
+  const width=Math.max(b.size.x,b.size.z,2),height=Math.max(b.size.y,2),depth=Math.max(Math.min(b.size.x,b.size.z),2);
+  const dv=height/(2*Math.tan(vf/2)),dh=width/(2*Math.tan(hf/2));
+  return Math.max(6,(Math.max(dv,dh)+depth*.42)*(mult||1.08));
+}
+function fitCamera(force){if(!renderer)return;const b=bounds();orbit.target.copy(b.center);orbit.rad=fittedRadius(1.06);if(force!==false){orbit.az=3.85;orbit.pol=.95;}renderNow();}
+function setSemanticView(v){if(!renderer)return;const b=bounds();orbit.target.copy(b.center);const R=fittedRadius(1.05);const map={FRONT:[Math.PI,1.03,R],BACK:[0,1.03,R],LEFT:[-Math.PI/2,1.03,R],RIGHT:[Math.PI/2,1.03,R],TOP:[Math.PI,.15,R*.92],ENTRY:[Math.PI,1.14,R*.72],FRONT_3Q:[Math.PI*1.25,.93,R],REAR_3Q:[Math.PI*.25,.93,R],LOW_FRONT:[Math.PI,1.34,R*.9],LOW_REAR:[0,1.34,R*.9],HIGH_LEFT:[-Math.PI/2,.63,R],HIGH_RIGHT:[Math.PI/2,.63,R]};const a=map[v]||map.FRONT;orbit.az=a[0];orbit.pol=a[1];orbit.rad=a[2];renderNow();state.lastCriticView=v;renderState();}
+function screenshot(v){setSemanticView(v);const was=diffGroup&&diffGroup.visible;if(diffGroup)diffGroup.visible=false;renderNow();const out=renderer.domElement.toDataURL('image/jpeg',.82);if(diffGroup)diffGroup.visible=was;renderNow();return out;}function screenshotDiff(v){setSemanticView(v);const was=diffGroup&&diffGroup.visible;if(diffGroup)diffGroup.visible=!!state.lastBuild;renderNow();const out=renderer.domElement.toDataURL('image/jpeg',.82);if(diffGroup)diffGroup.visible=was;renderNow();return out;}
+
+function updateSelectionUI(){
+  const n=$('selectionCard');if(!n)return;
+  if(!state.blueprintMode){n.textContent='PLAN';return;}
+  const o=state.world.find(x=>x.id===state.selectedId);
+  n.textContent=o?('PLAN · SELECTED '+o.id+' · '+String(o.role||'PART').toUpperCase()):'PLAN · TAP A PART TO SELECT';
+}
+function setBlueprintMode(on,preserve){
+  state.blueprintMode=!!on;document.body.classList.toggle('blueprint-mode',state.blueprintMode);
+  if(scene)scene.background.setHex(state.blueprintMode?0x0b2635:0x526b7b);
+  if(ground&&ground.material){ground.material.color.setHex(state.blueprintMode?0x102d3a:0x767a68);ground.material.needsUpdate=true;}
+  if(planGrid)planGrid.visible=state.blueprintMode;
+  $('blueprintBtn').classList.toggle('on',state.blueprintMode);$('blueprintBtn').textContent=state.blueprintMode?'BUILD':'PLAN';
+  rebuildWorld(!!preserve);updateSelectionUI();
+  if(state.blueprintMode&&!preserve){setSemanticView('TOP');orbit.pol=.08;renderNow();setPhase('BLUEPRINT','Tap a part, drag it in plan, or write what should change.');}
+  else if(!state.blueprintMode&&!preserve){fitCamera(true);setPhase('BUILD VIEW','The blueprint and built world are the same state seen differently.');}
+}
+function pointerNDC(x,y){const r=renderer.domElement.getBoundingClientRect();return new THREE.Vector2(((x-r.left)/r.width)*2-1,-((y-r.top)/r.height)*2+1);}
+function pickObject(x,y){if(!raycaster||!camera||!worldGroup)return null;raycaster.setFromCamera(pointerNDC(x,y),camera);const hits=raycaster.intersectObjects(worldGroup.children,false);return hits.length?hits[0]:null;}
+function groundPoint(x,y,yLevel){if(!raycaster||!camera)return null;raycaster.setFromCamera(pointerNDC(x,y),camera);const plane=new THREE.Plane(new THREE.Vector3(0,1,0),-(Number(yLevel)||0));const out=new THREE.Vector3();return raycaster.ray.intersectPlane(plane,out)?out:null;}
+function recordManualDesign(before,id,beforeShot){
+  const after=cloneJSON(state.world),diff=geometryDiff(before,after);if(!diff.changed.length&&!diff.added.length&&!diff.removed.length)return;
+  state.worldVersion++;state.viewScores={};
+  const rec={id:'manual-'+Date.now(),cycle:state.cycle,worldVersion:state.worldVersion,repairView:'TOP',summary:'YOU moved '+id+' in blueprint',operations:[{op:'MOVE',id:id,position:(state.world.find(o=>o.id===id)||{}).position}],requestedOperationCount:1,droppedOperationCount:0,receipts:['BLUEPRINT MOVE '+id],beforeWorld:before,afterWorld:after,diff,beforeShot:beforeShot||null,afterShot:renderer?renderer.domElement.toDataURL('image/jpeg',.8):null,diffShot:null,critiques:[],ts:new Date().toISOString()};
+  state.lastBuild=rec;state.history.push(rec);state.needBuild=false;state.showDiff=false;rebuildDiffOverlay(rec);if(diffGroup)diffGroup.visible=false;
+  addLog('builder','user override','BLUEPRINT MOVE · '+id+'\n'+JSON.stringify((state.world.find(o=>o.id===id)||{}).position));
+  event('manual_blueprint_move',{id,position:(state.world.find(o=>o.id===id)||{}).position,diff});setPhase('YOU DESIGNED',id+' moved in plan. STEP will inspect the consequence.');renderState();renderTrace();
+}
+function screenPanVectors(){
+  if(state.blueprintMode)return {right:new THREE.Vector3(1,0,0),forward:new THREE.Vector3(0,0,-1)};
+  const dir=new THREE.Vector3();camera.getWorldDirection(dir);const forward=dir.clone().setY(0);
+  const camRight=new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld,0).setY(0);
+  if(camRight.lengthSq()<1e-6)camRight.set(1,0,0);else camRight.normalize();
+  if(forward.lengthSq()<1e-6)forward.set(0,0,-1);else forward.normalize();
+  return {right:camRight,forward};
+}
+function wireOrbit(){
+  const c=renderer.domElement;let pinchStart=null,lastTap=0;
+  c.style.touchAction='none';
+  c.addEventListener('pointerdown',e=>{
+    c.setPointerCapture(e.pointerId);
+    const rec={x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,startAz:orbit.az,startPol:orbit.pol};
+    pointers.set(e.pointerId,rec);
+    if(state.blueprintMode&&pointers.size===1){
+      const hit=pickObject(e.clientX,e.clientY);
+      if(hit&&hit.object&&hit.object.userData.objectId){
+        state.selectedId=hit.object.userData.objectId;updateSelectionUI();rebuildWorld(true);
+        const o=state.world.find(x=>x.id===state.selectedId),gp=o?groundPoint(e.clientX,e.clientY,o.position[1]):null;
+        designDrag=o&&gp?{id:o.id,before:cloneJSON(state.world),beforeShot:renderer.domElement.toDataURL('image/jpeg',.8),offsetX:o.position[0]-gp.x,offsetZ:o.position[2]-gp.z,moved:false}:null;
+      }else{state.selectedId=null;updateSelectionUI();rebuildWorld(true);}
+    }
+    if(pointers.size===2){
+      designDrag=null;
+      const ps=[...pointers.values()],dx=ps[0].x-ps[1].x,dy=ps[0].y-ps[1].y,mx=(ps[0].x+ps[1].x)/2,my=(ps[0].y+ps[1].y)/2;
+      pinchStart={dist:Math.max(12,Math.hypot(dx,dy)),rad:orbit.rad,mx,my,target:orbit.target.clone()};
+    }
+  });
+  c.addEventListener('pointermove',e=>{
+    const p=pointers.get(e.pointerId);if(!p)return;p.x=e.clientX;p.y=e.clientY;
+    if(pointers.size>=2){
+      const ps=[...pointers.values()].slice(0,2),dx=ps[0].x-ps[1].x,dy=ps[0].y-ps[1].y,d=Math.max(12,Math.hypot(dx,dy)),mx=(ps[0].x+ps[1].x)/2,my=(ps[0].y+ps[1].y)/2;
+      if(!pinchStart)pinchStart={dist:d,rad:orbit.rad,mx,my,target:orbit.target.clone()};
+      orbit.rad=Math.max(2.5,Math.min(300,pinchStart.rad*(pinchStart.dist/d)));
+      const pdx=mx-pinchStart.mx,pdy=my-pinchStart.my,scale=orbit.rad*.0028,{right,forward}=screenPanVectors();
+      orbit.target.copy(pinchStart.target).add(right.multiplyScalar(-pdx*scale)).add(forward.multiplyScalar(pdy*scale));
+      renderNow();return;
+    }
+    if(state.blueprintMode&&designDrag){
+      const o=state.world.find(x=>x.id===designDrag.id),gp=o?groundPoint(e.clientX,e.clientY,o.position[1]):null;
+      if(o&&gp){o.position=[gp.x+designDrag.offsetX,o.position[1],gp.z+designDrag.offsetZ];designDrag.moved=true;rebuildWorld(true);updateSelectionUI();}
+      return;
+    }
+    orbit.az=p.startAz-(e.clientX-p.startX)/Math.max(300,c.clientWidth)*Math.PI*1.7;
+    orbit.pol=Math.max(.08,Math.min(1.54,p.startPol+(e.clientY-p.startY)/Math.max(300,c.clientHeight)*1.65));
+    renderNow();
+  });
+  const up=e=>{
+    const p=pointers.get(e.pointerId);pointers.delete(e.pointerId);
+    if(designDrag&&designDrag.moved&&pointers.size===0){const d=designDrag;designDrag=null;recordManualDesign(d.before,d.id,d.beforeShot);}
+    else if(pointers.size===0)designDrag=null;
+    if(pointers.size<2)pinchStart=null;
+    if(p&&Math.hypot(e.clientX-p.startX,e.clientY-p.startY)<8&&!state.blueprintMode){
+      const hit=pickObject(e.clientX,e.clientY);if(hit){orbit.target.copy(hit.point);renderNow();toast('FOCUS '+(hit.object.userData.objectId||'PART'));}
+      const now=performance.now();if(now-lastTap<310)fitCamera(true);lastTap=now;
+    }
+  };
+  ['pointerup','pointercancel'].forEach(ev=>c.addEventListener(ev,up));
+  c.addEventListener('wheel',e=>{orbit.rad=Math.max(2.5,Math.min(300,orbit.rad*Math.exp(e.deltaY*.00125)));renderNow();e.preventDefault();},{passive:false});
+}
+$('zoomOutBtn').addEventListener('click',()=>{orbit.rad=Math.min(300,orbit.rad*1.16);renderNow();});$('zoomInBtn').addEventListener('click',()=>{orbit.rad=Math.max(2.5,orbit.rad/1.16);renderNow();});$('fitBtn').addEventListener('click',()=>fitCamera(true));$('blueprintBtn').addEventListener('click',()=>setBlueprintMode(!state.blueprintMode));$('viewBtn').addEventListener('click',()=>{manualViewIndex=(manualViewIndex+1)%ALL_VIEWS.length;setSemanticView(ALL_VIEWS[manualViewIndex]);});$('diffBtn').addEventListener('click',()=>setDiffVisible(!state.showDiff));$('traceBtn').addEventListener('click',()=>{$('traceDrawer').classList.remove('hidden');renderTrace();});$('closeTraceBtn').addEventListener('click',()=>$('traceDrawer').classList.add('hidden'));$('exportTraceBtn').addEventListener('click',exportTrace);
+
+function safeJSON(text){let t=String(text||'').trim();t=t.replace(/^```(?:json)?\s*/i,'').replace(/```$/,'').trim();const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a>=0&&b>a)t=t.slice(a,b+1);return JSON.parse(t);}
+function contentInput(text,images){const c=[{type:'input_text',text}];(images||[]).forEach(im=>{if(im)c.push({type:'input_image',image_url:im,detail:'auto'});});return [{role:'user',content:c}];}
+async function modelJSON(instructions,text,images,max){const d=await apiFetch({model:state.model,instructions,store:false,max_output_tokens:max||2000,input:contentInput(text,images)},1);const ot=outputText(d);try{return safeJSON(ot);}catch(e){throw new Error('MODEL DID NOT RETURN VALID JSON: '+ot.slice(0,220));}}
+const BUILDER_PROMPT=`You are BUILDER in a brutish visual correspondence loop. Return ONLY JSON. Never write code or prose outside JSON. Operate on CURRENT WORLD using operations. Preserve good work and preserve explicit USER BLUEPRINT moves unless the criticism targets them. If an OFFLINE MEDICAL SCAN is supplied, treat it as evidence about what is visually observable versus what exact geometry contains; do not confuse low visual coverage with a proven building defect. Allowed operations: ADD, MOVE, SCALE, ROTATE_Y, COLOR, REMOVE, CLEAR. Allowed primitives: box, cylinder, cone, sphere, gable. Every object has id, primitive, role, position [x,y,z], size [x,y,z], rotation_y radians, color hex, material matte|metal, scale [x,y,z]. JSON shape: {"summary":"...","operations":[{...}]}. IF WORLD IS EMPTY: make a BLUEPRINT/MASSING PASS first, not a decorated final object. Establish footprint, major volumes, entrance axis, path/stair/door, dominant roof envelopes and spatial hierarchy with at most 24 operations. Do not spend the first pass on windows, trim or ornament. IF WORLD IS NOT EMPTY: change ONE consequential region only and use AT MOST 12 operations. Do not churn dozens of unrelated parts. The next observation must be able to tell what this move did. Role labels such as door, window, stair, path, landing, wall, roof, support matter to deterministic checks.`;
+const CRITIC_PROMPT=`You are CRITIC. FUCKED UNTIL PROVEN OTHERWISE. Your governing distinction is: IS THE BUILDING FUCKED, OR ARE OUR EYES FUCKED? You may receive explicitly labeled images: REFERENCE; CURRENT WORLD; BEFORE/AFTER/GEOMETRY DIFF; and optionally one OFFLINE MEDICAL SCAN sheet containing multi-view cameras, CT occupancy, laser/light-leak maps, and a virtual photogrammetry surface cloud. In GEOMETRY DIFF, cyan means added geometry, yellow means current changed geometry, and red means old/removed geometry. Use BEFORE/AFTER/DIFF to understand WHAT THE BUILDER ACTUALLY CHANGED and whether that repair introduced regressions. Search hard for a supported consequential discrepancy against REFERENCE. Do not praise. Do not propose fixes. Do not invent unseen reference facts. Return ONLY JSON: {"suck_score":0-100,"what_sucks":"one concise concrete criticism grounded in visible evidence"}. A score of 0 means only this view failed to find a meaningful discrepancy; it never means finished.`;
+function worldSummary(){return state.world.length?JSON.stringify(state.world):'[]';}
+function contextTail(log,n){return log.slice(-(n||12)).map(m=>m.role.toUpperCase()+': '+m.text).join('\n\n');}
+function applyOperations(ops){if(!Array.isArray(ops))throw new Error('Builder operations is not an array');const hadWorld=state.world.length>0,receipts=[],limit=state.world.length?12:48;for(const op of ops.slice(0,limit)){try{const kind=String(op.op||'').toUpperCase();if(kind==='CLEAR'){state.world=[];receipts.push('CLEAR');continue;}if(kind==='ADD'){if(!op.id)throw new Error('ADD missing id');if(state.world.some(o=>o.id===op.id))throw new Error('duplicate id '+op.id);state.world.push({id:String(op.id),primitive:op.primitive||'box',role:String(op.role||'part'),position:Array.isArray(op.position)?op.position:[0,1,0],size:Array.isArray(op.size)?op.size:[1,1,1],rotation_y:Number(op.rotation_y)||0,color:/^#[0-9a-f]{6}$/i.test(op.color||'')?op.color:'#d8c8a9',material:op.material==='metal'?'metal':'matte',scale:Array.isArray(op.scale)?op.scale:[1,1,1]});receipts.push('ADD '+op.id);continue;}const i=state.world.findIndex(o=>o.id===op.id);if(i<0)throw new Error(kind+' unknown id '+op.id);const o=state.world[i];if(kind==='REMOVE'){state.world.splice(i,1);receipts.push('REMOVE '+op.id);}else if(kind==='MOVE'){o.position=op.position||o.position;receipts.push('MOVE '+op.id);}else if(kind==='SCALE'){o.scale=op.scale||o.scale;receipts.push('SCALE '+op.id);}else if(kind==='ROTATE_Y'){o.rotation_y=Number(op.rotation_y)||0;receipts.push('ROTATE '+op.id);}else if(kind==='COLOR'){o.color=op.color||o.color;receipts.push('COLOR '+op.id);}else throw new Error('unknown op '+kind);}catch(e){receipts.push('REJECT '+(op.id||'?')+' · '+e.message);}}state.worldVersion++;state.viewScores={};rebuildWorld(hadWorld);renderState();return receipts;}
+async function callBuilder(){if(state.blueprintMode)setBlueprintMode(false,true);
+  if(reviewMode){reviewMode=false;stopReviewPlayback();rebuildWorld();}
+  setPhase('BUILDING',(state.lastCriticism||'Creating the first pass.').slice(0,120));renderState();
+  const repairView=state.lastCriticView||'FRONT',beforeWorld=cloneJSON(state.world),beforeShot=renderer?screenshot(repairView):null;
+  const diagText=(state.injectDiagnostic&&state.latestDiagnostic)?('\n\nOFFLINE MEDICAL SCAN SUMMARY:\n'+state.latestDiagnostic.summary):'';
+  const t='BUILD INTENT:\n'+state.intent+'\n\nLAST ACCUSATION:\n'+(state.lastCriticism||'INITIAL BUILD — no criticism yet.')+'\n\nCURRENT WORLD:\n'+worldSummary()+diagText+'\n\nRECENT BUILDER CONTEXT:\n'+contextTail(state.builderLog,10);
+  addLog('builder','user',t.slice(0,1600)+(t.length>1600?'\n[…full payload sent]':''));
+  const builderImages=[];if(state.reference)builderImages.push(state.reference);if(state.injectDiagnostic&&state.latestDiagnostic&&state.latestDiagnostic.sheet)builderImages.push(state.latestDiagnostic.sheet);
+  const j=await modelJSON(BUILDER_PROMPT,t,builderImages,3600);
+  const requestedOps=Array.isArray(j.operations)?j.operations:[],maxOps=beforeWorld.length?12:24,actualOps=requestedOps.slice(0,maxOps),droppedOps=Math.max(0,requestedOps.length-actualOps.length);
+  addLog('builder','assistant',(j.summary||'Builder move')+'\nOPS '+actualOps.length+(droppedOps?' applied · '+droppedOps+' deferred':''));
+  const rec=applyOperations(actualOps),afterWorld=cloneJSON(state.world),diff=geometryDiff(beforeWorld,afterWorld);
+  if(droppedOps)rec.push('DEFERRED '+droppedOps+' operations · one-region repair cap');
+  const record={id:'cycle-'+state.cycle+'-world-'+state.worldVersion,cycle:state.cycle,worldVersion:state.worldVersion,repairView,summary:j.summary||'Builder move',operations:cloneJSON(actualOps),requestedOperationCount:requestedOps.length,droppedOperationCount:droppedOps,receipts:rec.slice(),beforeWorld,afterWorld,diff,beforeShot,afterShot:null,diffShot:null,critiques:[],ts:new Date().toISOString()};
+  state.lastBuild=record;state.history.push(record);state.showDiff=false;reviewMode=false;reviewIndex=state.history.length;rebuildDiffOverlay(record);record.afterShot=renderer?screenshot(repairView):null;record.diffShot=renderer?screenshotDiff(repairView):null;flashDiffOverlay(1100);
+  const compactRec=rec.slice(0,8).join('\n')+(rec.length>8?'\n… +'+(rec.length-8)+' more operations in TRACE':'');addLog('builder','receipt',compactRec+'\n\nGEOMETRY Δ '+diffLabel(diff),'receipt compactReceipt');setPhase('BUILT',diffLabel(diff)+' · '+(j.summary||'Builder move'));event('builder_move',{summary:j.summary,operations:actualOps,requestedOperationCount:requestedOps.length,droppedOperationCount:droppedOps,receipts:rec,diff,repairView});renderState();
+}
+function oppositeView(v){return ({FRONT:'BACK',BACK:'FRONT',LEFT:'RIGHT',RIGHT:'LEFT',TOP:'ENTRY',ENTRY:'TOP',FRONT_3Q:'REAR_3Q',REAR_3Q:'FRONT_3Q',LOW_FRONT:'LOW_REAR',LOW_REAR:'LOW_FRONT',HIGH_LEFT:'HIGH_RIGHT',HIGH_RIGHT:'HIGH_LEFT'})[v]||'BACK';}
+function chooseNextView(){if(state.forcedView){const v=state.forcedView;state.forcedView=null;return v;}const current=state.lastCriticView;const order=CORE_VIEWS;let start=Math.max(0,order.indexOf(current));for(let k=1;k<=order.length;k++){const v=order[(start+k)%order.length],x=state.viewScores[v];if(!x||x.worldVersion!==state.worldVersion)return v;}const all=ALL_VIEWS.slice().sort((a,b)=>((state.viewScores[a]&&Date.parse(state.viewScores[a].ts))||0)-((state.viewScores[b]&&Date.parse(state.viewScores[b].ts))||0));return all[0];}
+async function callCritic(v){
+  if(state.blueprintMode)setBlueprintMode(false,true);
+  if(!renderer)throw new Error('3D engine is not ready');
+  setPhase('LOOKING '+v,'REFERENCE ⇄ CURRENT WORLD ⇄ LAST CHANGE');renderState();
+  const shot=screenshot(v),diffShot=state.lastBuild?screenshotDiff(v):null,lint=runLinters(),lb=state.lastBuild;
+  const useDiag=!!(state.injectDiagnostic&&state.latestDiagnostic&&state.latestDiagnostic.sheet);
+  const t='IMAGE 1 ROLE=REFERENCE\nIMAGE 2 ROLE=CURRENT_WORLD VIEW='+v+' WORLD='+state.worldVersion+'\n'+(useDiag?'IMAGE 3 ROLE=OFFLINE_MEDICAL_SCAN — distinguish BUILDING FAILURE from EYE/COVERAGE FAILURE\n':(diffShot?'IMAGE 3 ROLE=GEOMETRY_DIFF VIEW='+v+'\n':'')+(lb&&lb.beforeShot?'IMAGE 4 ROLE=BEFORE_LAST_BUILD REPAIR_VIEW='+lb.repairView+'\n':'')+(lb&&lb.afterShot?'IMAGE 5 ROLE=AFTER_LAST_BUILD REPAIR_VIEW='+lb.repairView+'\n':''))+'BUILD INTENT='+state.intent+'\n\nLAST GEOMETRY CHANGE:\n'+(lb?diffLabel(lb.diff)+' · '+(lb.summary||''):'NONE')+'\n\nDETERMINISTIC ACCUSATIONS:\n'+criticLinterText()+(useDiag?'\n\nMEDICAL SCAN SUMMARY:\n'+state.latestDiagnostic.summary:'')+'\n\nRECENT CRITIC CONTEXT:\n'+contextTail(state.criticLog,8);
+  addLog('critic','user','OBSERVE '+v+'\nGEOMETRY Δ '+(lb?diffLabel(lb.diff):'NONE')+'\n'+criticLinterText()+(useDiag?'\nMEDICAL SCAN ATTACHED':''));
+  const images=[state.reference,shot];if(useDiag)images.push(state.latestDiagnostic.sheet);else{if(diffShot)images.push(diffShot);if(lb&&lb.beforeShot)images.push(lb.beforeShot);if(lb&&lb.afterShot)images.push(lb.afterShot);}
+  const j=await modelJSON(CRITIC_PROMPT,t,images,800),score=Math.max(0,Math.min(100,Number(j.suck_score)||0)),crit=String(j.what_sucks||'').trim(),ts=new Date().toISOString();
+  state.viewScores[v]={score,criticism:crit,worldVersion:state.worldVersion,ts};state.snapshotsByView[v]={image:shot,worldVersion:state.worldVersion,ts};state.lastCriticView=v;state.lastCriticism=crit;if(lb&&lb.worldVersion===state.worldVersion)lb.critiques.push({view:v,score,criticism:crit,ts});
+  addLog('critic','assistant','SUCK SCORE: '+score+'\nWHAT SUCKS: '+crit,'critic');setPhase('CRITIC '+score,crit);event('critique',{view:v,score,what_sucks:crit,geometry_diff:lb?lb.diff:null});renderState();return {score,crit};
+}
+async function doStep(){if(busy)return;if(!apiTested){toast('TEST API FIRST');$('setup').classList.remove('hidden');return;}if(!state.reference){toast('UPLOAD REFERENCE FIRST');$('setup').classList.remove('hidden');return;}if(!state.intent){toast('ENTER BUILD INTENT');$('setup').classList.remove('hidden');return;}if(!renderer){toast('3D ENGINE NOT READY');return;}busy=true;$('stepBtn').textContent='…';try{
+  if(state.needBuild){state.cycle++;await callBuilder();}
+  const v=chooseNextView();const c=await callCritic(v);
+  if(c.score>=LOW_THRESHOLD){
+    addLog('builder','critic → builder','"'+c.crit+'"','bridge');
+    state.highStreak=(state.lastBuild&&state.lastBuild.repairView===v)?state.highStreak+1:1;
+    if(state.highStreak>=2){
+      state.needBuild=false;state.forcedView=oppositeView(v);state.highStreak=0;
+      addLog('builder','system','STILL FUCKED FROM '+v+' → LOOK '+state.forcedView+' BEFORE ANOTHER PATCH.');
+      setPhase('MOVE CAMERA','Still bad from '+v+'. Stress-check '+state.forcedView+' before changing more geometry.');
+    }else{state.needBuild=true;setPhase('NEXT BUILD',c.crit);}
+  }else{
+    state.highStreak=0;state.needBuild=false;state.forcedView=oppositeView(v);
+    addLog('builder','system','LOW SCORE FROM '+v+' → DO NOT CELEBRATE. LOOK '+state.forcedView+'.');
+    setPhase('MOVE CAMERA','This view found little. Look '+state.forcedView+'.');
+  }
+  renderState();
+}catch(e){toast(e.message||String(e),5000);addLog(state.needBuild?'builder':'critic','error',e.message||String(e));event('loop_error',{message:e.message||String(e)});setPhase('ERROR',e.message||String(e));renderState();}finally{busy=false;$('stepBtn').textContent='STEP';}}
+$('stepBtn').addEventListener('click',doStep);$('loopBtn').addEventListener('click',function(){looping=!looping;this.classList.toggle('on',looping);this.textContent=looping?'STOP':'LOOP';if(looping)(async()=>{while(looping){await doStep();await new Promise(r=>setTimeout(r,300));}})();});$('sendBtn').addEventListener('click',()=>{const t=$('userInput').value.trim();if(!t)return;const sel=state.selectedId?state.world.find(o=>o.id===state.selectedId):null;const note=sel?('SELECTED PART '+sel.id+' ('+sel.role+') '+JSON.stringify({position:sel.position,size:sel.size,scale:sel.scale})+'\nUSER: '+t):t;addLog('builder','user override',note);state.lastCriticism=(state.lastCriticism?state.lastCriticism+'\n':'')+'USER: '+note;state.needBuild=true;$('userInput').value='';renderState();});
+
+
+/* ========================= MEDICAL IMAGING LAB =========================
+   Exact world + synthetic sensors. No OpenAI call is made anywhere in this block.
+   The result can be injected later as ONE compact evidence sheet.
+=========================================================================== */
+function diagCanvas(w,h,bg){const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle=bg||'#0a0d10';x.fillRect(0,0,w,h);return c;}
+function drawTitle(ctx,text,x,y,size,color){ctx.save();ctx.fillStyle=color||'#edf1f4';ctx.font='bold '+(size||18)+'px ui-monospace,monospace';ctx.textBaseline='top';ctx.fillText(String(text),x,y);ctx.restore();}
+function drawSmall(ctx,text,x,y,color){ctx.save();ctx.fillStyle=color||'#9ca7b1';ctx.font='12px ui-monospace,monospace';ctx.textBaseline='top';ctx.fillText(String(text),x,y);ctx.restore();}
+function drawFit(ctx,img,x,y,w,h){if(!img)return;const iw=img.width||1,ih=img.height||1,sc=Math.min(w/iw,h/ih),dw=iw*sc,dh=ih*sc;ctx.drawImage(img,x+(w-dw)/2,y+(h-dh)/2,dw,dh);}
+function loadImg(src){return new Promise((resolve,reject)=>{if(!src)return resolve(null);const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error('image decode failed'));im.src=src;});}
+function roleColor(role){role=String(role||'').toLowerCase();if(/door|entry|stair|path|landing/.test(role))return '#efbd4d';if(/roof/.test(role))return '#66bddd';if(/window/.test(role))return '#76d7c9';if(/support|foundation|column/.test(role))return '#b3bcc5';if(/service|pipe|wire|light|mep/.test(role))return '#ca83db';return '#768b96';}
+function worldMeshes(){return worldGroup?worldGroup.children.filter(m=>m&&m.userData&&m.userData.objectId):[];}
+function meshById(id){return worldMeshes().find(m=>m.userData.objectId===id)||null;}
+function saveOrbit(){return {az:orbit.az,pol:orbit.pol,rad:orbit.rad,target:orbit.target.clone(),view:state.lastCriticView};}
+function restoreOrbit(o){if(!o)return;orbit.az=o.az;orbit.pol=o.pol;orbit.rad=o.rad;orbit.target.copy(o.target);state.lastCriticView=o.view;renderNow();}
+function poseForView(v){const b=bounds(),t=b.center.clone(),R=fittedRadius(1.06);const map={FRONT:[Math.PI,1.03,R],BACK:[0,1.03,R],LEFT:[-Math.PI/2,1.03,R],RIGHT:[Math.PI/2,1.03,R],TOP:[Math.PI,.15,R*.92],ENTRY:[Math.PI,1.14,R*.72],FRONT_3Q:[Math.PI*1.25,.93,R],REAR_3Q:[Math.PI*.25,.93,R],LOW_FRONT:[Math.PI,1.34,R*.9],LOW_REAR:[0,1.34,R*.9],HIGH_LEFT:[-Math.PI/2,.63,R],HIGH_RIGHT:[Math.PI/2,.63,R]};const a=map[v]||map.FRONT;return {name:v,target:t,pos:new THREE.Vector3(t.x+a[2]*Math.sin(a[1])*Math.sin(a[0]),t.y+a[2]*Math.cos(a[1]),t.z+a[2]*Math.sin(a[1])*Math.cos(a[0]))};}
+function renderPoseToCanvas(pose,w,h){
+  const oldAspect=camera.aspect,oldTarget=renderer.getRenderTarget(),wasDiff=diffGroup&&diffGroup.visible,wasGrid=planGrid&&planGrid.visible,wasScan=scanOverlayRoot&&scanOverlayRoot.visible;
+  if(diffGroup)diffGroup.visible=false;if(planGrid)planGrid.visible=false;if(scanOverlayRoot)scanOverlayRoot.visible=false;
+  const rt=new THREE.WebGLRenderTarget(Math.max(1,w),Math.max(1,h),{format:THREE.RGBAFormat,minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter,depthBuffer:true});
+  camera.aspect=w/Math.max(1,h);camera.updateProjectionMatrix();camera.position.copy(pose.pos);camera.lookAt(pose.target);camera.updateMatrixWorld(true);
+  renderer.setRenderTarget(rt);renderer.render(scene,camera);const c=readRenderTargetCanvas(rt,w,h);renderer.setRenderTarget(oldTarget);rt.dispose();
+  camera.aspect=oldAspect;camera.updateProjectionMatrix();if(diffGroup)diffGroup.visible=wasDiff;if(planGrid)planGrid.visible=wasGrid;if(scanOverlayRoot)scanOverlayRoot.visible=wasScan;return c;
+}
+function worldBox(){const b=new THREE.Box3().setFromObject(worldGroup);if(b.isEmpty())b.set(new THREE.Vector3(-5,0,-5),new THREE.Vector3(5,10,5));return b;}
+function objectBoxes(){return worldMeshes().map(m=>{const b=new THREE.Box3().setFromObject(m);return {id:m.userData.objectId,role:(state.world.find(o=>o.id===m.userData.objectId)||{}).role||'part',box:b};});}
+function cameraPoses(){return ALL_VIEWS.map(poseForView);}
+function rayVisible(a,b,targetId){const dir=b.clone().sub(a),dist=dir.length();if(dist<1e-6)return true;dir.normalize();raycaster.set(a,dir);raycaster.far=dist-.02;const hits=raycaster.intersectObjects(worldMeshes(),false);if(!hits.length)return true;if(targetId)return hits[0].object.userData.objectId===targetId;return false;}
+function cameraCoverage(poses){const coverage={};state.world.forEach(o=>coverage[o.id]=0);const meshMap=new Map(worldMeshes().map(m=>[m.userData.objectId,m]));for(const p of poses){for(const [id,m] of meshMap){const pt=new THREE.Vector3();m.getWorldPosition(pt);if(rayVisible(p.pos,pt,id))coverage[id]++;}}return coverage;}
+
+async function makeFlyEye(){
+  if(!renderer)throw new Error('3D engine not ready');const saved=saveOrbit();const c=diagCanvas(1000,820,'#080b0e'),x=c.getContext('2d');drawTitle(x,'FLY EYE · 12 CALIBRATED VIEWS',20,16,22,'#edf1f4');drawSmall(x,'same world · fixed semantic cameras · one contact sheet',20,45,'#8f99a3');
+  const cols=4,tw=235,th=170,g=8,y0=70;for(let i=0;i<ALL_VIEWS.length;i++){const v=ALL_VIEWS[i],p=poseForView(v),tile=renderPoseToCanvas(p,tw,th),cx=20+(i%cols)*(tw+g),cy=y0+Math.floor(i/cols)*(th+38);x.drawImage(tile,cx,cy,tw,th);x.strokeStyle='#39424d';x.strokeRect(cx+.5,cy+.5,tw-1,th-1);drawSmall(x,v,cx,cy+th+4,'#d8e0e6');drawSmall(x,'C'+String(i+1).padStart(2,'0')+'  '+p.pos.toArray().map(n=>n.toFixed(1)).join(','),cx,cy+th+18,'#68737d');}
+  restoreOrbit(saved);return c;
+}
+
+function makeCalibrationTexture(){const c=diagCanvas(1024,512,'#11151a'),x=c.getContext('2d');for(let j=0;j<8;j++)for(let i=0;i<16;i++){const xx=i*64,yy=j*64;const h=(i*37+j*71)%360;x.fillStyle='hsl('+h+',55%,'+(j%2?42:32)+'%)';x.fillRect(xx,yy,64,64);x.strokeStyle='#eef4f7aa';x.strokeRect(xx+.5,yy+.5,63,63);x.fillStyle='#fff';x.font='bold 10px monospace';x.fillText(i+','+j,xx+4,yy+14);}for(let i=0;i<1024;i+=32){x.fillStyle=i%64?'#ffffff44':'#ffffff99';x.fillRect(i,252,1,i%64?8:16);}return new THREE.CanvasTexture(c);}
+function readRenderTargetCanvas(rt,w,h){const px=new Uint8Array(w*h*4);renderer.readRenderTargetPixels(rt,0,0,w,h,px);const c=diagCanvas(w,h),ctx=c.getContext('2d'),img=ctx.createImageData(w,h);for(let y=0;y<h;y++){const sy=h-1-y;img.data.set(px.subarray(sy*w*4,(sy+1)*w*4),y*w*4);}ctx.putImageData(img,0,0);return c;}
+async function makeEquirect(){
+  if(!renderer)throw new Error('3D engine not ready');const saved=saveOrbit(),b=worldBox(),center=new THREE.Vector3();b.getCenter(center);const sz=new THREE.Vector3();b.getSize(sz);const R=Math.max(8,sz.length()*1.15);const tex=makeCalibrationTexture();tex.needsUpdate=true;const dome=new THREE.Mesh(new THREE.SphereGeometry(R,32,20),new THREE.MeshBasicMaterial({map:tex,side:THREE.BackSide,depthWrite:false}));dome.position.copy(center);dome.renderOrder=-10;scene.add(dome);
+  const cubeRT=new THREE.WebGLCubeRenderTarget(256,{format:THREE.RGBAFormat,generateMipmaps:false,minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});const cc=new THREE.CubeCamera(.1,R*3,cubeRT);cc.position.copy(center);cc.update(renderer,scene);
+  const w=1024,h=512,rt=new THREE.WebGLRenderTarget(w,h,{format:THREE.RGBAFormat,minFilter:THREE.LinearFilter,magFilter:THREE.LinearFilter});const qs=new THREE.Scene(),qc=new THREE.OrthographicCamera(-1,1,1,-1,0,1);const mat=new THREE.ShaderMaterial({uniforms:{cubeMap:{value:cubeRT.texture}},vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}',fragmentShader:'precision highp float;varying vec2 vUv;uniform samplerCube cubeMap;const float PI=3.141592653589793;void main(){float lon=(vUv.x*2.0-1.0)*PI;float lat=(vUv.y-0.5)*PI;vec3 d=normalize(vec3(cos(lat)*sin(lon),sin(lat),cos(lat)*cos(lon)));gl_FragColor=textureCube(cubeMap,d);}'});qs.add(new THREE.Mesh(new THREE.PlaneGeometry(2,2),mat));const prev=renderer.getRenderTarget();renderer.setRenderTarget(rt);renderer.render(qs,qc);const pano=readRenderTargetCanvas(rt,w,h);renderer.setRenderTarget(prev);
+  scene.remove(dome);dome.geometry.dispose();dome.material.dispose();tex.dispose();cubeRT.dispose();rt.dispose();mat.dispose();restoreOrbit(saved);
+  const out=diagCanvas(1080,600,'#080b0e'),x=out.getContext('2d');drawTitle(x,'360° CENTER EYE · TRUE EQUIRECTANGULAR CUBEMAP',20,14,20);drawSmall(x,'calibration dome sits behind the building; visible pattern = line of sight escaped through the assembly',20,42,'#8f99a3');x.drawImage(pano,20,70,1040,520);return out;
+}
+
+function makeCameraMap(){const poses=cameraPoses(),b=worldBox(),min=b.min,max=b.max,c=diagCanvas(900,650,'#080b0e'),x=c.getContext('2d');drawTitle(x,'CAMERA CONSTELLATION · MUTUAL VISIBILITY / COVERAGE',18,14,20);const pad=70,ww=760,hh=500;const map=(p)=>({x:pad+(p.x-min.x)/(Math.max(.001,max.x-min.x))*ww,y:pad+hh-(p.z-min.z)/(Math.max(.001,max.z-min.z))*hh});const expand=Math.max(max.x-min.x,max.z-min.z)*.55+1;const extMin=new THREE.Vector3(min.x-expand,min.y,min.z-expand),extMax=new THREE.Vector3(max.x+expand,max.y,max.z+expand);const map2=(p)=>({x:pad+(p.x-extMin.x)/(extMax.x-extMin.x)*ww,y:pad+hh-(p.z-extMin.z)/(extMax.z-extMin.z)*hh});
+  x.strokeStyle='#253039';x.lineWidth=1;for(let i=0;i<=10;i++){const gx=pad+i*ww/10,gy=pad+i*hh/10;x.beginPath();x.moveTo(gx,pad);x.lineTo(gx,pad+hh);x.stroke();x.beginPath();x.moveTo(pad,gy);x.lineTo(pad+ww,gy);x.stroke();}
+  /* mutual camera visibility: a line means the two eyes can see each other without the building blocking them */
+  x.strokeStyle='#28515a88';for(let i=0;i<poses.length;i++)for(let j=i+1;j<poses.length;j++){if(rayVisible(poses[i].pos,poses[j].pos,null)){const a=map2(poses[i].pos),d=map2(poses[j].pos);x.beginPath();x.moveTo(a.x,a.y);x.lineTo(d.x,d.y);x.stroke();}}
+  const wb1=map2(new THREE.Vector3(min.x,0,min.z)),wb2=map2(new THREE.Vector3(max.x,0,max.z));x.fillStyle='#6f7d8655';x.fillRect(Math.min(wb1.x,wb2.x),Math.min(wb1.y,wb2.y),Math.abs(wb2.x-wb1.x),Math.abs(wb2.y-wb1.y));x.strokeStyle='#b4c0c8';x.strokeRect(Math.min(wb1.x,wb2.x),Math.min(wb1.y,wb2.y),Math.abs(wb2.x-wb1.x),Math.abs(wb2.y-wb1.y));
+  const ctr=new THREE.Vector3();b.getCenter(ctr);const mc=map2(ctr);poses.forEach((p,i)=>{const q=map2(p.pos);x.strokeStyle='#5d687266';x.beginPath();x.moveTo(q.x,q.y);x.lineTo(mc.x,mc.y);x.stroke();x.fillStyle=i<6?'#2de2d0':'#efbd4d';x.beginPath();x.arc(q.x,q.y,8,0,Math.PI*2);x.fill();drawSmall(x,'C'+(i+1)+' '+p.name,q.x+10,q.y-7,'#d9e1e7');});
+  const cov=cameraCoverage(poses),unseen=Object.entries(cov).filter(([,n])=>n===0).map(([id])=>id),low=Object.entries(cov).filter(([,n])=>n>0&&n<=2).map(([id,n])=>id+'('+n+')');drawSmall(x,'UNSEEN OBJECTS: '+(unseen.length?unseen.slice(0,12).join(', '):'NONE'),18,585,unseen.length?'#ff7671':'#5fd28b');drawSmall(x,'LOW COVERAGE ≤2 EYES: '+(low.length?low.slice(0,12).join(', '):'NONE'),18,605,low.length?'#efbd4d':'#5fd28b');return {canvas:c,coverage:cov,unseen,low};}
+
+function componentCount(grid,w,h){const seen=new Uint8Array(grid.length);let c=0;const q=[];for(let i=0;i<grid.length;i++){if(!grid[i]||seen[i])continue;c++;seen[i]=1;q.push(i);while(q.length){const n=q.pop(),x=n%w,y=(n/w)|0,nb=[x>0?n-1:-1,x<w-1?n+1:-1,y>0?n-w:-1,y<h-1?n+w:-1];for(const k of nb){if(k>=0&&grid[k]&&!seen[k]){seen[k]=1;q.push(k);}}}}return c;}
+function makeCT(){const boxes=objectBoxes(),b=worldBox(),c=diagCanvas(1120,780,'#080b0e'),x=c.getContext('2d');drawTitle(x,'CT OCCUPANCY · X / Y / Z SLICE CONTACT SHEET',18,12,20);drawSmall(x,'approximate assembly slices from exact object bounds · C = connected occupancy islands',18,40,'#8f99a3');const axes=['X','Y','Z'],N=6,cellW=170,cellH=205,g=10,x0=20,y0=70;const anomalies=[];for(let ai=0;ai<3;ai++){const ax=axes[ai],lo=ax==='X'?b.min.x:ax==='Y'?b.min.y:b.min.z,hi=ax==='X'?b.max.x:ax==='Y'?b.max.y:b.max.z;let prev=null;for(let si=0;si<N;si++){const pos=lo+(si+.5)/N*(hi-lo),cx=x0+si*(cellW+g),cy=y0+ai*(cellH+28),gw=28,gh=28,grid=new Uint8Array(gw*gh);x.fillStyle='#10161a';x.fillRect(cx,cy,cellW,cellH);const project=(box)=>{let u0,u1,v0,v1;if(ax==='X'){u0=(box.min.z-b.min.z)/(b.max.z-b.min.z||1);u1=(box.max.z-b.min.z)/(b.max.z-b.min.z||1);v0=(box.min.y-b.min.y)/(b.max.y-b.min.y||1);v1=(box.max.y-b.min.y)/(b.max.y-b.min.y||1);}else if(ax==='Y'){u0=(box.min.x-b.min.x)/(b.max.x-b.min.x||1);u1=(box.max.x-b.min.x)/(b.max.x-b.min.x||1);v0=(box.min.z-b.min.z)/(b.max.z-b.min.z||1);v1=(box.max.z-b.min.z)/(b.max.z-b.min.z||1);}else{u0=(box.min.x-b.min.x)/(b.max.x-b.min.x||1);u1=(box.max.x-b.min.x)/(b.max.x-b.min.x||1);v0=(box.min.y-b.min.y)/(b.max.y-b.min.y||1);v1=(box.max.y-b.min.y)/(b.max.y-b.min.y||1);}return {u0,u1,v0,v1};};
+      boxes.forEach(o=>{const crosses=ax==='X'?(o.box.min.x<=pos&&o.box.max.x>=pos):ax==='Y'?(o.box.min.y<=pos&&o.box.max.y>=pos):(o.box.min.z<=pos&&o.box.max.z>=pos);if(!crosses)return;const p=project(o.box),rx=cx+p.u0*cellW,ry=cy+(1-p.v1)*cellH,rw=Math.max(1,(p.u1-p.u0)*cellW),rh=Math.max(1,(p.v1-p.v0)*cellH);x.fillStyle=roleColor(o.role)+'99';x.fillRect(rx,ry,rw,rh);const ix0=Math.max(0,Math.floor(p.u0*gw)),ix1=Math.min(gw-1,Math.ceil(p.u1*gw)),iy0=Math.max(0,Math.floor(p.v0*gh)),iy1=Math.min(gh-1,Math.ceil(p.v1*gh));for(let yy=iy0;yy<=iy1;yy++)for(let xx=ix0;xx<=ix1;xx++)grid[yy*gw+xx]=1;});const comps=componentCount(grid,gw,gh);if(prev!=null&&Math.abs(comps-prev)>=3)anomalies.push(ax+(si-1)+'→'+ax+si+' islands '+prev+'→'+comps);prev=comps;x.strokeStyle='#39434d';x.strokeRect(cx+.5,cy+.5,cellW-1,cellH-1);drawSmall(x,ax+' '+(si+1)+' · '+pos.toFixed(2)+' · C='+comps,cx,cy+cellH+5,comps>4?'#efbd4d':'#aeb7bf');}}
+  drawSmall(x,'TOPOLOGY JUMPS: '+(anomalies.length?anomalies.slice(0,8).join(' | '):'none detected at this coarse resolution'),18,746,anomalies.length?'#efbd4d':'#5fd28b');return {canvas:c,anomalies};}
+
+function laserMapFor(origin,b,R,wCells,hCells){const c=diagCanvas(wCells*6,hCells*6,'#101418'),x=c.getContext('2d'),mask=diagCanvas(wCells*6,hCells*6),mx=mask.getContext('2d');let leaks=0,total=0;for(let j=0;j<hCells;j++){const lat=((j+.5)/hCells-.5)*Math.PI;for(let i=0;i<wCells;i++){const lon=((i+.5)/wCells*2-1)*Math.PI,d=new THREE.Vector3(Math.cos(lat)*Math.sin(lon),Math.sin(lat),Math.cos(lat)*Math.cos(lon)).normalize();raycaster.set(origin,d);raycaster.far=R;const hits=raycaster.intersectObjects(worldMeshes(),false);const hit=hits.length?hits[0]:null;total++;if(!hit)leaks++;const xx=i*6,yy=(hCells-1-j)*6;if(!hit){x.fillStyle='#ff5b57';mx.fillStyle='rgba(255,45,40,.92)';mx.fillRect(xx,yy,6,6);}else{const t=Math.max(0,Math.min(1,hit.distance/R));const hue=185-120*t;x.fillStyle='hsl('+hue+',65%,'+(28+20*t)+'%)';}x.fillRect(xx,yy,6,6);}}return {canvas:c,mask,leaks,total,fraction:total?leaks/total:1};}
+function makeLaser(){const b=worldBox(),center=new THREE.Vector3(),sz=new THREE.Vector3();b.getCenter(center);b.getSize(sz);const R=Math.max(8,sz.length()*1.2),origins=[center.clone().add(new THREE.Vector3(0,-sz.y*.22,0)),center.clone(),center.clone().add(new THREE.Vector3(0,sz.y*.22,0))],names=['LOW','MID','HIGH'],maps=origins.map(o=>laserMapFor(o,b,R,64,32));const out=diagCanvas(900,780,'#080b0e'),x=out.getContext('2d');drawTitle(x,'LIGHT-LEAK / LASER DOME',18,14,20);drawSmall(x,'virtual emitters fire rays outward · RED = ray reached the calibration dome without touching building geometry',18,42,'#8f99a3');maps.forEach((m,i)=>{x.drawImage(m.canvas,18,75+i*220,864,180);drawSmall(x,names[i]+' emitter · leaked '+Math.round(m.fraction*100)+'% of sampled directions',18,260+i*220,m.fraction>.35?'#ff7671':m.fraction>.15?'#efbd4d':'#5fd28b');});const avg=maps.reduce((a,m)=>a+m.fraction,0)/maps.length;return {canvas:out,leakFraction:avg,maps};}
+
+function sampleSurfaceCloud(poses){const points=[],counts={};state.world.forEach(o=>counts[o.id]=0);const dense=state.world.length<180,{nx,ny}=dense?{nx:23,ny:15}:{nx:17,ny:11},tc=new THREE.PerspectiveCamera(40,nx/ny,.1,1000),r=new THREE.Raycaster();for(let pi=0;pi<poses.length;pi++){const p=poses[pi];tc.position.copy(p.pos);tc.lookAt(p.target);tc.updateMatrixWorld(true);tc.updateProjectionMatrix();for(let yy=0;yy<ny;yy++)for(let xx=0;xx<nx;xx++){const ndc=new THREE.Vector2((xx+.5)/nx*2-1,-((yy+.5)/ny*2-1));r.setFromCamera(ndc,tc);const hit=r.intersectObjects(worldMeshes(),false)[0];if(hit){const id=hit.object.userData.objectId;counts[id]=(counts[id]||0)+1;points.push({p:hit.point.clone(),id,cam:pi,distance:hit.distance});}}}return {points,counts,nx,ny};}
+function makePhotoCloud(){const poses=cameraPoses(),cloud=sampleSurfaceCloud(poses),b=worldBox(),out=diagCanvas(1050,560,'#080b0e'),x=out.getContext('2d');drawTitle(x,'VIRTUAL PHOTOGRAMMETRY · FIRST-HIT SURFACE CLOUD',18,14,20);drawSmall(x,'synthetic calibrated rays reconstruct WORLD_SEEN; colors identify camera provenance',18,42,'#8f99a3');const panels=[{name:'TOP X/Z',u:'x',v:'z'},{name:'FRONT X/Y',u:'x',v:'y'},{name:'SIDE Z/Y',u:'z',v:'y'}],min=b.min,max=b.max;panels.forEach((pn,k)=>{const px=20+k*340,py=80,pw=320,ph=380;x.fillStyle='#10161a';x.fillRect(px,py,pw,ph);x.strokeStyle='#2d363f';x.strokeRect(px+.5,py+.5,pw-1,ph-1);for(const q of cloud.points){const umax=max[pn.u],umin=min[pn.u],vmax=max[pn.v],vmin=min[pn.v],u=(q.p[pn.u]-umin)/(umax-umin||1),v=(q.p[pn.v]-vmin)/(vmax-vmin||1);x.fillStyle='hsl('+((q.cam*29)%360)+',70%,62%)';x.fillRect(px+u*pw,py+(1-v)*ph,2.2,2.2);}drawSmall(x,pn.name,px,py+ph+6,'#d9e1e7');});const unseen=Object.entries(cloud.counts).filter(([,n])=>!n).map(([id])=>id),low=Object.entries(cloud.counts).filter(([,n])=>n>0&&n<3).map(([id,n])=>id+'('+n+')');drawSmall(x,'UNRECONSTRUCTED OBJECTS: '+(unseen.length?unseen.slice(0,14).join(', '):'NONE'),18,495,unseen.length?'#ff7671':'#5fd28b');drawSmall(x,'WEAKLY SAMPLED: '+(low.length?low.slice(0,14).join(', '):'NONE'),18,517,low.length?'#efbd4d':'#5fd28b');return {canvas:out,unseen,low,counts:cloud.counts,pointCount:cloud.points.length,cloud,poses};}
+
+
+function tempProjectionCamera(pose,aspect){const c=new THREE.PerspectiveCamera(40,aspect,.1,1000);c.position.copy(pose.pos);c.lookAt(pose.target);c.updateMatrixWorld(true);c.updateProjectionMatrix();return c;}
+async function makeRegisteredAtlas(photo){const views=CORE_VIEWS,cols=2,tw=550,th=330,g=18,out=diagCanvas(1160,1260,'#080b0e'),x=out.getContext('2d');drawTitle(x,'REGISTERED FLY-EYE · WORLD_TRUE + WORLD_SEEN',20,16,23);drawSmall(x,'cyan samples are first-hit photogrammetry points projected back into the exact camera that measured them',20,46,'#8f99a3');for(let i=0;i<views.length;i++){const idx=ALL_VIEWS.indexOf(views[i]),pose=photo.poses[idx],tile=renderPoseToCanvas(pose,tw,th),cx=20+(i%cols)*(tw+g),cy=76+Math.floor(i/cols)*(th+64);x.drawImage(tile,cx,cy,tw,th);const pc=tempProjectionCamera(pose,tw/th);x.save();x.beginPath();x.rect(cx,cy,tw,th);x.clip();for(const q of photo.cloud.points){if(q.cam!==idx)continue;const v=q.p.clone().project(pc);if(v.z<-1||v.z>1||Math.abs(v.x)>1.02||Math.abs(v.y)>1.02)continue;const px=cx+(v.x*.5+.5)*tw,py=cy+(-v.y*.5+.5)*th;x.fillStyle='rgba(45,226,208,.86)';x.fillRect(px-1.5,py-1.5,3,3);}x.restore();x.strokeStyle='#3d4852';x.strokeRect(cx+.5,cy+.5,tw-1,th-1);drawSmall(x,views[i]+' · TRUE + SEEN',cx,cy+th+6,'#dce4e9');const sampled=photo.cloud.points.filter(q=>q.cam===idx).length;drawSmall(x,'C'+String(idx+1).padStart(2,'0')+' · '+sampled+' measured surface points',cx,cy+th+24,'#72808a');}return out;}
+function makeRegistered360(eq,laser){const out=diagCanvas(eq.width,eq.height,'#080b0e'),x=out.getContext('2d');x.drawImage(eq,0,0);const mid=laser.maps&&laser.maps[1];if(mid&&mid.mask){x.save();x.globalAlpha=.42;x.drawImage(mid.mask,20,70,1040,520);x.restore();drawSmall(x,'RED OVERLAY = center-emitter rays that escaped to the calibration dome',22,576,'#ff7671');}return out;}
+function clearScanGroup(g){if(!g)return;while(g.children.length){const o=g.children.pop();if(o.geometry&&o.geometry.dispose)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose&&m.dispose());else if(o.material.dispose)o.material.dispose();}}}
+function setScanWorldStyle(on){if(!worldGroup)return;worldMeshes().forEach(m=>{const mat=m.material;if(!mat)return;if(on){if(!m.userData.__scanMat)m.userData.__scanMat={transparent:mat.transparent,opacity:mat.opacity,depthWrite:mat.depthWrite};mat.transparent=true;mat.opacity=.24;mat.depthWrite=false;}else if(m.userData.__scanMat){const p=m.userData.__scanMat;mat.transparent=p.transparent;mat.opacity=p.opacity;mat.depthWrite=p.depthWrite;delete m.userData.__scanMat;}});}
+function applyScanLayers(){if(!scanOverlayRoot)return;worldGroup.visible=state.scanStage?!!state.scanLayers.trueWorld:true;scanPointGroup.visible=!!state.scanLayers.seen;scanCamGroup.visible=!!state.scanLayers.cams;scanRayGroup.visible=!!state.scanLayers.rays;scanPlaneGroup.visible=!!state.scanLayers.slice;[['scanTrueBtn','trueWorld'],['scanSeenBtn','seen'],['scanCamsBtn','cams'],['scanRaysBtn','rays'],['scanSliceBtn','slice']].forEach(([id,k])=>$(id)&&$(id).classList.toggle('on',!!state.scanLayers[k]));renderNow();}
+function enterScanStage(on){state.scanStage=on==null?!state.scanStage:!!on;document.body.classList.toggle('scan-stage',state.scanStage);$('scanStageBtn').classList.toggle('on',state.scanStage);$('scanStageBtn').textContent=state.scanStage?'EXIT STAGE':'LIVE STAGE';if(scanOverlayRoot)scanOverlayRoot.visible=state.scanStage;if(state.scanStage){setScanWorldStyle(true);$('scanStageStatus').textContent='REGISTERED WORLD · orbit / pinch while TRUE, SEEN, CAMS, RAYS and SLICE occupy the same coordinates.';fitCamera(true);}else{scanAnimToken++;setScanWorldStyle(false);if(scanOverlayRoot)scanOverlayRoot.visible=false;worldGroup.visible=true;}applyScanLayers();resizeThree();}
+function buildCameraRig(poses){clearScanGroup(scanCamGroup);const b=worldBox(),c=new THREE.Vector3(),sz=new THREE.Vector3();b.getCenter(c);b.getSize(sz);const dotR=Math.max(.08,sz.length()*.006);for(let i=0;i<poses.length;i++){const p=poses[i],g=new THREE.SphereGeometry(dotR,8,6),m=new THREE.MeshBasicMaterial({color:i<6?0x2de2d0:0xefbd4d}),dot=new THREE.Mesh(g,m);dot.position.copy(p.pos);scanCamGroup.add(dot);const geom=new THREE.BufferGeometry().setFromPoints([p.pos,c]),line=new THREE.Line(geom,new THREE.LineBasicMaterial({color:i<6?0x2de2d0:0xefbd4d,transparent:true,opacity:.28}));scanCamGroup.add(line);}}
+function buildSeenPointCloud(cloud){clearScanGroup(scanPointGroup);const pts=cloud.points;if(!pts.length)return null;const pos=new Float32Array(pts.length*3),col=new Float32Array(pts.length*3);for(let i=0;i<pts.length;i++){const q=pts[i],cc=new THREE.Color();cc.setHSL((q.cam*.083)%1,.72,.62);pos[i*3]=q.p.x;pos[i*3+1]=q.p.y;pos[i*3+2]=q.p.z;col[i*3]=cc.r;col[i*3+1]=cc.g;col[i*3+2]=cc.b;}const geom=new THREE.BufferGeometry();geom.setAttribute('position',new THREE.BufferAttribute(pos,3));geom.setAttribute('color',new THREE.BufferAttribute(col,3));geom.setDrawRange(0,0);const sz=worldBox().getSize(new THREE.Vector3()).length(),mat=new THREE.PointsMaterial({size:Math.max(.05,sz*.006),vertexColors:true,sizeAttenuation:true,transparent:true,opacity:.98,depthTest:true}),p=new THREE.Points(geom,mat);p.userData.totalPoints=pts.length;scanPointGroup.add(p);return p;}
+function buildLaserRig(){clearScanGroup(scanRayGroup);const b=worldBox(),center=new THREE.Vector3(),sz=new THREE.Vector3();b.getCenter(center);b.getSize(sz);const R=Math.max(8,sz.length()*1.2),origins=[center.clone().add(new THREE.Vector3(0,-sz.y*.22,0)),center.clone(),center.clone().add(new THREE.Vector3(0,sz.y*.22,0))],verts=[],cols=[];for(const origin of origins){for(let j=0;j<6;j++){const lat=((j+.5)/6-.5)*Math.PI*.9;for(let i=0;i<12;i++){const lon=((i+.5)/12*2-1)*Math.PI,d=new THREE.Vector3(Math.cos(lat)*Math.sin(lon),Math.sin(lat),Math.cos(lat)*Math.cos(lon)).normalize();raycaster.set(origin,d);raycaster.far=R;const hit=raycaster.intersectObjects(worldMeshes(),false)[0],end=hit?hit.point.clone():origin.clone().addScaledVector(d,R),cc=new THREE.Color(hit?0x2de2d0:0xff4f4a);verts.push(origin.x,origin.y,origin.z,end.x,end.y,end.z);for(let k=0;k<2;k++)cols.push(cc.r,cc.g,cc.b);}}}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));g.setAttribute('color',new THREE.Float32BufferAttribute(cols,3));scanRayGroup.add(new THREE.LineSegments(g,new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:.48,depthTest:true})));}
+function setSlicePlane(axis,t){clearScanGroup(scanPlaneGroup);const b=worldBox(),sz=new THREE.Vector3(),c=new THREE.Vector3();b.getSize(sz);b.getCenter(c);let geo,pos=c.clone(),rot=new THREE.Euler();if(axis==='Y'){geo=new THREE.PlaneGeometry(sz.x*1.15,sz.z*1.15);pos.y=b.min.y+t*sz.y;rot.x=-Math.PI/2;}else if(axis==='X'){geo=new THREE.PlaneGeometry(sz.z*1.15,sz.y*1.15);pos.x=b.min.x+t*sz.x;rot.y=Math.PI/2;}else{geo=new THREE.PlaneGeometry(sz.x*1.15,sz.y*1.15);pos.z=b.min.z+t*sz.z;}const p=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0xefbd4d,transparent:true,opacity:.14,side:THREE.DoubleSide,depthWrite:false}));p.position.copy(pos);p.rotation.copy(rot);scanPlaneGroup.add(p);}
+function wait(ms){return new Promise(r=>setTimeout(r,ms));}
+async function playRegisteredScan(photo){if(!photo||!photo.cloud)return;enterScanStage(true);const token=++scanAnimToken,poses=photo.poses||cameraPoses();buildCameraRig(poses);buildLaserRig();setSlicePlane('Y',0);const pts=buildSeenPointCloud(photo.cloud);applyScanLayers();renderNow();await wait(120);if(!pts)return;const total=pts.userData.totalPoints||0,start=performance.now(),dur=1500;await new Promise(resolve=>{function frame(now){if(token!==scanAnimToken)return resolve();const f=Math.min(1,(now-start)/dur),n=Math.floor(total*f),ci=Math.min(poses.length-1,Math.floor(f*poses.length));pts.geometry.setDrawRange(0,n);$('scanStageStatus').textContent='PHOTOGRAMMETRY · C'+String(ci+1).padStart(2,'0')+' '+poses[ci].name+' · WORLD_SEEN '+n+'/'+total+' points';renderNow();if(f<1)requestAnimationFrame(frame);else resolve();}requestAnimationFrame(frame);});const st=performance.now();await new Promise(resolve=>{function frame(now){if(token!==scanAnimToken)return resolve();const f=Math.min(1,(now-st)/850);setSlicePlane('Y',f);$('scanStageStatus').textContent='CT SWEEP · Y '+Math.round(f*100)+'% · point reconstruction remains registered';renderNow();if(f<1)requestAnimationFrame(frame);else resolve();}requestAnimationFrame(frame);});$('scanStageStatus').textContent='REGISTERED RESULT · TRUE geometry dimmed · WORLD_SEEN point reconstruction + camera constellation + laser paths + CT plane. Toggle layers and orbit.';renderNow();}
+async function makeMedicalSheet(parts){const out=diagCanvas(1600,2600,'#07090c'),x=out.getContext('2d');drawTitle(x,'OPERATIVE BUILDER · REGISTERED MEDICAL IMAGING ATLAS',28,24,30);drawSmall(x,'WORLD '+state.worldVersion+' · every panel is derived from the same coordinate system · generated locally · NO API',28,64,'#8f99a3');let ref=null;try{ref=await loadImg(state.reference);}catch(_){ref=null;}if(ref){x.fillStyle='#101419';x.fillRect(28,100,350,250);drawFit(x,ref,34,106,338,218);drawSmall(x,'REFERENCE · evidence only',34,330,'#d9e1e7');}else drawSmall(x,'NO REFERENCE PINNED',28,110,'#efbd4d');const r360=parts.registered360||parts.equirect,atlas=parts.registeredAtlas||parts.flyEye;drawFit(x,r360,405,100,1165,560);drawTitle(x,'CENTER EYE + LEAK FIELD',415,625,14,'#dce5ec');drawFit(x,atlas,28,700,1544,1040);drawTitle(x,'REGISTERED FLY-EYE · TRUE + SEEN',38,1710,14,'#dce5ec');drawFit(x,parts.ct.canvas,28,1770,760,520);drawFit(x,parts.photo.canvas,812,1770,760,520);drawFit(x,parts.camera.canvas,28,2310,760,250);x.fillStyle='#101419';x.fillRect(812,2310,760,250);drawTitle(x,'CROSS-REGISTERED DIFFERENCE ENGINE',832,2328,18);const unseen=Array.from(new Set([...(parts.camera.unseen||[]),...(parts.photo.unseen||[])])),blast=state.lastBuild?((state.lastBuild.diff.added||[]).length+(state.lastBuild.diff.changed||[]).length+(state.lastBuild.diff.removed||[]).length):0,lines=['WORLD_TRUE objects: '+state.world.length,'WORLD_SEEN measured points: '+parts.photo.pointCount,'objects not reconstructed: '+unseen.length,'center light-leak field: '+Math.round(parts.laser.leakFraction*100)+'%','CT topology jumps: '+parts.ct.anomalies.length,'last repair blast radius: '+blast,'','QUESTION: BUILDING FAILURE OR EYE FAILURE?'];lines.forEach((t,i)=>drawSmall(x,t,832,2366+i*23,i===7?'#efbd4d':'#c1cad1'));return out;}
+function diagnosticSummary(parts){const unseen=Array.from(new Set([...(parts.camera.unseen||[]),...(parts.photo.unseen||[])])),low=parts.camera.low||[],blast=state.lastBuild?((state.lastBuild.diff.added||[]).length+(state.lastBuild.diff.changed||[]).length+(state.lastBuild.diff.removed||[]).length):0;const leak=Math.round(parts.laser.leakFraction*100);return ['MEDICAL SCAN · WORLD '+state.worldVersion,'WORLD_TRUE: '+state.world.length+' objects.','WORLD_SEEN: '+parts.photo.pointCount+' first-hit surface samples from '+ALL_VIEWS.length+' calibrated cameras.','EYE COVERAGE: '+unseen.length+' objects completely unrecovered; '+low.length+' objects visible from only 1–2 semantic cameras.','LIGHT-LEAK DOME: '+leak+'% of sampled rays escaped from low/mid/high interior emitters without touching geometry. This indicates permeability from those emitters, not automatically a defect.','CT: '+parts.ct.anomalies.length+' coarse slice-topology jumps detected.','LAST REPAIR BLAST RADIUS: '+blast+' objects added/changed/removed.','UNSEEN IDS: '+(unseen.length?unseen.slice(0,18).join(', '):'NONE'),'', 'INTERPRETATION RULE: separate BUILDING FAILURE from EYE FAILURE. Unseen/weakly sampled geometry means acquire better evidence before asserting a reference mismatch. Light leaks and CT jumps are probes that localize where to look, not verdicts.'].join('\n');}
+function canvasURL(c,q){return c.toDataURL('image/jpeg',q==null?.82:q);}
+function pushDiagnostic(rec){state.latestDiagnostic=rec;state.diagnostics.push(rec);if(state.diagnostics.length>3)state.diagnostics=state.diagnostics.slice(-3);event('medical_scan',{worldVersion:rec.worldVersion,metrics:rec.metrics});renderDiagnostics();renderState();}
+function renderDiagnostics(){const r=state.latestDiagnostic,metrics=$('diagMetrics'),main=$('diagMain'),side=$('diagSide');$('injectDiagBtn').classList.toggle('on',!!state.injectDiagnostic);$('injectDiagBtn').textContent=state.injectDiagnostic?'API LENS ON':'API LENS OFF';$('scanStageBtn').classList.toggle('on',!!state.scanStage);$('scanStageBtn').textContent=state.scanStage?'EXIT STAGE':'LIVE STAGE';if(!r){metrics.innerHTML='';$('diagSummaryText').textContent='NO SCAN YET.';main.innerHTML='<div class="diagCap">MEDICAL SHEET</div>';side.innerHTML='';return;}const m=r.metrics||{};metrics.innerHTML='<div class="diagMetric"><span>WORLD TRUE</span><b>'+m.objects+'</b></div><div class="diagMetric '+(m.unseen?'warn':'ok')+'"><span>UNSEEN</span><b>'+m.unseen+'</b></div><div class="diagMetric '+(m.leak>35?'hot':m.leak>15?'warn':'ok')+'"><span>LIGHT LEAK</span><b>'+m.leak+'%</b></div><div class="diagMetric '+(m.ctJumps?'warn':'ok')+'"><span>CT JUMPS</span><b>'+m.ctJumps+'</b></div>';$('diagSummaryText').textContent=r.summary;main.innerHTML='<img src="'+r.sheet+'"><div class="diagCap">REGISTERED ATLAS · all evidence shares WORLD coordinates · tap a panel below to promote it</div>';const order=[['REGISTERED TRUE + SEEN','registeredAtlas'],['360° + LEAK','registered360'],['FLY EYE','flyEye'],['360° CENTER EYE','equirect'],['CAMERA CONSTELLATION','camera'],['CT','ct'],['LASER / LEAK','laser'],['PHOTO CLOUD','photo']];side.innerHTML=order.filter(([,k])=>r.images&&r.images[k]).map(([n,k])=>'<div class="diagPanel selectable" data-diag-key="'+k+'"><img src="'+r.images[k]+'"><div class="diagCap">'+n+'</div></div>').join('');}
+async function scanAll(){if(!renderer)throw new Error('3D engine not ready');if(!state.world.length)throw new Error('Load or build geometry first');setPhase('SCANNING','Offline registered imaging: fly-eye + 360 + CT + leak field + inverse point reconstruction.');$('diagStatus').textContent='SCANNING LOCALLY… no API call.';const blueprintWas=state.blueprintMode;if(blueprintWas)setBlueprintMode(false,true);const saved=saveOrbit();try{if(state.scanStage)enterScanStage(false);const flyEye=await makeFlyEye();$('diagStatus').textContent='FLY EYE ✓ · building 360° center eye…';const equirect=await makeEquirect();$('diagStatus').textContent='360° ✓ · triangulating cameras…';const camera=makeCameraMap();$('diagStatus').textContent='CAMERAS ✓ · slicing CT…';const ct=makeCT();$('diagStatus').textContent='CT ✓ · firing light/laser dome…';const laser=makeLaser();$('diagStatus').textContent='LASER ✓ · reconstructing inverse WORLD_SEEN point model…';const photo=makePhotoCloud();$('diagStatus').textContent='WORLD_SEEN ✓ · cross-registering data layers…';const registeredAtlas=await makeRegisteredAtlas(photo),registered360=makeRegistered360(equirect,laser),parts={flyEye,equirect,camera,ct,laser,photo,registeredAtlas,registered360},sheet=await makeMedicalSheet(parts),summary=diagnosticSummary(parts),unseen=Array.from(new Set([...(camera.unseen||[]),...(photo.unseen||[])])),rec={id:'scan-'+Date.now(),ts:new Date().toISOString(),worldVersion:state.worldVersion,worldHash:JSON.stringify(state.world.map(o=>geomSig(o))).length,summary,metrics:{objects:state.world.length,unseen:unseen.length,lowCoverage:(camera.low||[]).length,leak:Math.round(laser.leakFraction*100),ctJumps:ct.anomalies.length,photoPoints:photo.pointCount,blast:state.lastBuild?((state.lastBuild.diff.added||[]).length+(state.lastBuild.diff.changed||[]).length+(state.lastBuild.diff.removed||[]).length):0},sheet:canvasURL(sheet,.8),images:{registeredAtlas:canvasURL(registeredAtlas,.8),registered360:canvasURL(registered360,.8),flyEye:canvasURL(flyEye,.78),equirect:canvasURL(equirect,.78),camera:canvasURL(camera.canvas,.8),ct:canvasURL(ct.canvas,.8),laser:canvasURL(laser.canvas,.8),photo:canvasURL(photo.canvas,.8)}};pushDiagnostic(rec);$('diagStatus').textContent='SCAN RECORDED · replaying measurement in the shared 3D stage…';await playRegisteredScan(photo);$('diagStatus').textContent='SCAN COMPLETE · ZERO API CALLS · LIVE STAGE is the inverted WORLD_SEEN reconstruction over WORLD_TRUE.';setPhase('SCAN COMPLETE','Orbit the registered scan. Toggle TRUE / SEEN / CAMS / RAYS / SLICE.');return rec;}finally{restoreOrbit(saved);if(blueprintWas)setBlueprintMode(true,true);renderNow();}}
+async function runOneDiagnostic(kind){if(!renderer)throw new Error('3D engine not ready');if(!state.world.length)throw new Error('Load or build geometry first');$('diagStatus').textContent='RUNNING '+kind+' LOCALLY…';const saved=saveOrbit(),blueprintWas=state.blueprintMode;if(blueprintWas)setBlueprintMode(false,true);try{let c,caption=kind;if(kind==='FLY EYE')c=await makeFlyEye();else if(kind==='360° EYE')c=await makeEquirect();else if(kind==='CAMERAS')c=makeCameraMap().canvas;else if(kind==='CT')c=makeCT().canvas;else if(kind==='LASER / LEAK')c=makeLaser().canvas;else if(kind==='PHOTO CLOUD')c=makePhotoCloud().canvas;const url=canvasURL(c,.82);$('diagMain').innerHTML='<img src="'+url+'"><div class="diagCap">'+caption+' · OFFLINE PREVIEW</div>';$('diagStatus').textContent=kind+' COMPLETE · no API call. SCAN ALL records a combined sheet.';}finally{restoreOrbit(saved);if(blueprintWas)setBlueprintMode(true,true);renderNow();}}
+function exportDiagnostic(){const r=state.latestDiagnostic;if(!r||!r.sheet)return toast('RUN SCAN ALL FIRST');const a=document.createElement('a');a.href=r.sheet;a.download='operative-builder-medical-scan-world-'+state.worldVersion+'-'+new Date().toISOString().replace(/[:.]/g,'-')+'.jpg';document.body.appendChild(a);a.click();a.remove();}
+$('scanBtn').addEventListener('click',()=>{$('diagDrawer').classList.remove('hidden');renderDiagnostics();});$('scanStageBtn').addEventListener('click',()=>enterScanStage());$('scanTrueBtn').addEventListener('click',()=>{state.scanLayers.trueWorld=!state.scanLayers.trueWorld;applyScanLayers();});$('scanSeenBtn').addEventListener('click',()=>{state.scanLayers.seen=!state.scanLayers.seen;applyScanLayers();});$('scanCamsBtn').addEventListener('click',()=>{state.scanLayers.cams=!state.scanLayers.cams;applyScanLayers();});$('scanRaysBtn').addEventListener('click',()=>{state.scanLayers.rays=!state.scanLayers.rays;applyScanLayers();});$('scanSliceBtn').addEventListener('click',()=>{state.scanLayers.slice=!state.scanLayers.slice;applyScanLayers();});$('diagSide').addEventListener('click',e=>{const p=e.target.closest&&e.target.closest('[data-diag-key]');if(!p||!state.latestDiagnostic)return;const k=p.dataset.diagKey,u=state.latestDiagnostic.images&&state.latestDiagnostic.images[k];if(u)$('diagMain').innerHTML='<img src="'+u+'"><div class="diagCap">'+k.toUpperCase()+' · CROSS-REFERENCE VIEW</div>';});$('closeDiagBtn').addEventListener('click',()=>{if(state.scanStage)enterScanStage(false);$('diagDrawer').classList.add('hidden');});$('injectDiagBtn').addEventListener('click',()=>{state.injectDiagnostic=!state.injectDiagnostic;renderDiagnostics();toast(state.injectDiagnostic?'MEDICAL SHEET WILL ENTER NEXT API CALL':'MEDICAL SHEET STAYS OFFLINE');});$('exportDiagBtn').addEventListener('click',exportDiagnostic);
+$('scanAllBtn').addEventListener('click',async()=>{try{await scanAll();}catch(e){$('diagStatus').textContent='SCAN FAILED · '+e.message;toast('SCAN FAILED: '+e.message,5000);}});$('flyEyeBtn').addEventListener('click',()=>runOneDiagnostic('FLY EYE').catch(e=>toast(e.message,4000)));$('sphereBtn').addEventListener('click',()=>runOneDiagnostic('360° EYE').catch(e=>toast(e.message,4000)));$('cameraMapBtn').addEventListener('click',()=>runOneDiagnostic('CAMERAS').catch(e=>toast(e.message,4000)));$('ctBtn').addEventListener('click',()=>runOneDiagnostic('CT').catch(e=>toast(e.message,4000)));$('laserBtn').addEventListener('click',()=>runOneDiagnostic('LASER / LEAK').catch(e=>toast(e.message,4000)));$('photoBtn').addEventListener('click',()=>runOneDiagnostic('PHOTO CLOUD').catch(e=>toast(e.message,4000)));
+renderDiagnostics();
+
+function setAgentTab(which){
+  const map={live:'liveAgent',builder:'builderAgent',critic:'criticAgent'};
+  Object.values(map).forEach(id=>$(id)&&$(id).classList.remove('active'));
+  const id=map[which]||map.live;if($(id))$(id).classList.add('active');
+  [['tabLive','live'],['tabBuilder','builder'],['tabCritic','critic']].forEach(([bid,key])=>$(bid)&&$(bid).classList.toggle('on',key===which));
+}
+$('tabLive').addEventListener('click',()=>setAgentTab('live'));
+$('tabBuilder').addEventListener('click',()=>setAgentTab('builder'));
+$('tabCritic').addEventListener('click',()=>setAgentTab('critic'));
+setAgentTab('live');
+
+
+function setSheet(open){$('console').classList.toggle('open',!!open);document.body.classList.toggle('sheet-open',!!open);$('sheetToggle').textContent=open?'CHAT ↓':'CHAT ↑';setTimeout(()=>resizeThree(),220);}
+$('sheetToggle').addEventListener('click',()=>setSheet(!$('console').classList.contains('open')));setSheet(false);
+
+$('setupBtn').addEventListener('click',()=>$('setup').classList.remove('hidden'));
+$('beginBtn').addEventListener('click',()=>{const intent=$('intentInput').value.trim();if(intent)state.intent=intent;state.model=$('modelInput').value.trim()||state.model||'gpt-5.6-sol';API_KEY=$('keyInput').value.trim();if(!renderer)return toast('3D ENGINE NOT READY');$('setup').classList.add('hidden');setPhase(apiTested?'WORLD OPEN':'OFFLINE READY',state.world.length?(state.world.length+' parts · SCAN works without API.'):'Design / scan offline. STEP and LOOP require a tested API.');renderState();fitCamera(true);});
+$('resetBtn').addEventListener('click',()=>{state.world=[];state.viewScores={};state.snapshotsByView={};state.builderLog=[];state.criticLog=[];state.events=[];state.history=[];state.cycle=0;state.worldVersion=0;state.lastCriticism='';state.lastBuild=null;state.showDiff=false;state.needBuild=true;state.highStreak=0;state.forcedView=null;state.diagnostics=[];state.latestDiagnostic=null;state.injectDiagnostic=false;state.scanStage=false;state.scanLayers={trueWorld:true,seen:true,cams:true,rays:true,slice:true};state.usage={calls:0,input:0,output:0,cached:0};state.phase='READY';state.phaseText='World reset. Build, load, or scan again.';reviewMode=false;reviewIndex=0;stopReviewPlayback();if(diffGroup){while(diffGroup.children.length)diffGroup.remove(diffGroup.children[0]);diffGroup.visible=false;}if(scanOverlayRoot){scanAnimToken++;clearScanGroup(scanPointGroup);clearScanGroup(scanRayGroup);clearScanGroup(scanCamGroup);clearScanGroup(scanPlaneGroup);scanOverlayRoot.visible=false;}document.body.classList.remove('scan-stage');rebuildWorld();renderState();toast('WORLD RESET');});
+
+/* Boot self-test proves button wiring executed. */
+const uiChecks=['refFile','loadFile','testApiBtn','beginBtn','stepBtn','loopBtn','setupBtn','zoomOutBtn','zoomInBtn','fitBtn','viewBtn','diffBtn','scanBtn','traceBtn','exportTraceBtn','traceScrub','tracePlay','tabLive','tabBuilder','tabCritic','blueprintBtn','sheetToggle','diagDrawer','scanAllBtn','scanStageBtn','scanTrueBtn','scanSeenBtn','scanCamsBtn','scanRaysBtn','scanSliceBtn','flyEyeBtn','sphereBtn','cameraMapBtn','ctBtn','laserBtn','photoBtn'].every(id=>!!$(id));$('bootStatus').textContent='UI SELF-TEST: '+(uiChecks?'PASS — CONTROLS WIRED':'FAIL');$('bootStatus').className=uiChecks?'ok':'bad';window.__OPERATIVE_BUILDER_SELFTEST=()=>({ui:uiChecks,three:!!renderer,apiTested,reference:!!state.reference});
+renderReference();renderState();
+function loadThree(){
+  if(window.THREE){initThree();return;}
+  const script=document.createElement('script');
+  script.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+  script.async=true;
+  script.onload=()=>initThree();
+  script.onerror=()=>{ $('threeChip').textContent='FAILED'; $('threeChip').className='bad'; $('worldFallback').textContent='THREE.JS CDN FAILED.\nUpload + API test still work.\nServe this file from HTTPS or connect to the internet for the 3D world.'; };
+  document.head.appendChild(script);
+  setTimeout(()=>{ if(!window.THREE&&!renderer){ $('threeChip').textContent='WAITING'; $('threeChip').className='warn'; } },2500);
+}
+loadThree();
+})();
+</script>
+</body>
+</html>
