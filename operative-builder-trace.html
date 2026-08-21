@@ -2,251 +2,220 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
-<meta name="theme-color" content="#080a0d">
-<title>OPERATIVE BUILDER TRACE — FUCKED UNTIL PROVEN OTHERWISE</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f7f6f3">
+<title>Operative Builder Trace</title>
 <link rel="icon" href="assets/branding/favicon.svg">
 <style>
-/* The viewer wears the builder's clothes on purpose. Somebody who has run the loop
-   should recognise this instantly: same monospace, same ink, same world-on-top /
-   correspondence-below, same floating reference card with the suck score on it.
-   The only difference is that nothing here is live — every number is read out of
-   the file. */
-:root{--bg:#080a0d;--panel:#101419f2;--line:#303842;--fg:#edf1f4;--dim:#8f99a3;
-      --hot:#ff5b57;--warn:#efbd4d;--ok:#5fd28b;--cyan:#2de2d0}
+/* Paper, not a console. The loop's own interface is a monospace instrument panel and
+   it is right to be; this is the transcript afterwards, and a transcript is for
+   reading. One column, two voices, plenty of air, and nothing said twice. */
+:root{
+  --paper:#f7f6f3; --ink:#1c1b19; --soft:#78746c; --faint:#a8a49b;
+  --rule:#e4e1da; --card:#ffffff; --mine:#ebe8e1;
+  --alarm:#c0492f; --calm:#5c7a5e;
+  --sky-top:#cfd8dd; --sky-bot:#e8e6e0;
+}
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);
-  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;-webkit-font-smoothing:antialiased}
-button,input,select{font:inherit;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);
+  font:400 15px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Inter,system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+button,select,input{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.cap{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
 
-/* ---------- world ---------- */
-#world{position:absolute;inset:0 0 43vh;background:#9fb5c7;overflow:hidden}
-#world canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
-#shade{position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(#05070a55,transparent 24%,transparent 74%,#05070aaa)}
+/* `minmax(0,1fr)` on the column, not just `100%`: a grid track is sized to its
+   content by default, so one header that would not fit quietly widened the whole
+   page, and `right:16px` on the score then measured from an edge off the screen. */
+#app{display:grid;height:100%;grid-template-columns:minmax(0,1fr);
+  grid-template-rows:auto minmax(0,40%) minmax(0,1fr);overflow:hidden}
 
-/* the reference is pinned, always, because the whole argument is about it */
-#refCard{position:absolute;z-index:20;top:max(8px,env(safe-area-inset-top));left:8px;width:136px;
-  padding:7px;border:1px solid #404954;border-radius:14px;background:#080a0dea;box-shadow:0 8px 28px #0007}
-#refName{font-size:7px;letter-spacing:.12em;color:var(--dim);white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis;margin-bottom:5px}
-#refCard img{display:block;width:100%;height:84px;object-fit:cover;border:1px solid #2e353d;
-  border-radius:9px;background:#111;cursor:zoom-in}
-#scoreCap{font-size:7px;letter-spacing:.1em;color:var(--dim);margin-top:7px}
-#worldScore{font-size:34px;font-weight:900;line-height:.95;color:var(--hot)}
-#settled{font-size:7px;margin-top:4px;color:var(--warn);letter-spacing:.08em}
+/* ---------------- header ---------------- */
+header{display:flex;gap:10px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--rule);
+  background:var(--paper);min-width:0;overflow:hidden}
+header .name{font-size:13px;font-weight:500;letter-spacing:-.01em;white-space:nowrap}
+header .sp{flex:1}
+header select,header button,header label{font-size:11.5px;color:var(--soft);background:#fff;
+  border:1px solid var(--rule);border-radius:99px;padding:6px 12px;cursor:pointer;white-space:nowrap;
+  flex:0 0 auto}
+header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
+.narrow{display:none}
 
-#stateCard{position:absolute;z-index:18;right:8px;top:max(8px,env(safe-area-inset-top));
-  max-width:calc(100vw - 160px);padding:8px 10px;border:1px solid #3a434d;border-radius:12px;
-  background:#080a0ddd;font-size:7px;line-height:1.5;color:var(--dim);text-transform:uppercase}
-#stateCard b{color:var(--fg)}
-.ok{color:var(--ok)!important}.bad{color:var(--hot)!important}
-.warn{color:var(--warn)!important}.cyan{color:var(--cyan)!important}
+/* ---------------- the model ---------------- */
+#stage{position:relative;overflow:hidden;background:linear-gradient(var(--sky-top),var(--sky-bot))}
+#gl{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
 
-/* what the critic was actually shown — on the glass, never behind a tab */
-#shots{position:absolute;z-index:19;left:8px;bottom:96px;display:flex;gap:6px;
-  max-width:calc(100vw - 16px);overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none}
-#shots::-webkit-scrollbar{display:none}
-.shot{flex:0 0 118px;scroll-snap-align:start}
-.shot img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;
-  border:1px solid #343d47;background:#111;cursor:zoom-in}
-.shot span{display:block;margin-top:3px;color:var(--dim);font-size:6.5px;letter-spacing:.08em;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ref{position:absolute;top:16px;left:16px;z-index:5;width:104px}
+#ref img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:10px;
+  background:#fff;box-shadow:0 1px 3px #0000001f,0 8px 24px #00000014;cursor:zoom-in}
+#ref .cap{margin-top:7px}
 
-#empty{position:absolute;z-index:16;left:50%;top:46%;transform:translate(-50%,-50%);display:none;
-  text-align:center;font-size:11px;letter-spacing:.2em;color:#3d4a52}
-#empty.on{display:block}
-#empty span{display:block;max-width:300px;margin:7px auto 0;font-size:7px;letter-spacing:.06em;
-  line-height:1.6;color:#4d5a63;text-transform:none}
-#nowCard{position:absolute;z-index:19;left:152px;right:8px;top:max(84px,calc(env(safe-area-inset-top) + 76px));
-  border:1px solid #3a434d;border-radius:12px;background:#080a0de8;padding:8px 10px;pointer-events:none}
-#phaseLabel{display:block;font-size:8px;letter-spacing:.16em;color:var(--cyan);margin-bottom:3px}
-#phaseText{display:block;font-size:9px;line-height:1.4;color:#e7edf2;max-height:3.9em;overflow:hidden}
+#meter{position:absolute;top:16px;right:16px;z-index:5;text-align:right}
+#score{font-size:40px;line-height:1;font-weight:300;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+#meter .cap{margin-bottom:3px}
+#meterNote{font-size:11px;color:var(--soft);margin-top:4px;letter-spacing:0}
 
-#makingBar{position:absolute;z-index:18;left:8px;right:8px;bottom:54px;display:grid;
-  grid-template-columns:36px minmax(0,1fr) 78px;grid-template-rows:24px 18px;gap:3px 7px;
-  align-items:center;padding:5px 7px;border:1px solid #39424d;border-radius:11px;
-  background:#080a0de8;backdrop-filter:blur(8px)}
-#makingNote{grid-column:1/-1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
-  color:#c6ced5;font-size:7px;letter-spacing:.05em}
-#tracePlay{grid-row:2;min-height:18px;border:0;background:transparent;color:var(--fg);font-size:10px;padding:0}
-#traceScrub{grid-row:2;width:100%;height:18px;accent-color:var(--cyan)}
-#traceTick{grid-row:2;text-align:right;color:var(--dim);font-size:7px;font-variant-numeric:tabular-nums}
+#emptyPlate{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:24px;
+  color:var(--faint);z-index:2}
+#emptyPlate.on{display:grid}
+#emptyPlate b{display:block;font-size:13px;font-weight:500;color:var(--soft);letter-spacing:.04em}
+#emptyPlate span{display:block;max-width:280px;margin:6px auto 0;font-size:12px;line-height:1.5}
 
-#worldButtons{position:absolute;z-index:18;right:8px;bottom:8px;display:flex;gap:5px}
-.wbtn{min-height:36px;padding:0 10px;border:1px solid #39424d;border-radius:10px;
-  background:#101419e8;color:var(--fg);font-size:8px}
-.wbtn.on{background:var(--cyan);border-color:var(--cyan);color:#061210}
-#diffLegend{position:absolute;z-index:17;left:8px;bottom:8px;padding:6px 8px;border:1px solid #39424d;
-  border-radius:9px;background:#080a0ddd;font-size:7px;letter-spacing:.08em}
-#diffLegend .a{color:var(--cyan)}#diffLegend .c{color:var(--warn)}#diffLegend .r{color:var(--hot)}
+#bar{position:absolute;left:0;right:0;bottom:0;z-index:6;display:flex;gap:14px;align-items:center;
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(#f7f6f300,#f7f6f3cc 42%,var(--paper));backdrop-filter:blur(6px)}
+#bar button.round{width:34px;height:34px;border-radius:50%;background:var(--ink);color:var(--paper);
+  display:grid;place-items:center;font-size:12px;flex:none}
+#seek{flex:1;-webkit-appearance:none;appearance:none;height:22px;background:transparent;min-width:40px}
+#seek::-webkit-slider-runnable-track{height:2px;background:var(--rule);border-radius:2px}
+#seek::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+  background:var(--ink);margin-top:-5.5px}
+#seek::-moz-range-track{height:2px;background:var(--rule);border-radius:2px}
+#seek::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:var(--ink)}
+#tick{font-size:11px;color:var(--soft);font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:0}
 
-/* ---------- correspondence ---------- */
-#console{position:absolute;left:0;right:0;bottom:0;height:43vh;background:#080a0df8;
-  border-top:1px solid #313943;display:grid;grid-template-rows:31px minmax(0,1fr);
-  padding-bottom:env(safe-area-inset-bottom)}
-#ledger{display:flex;gap:12px;align-items:center;padding:0 9px;border-bottom:1px solid #252c34;
-  overflow:auto;white-space:nowrap;font-size:7px;color:var(--dim);text-transform:uppercase}
-#ledger b{color:var(--fg)}
-#ledger select{background:#151a20;border:1px solid #39424d;border-radius:8px;color:var(--fg);
-  font-size:7px;padding:3px 6px;text-transform:none}
-#ledger button,#ledger label.btn{background:#151a20;border:1px solid #39424d;border-radius:8px;
-  color:var(--fg);font-size:7px;padding:4px 8px;cursor:pointer}
-#agents{display:grid;grid-template-columns:1fr 1fr;min-height:0}
-.agent{display:grid;grid-template-rows:26px minmax(0,1fr);min-width:0}
-.agent:first-child{border-right:1px solid #252c34}
-.agentHead{padding:7px 8px;border-bottom:1px solid #252c34;font-size:8px;letter-spacing:.14em}
-.log{overflow:auto;padding:6px}
-.msg{padding:6px;margin-bottom:6px;border:1px solid #2b333c;border-radius:8px;background:#101419;
-  font-size:7.5px;line-height:1.42;white-space:pre-wrap;word-break:break-word;cursor:pointer}
-.msg .r{display:block;color:var(--dim);font-size:6.5px;letter-spacing:.12em;margin-bottom:3px}
-.msg.critic{border-color:#573030}
-.msg.bridge{border-color:#62502e;border-style:dashed}
-.msg.receipt{border-style:dashed;color:#b4bdc5}
-.msg.err{border-color:#7a3232;color:#ffb0ad}
-.msg.now{border-color:var(--cyan);box-shadow:0 0 0 1px var(--cyan) inset}
-.msg .sc{float:right;font-size:15px;font-weight:900;line-height:1;margin-left:6px}
-.msg .pill{display:inline-block;font-size:6.5px;letter-spacing:.08em;padding:1px 5px;border-radius:99px;
-  border:1px solid #39424d;color:var(--dim);margin:3px 3px 0 0}
-.msg .pill.y{border-color:#2f5b3f;color:var(--ok)}
-.msg .pill.n{border-color:#5b2f2f;color:var(--hot)}
-.clip{max-height:9.6em;overflow:hidden}
-.mobileHint{display:none;color:var(--cyan)}
+/* ---------------- the thread ---------------- */
+#thread{overflow-y:auto;overscroll-behavior:contain;background:var(--paper);
+  border-top:1px solid var(--rule);padding:20px 0 28px;scroll-behavior:smooth}
+.wrap{max-width:660px;margin:0 auto;padding:0 20px}
 
-/* ---------- overlays ---------- */
-#lightbox{position:fixed;z-index:200;inset:0;background:#05070af5;display:none;
-  place-items:center;padding:20px;cursor:zoom-out}
-#lightbox.on{display:grid}
-#lightbox img{max-width:100%;max-height:100%;border:1px solid #3b4650;border-radius:12px}
-#lightbox b{position:fixed;top:14px;left:50%;transform:translateX(-50%);font-size:8px;
-  letter-spacing:.14em;color:var(--dim)}
-#docs{position:fixed;z-index:210;inset:4vh 8px 8px;background:#080a0df7;border:1px solid #3b4650;
-  border-radius:16px;box-shadow:0 18px 70px #000c;display:none;grid-template-rows:50px minmax(0,1fr);
-  overflow:hidden}
-#docs.on{display:grid}
-#docsHead{display:flex;align-items:center;justify-content:space-between;padding:0 12px;
-  border-bottom:1px solid var(--line);font-size:10px;letter-spacing:.12em}
-#docsHead button{min-height:34px;border:1px solid #39424d;border-radius:9px;background:#151a20;
-  color:var(--fg);font-size:7px;padding:0 10px}
-#docsBody{overflow:auto;padding:14px}
-#docsBody h3{font-size:8px;letter-spacing:.15em;color:var(--warn);margin:18px 0 6px}
-#docsBody p,#docsBody li{font-size:8.5px;line-height:1.6;color:#b8c1c9;margin:0 0 8px}
-#docsBody pre{background:#0a0e13;border:1px solid var(--line);border-radius:9px;padding:10px;
-  overflow:auto;font-size:7.5px;line-height:1.5;color:#a7b4c0;white-space:pre-wrap}
-#docsBody a{color:var(--cyan)}
-#boot{position:fixed;z-index:300;inset:0;display:grid;place-items:center;background:var(--bg);
-  color:var(--dim);font-size:9px;letter-spacing:.14em;text-transform:uppercase;text-align:center;padding:20px}
+.turn{display:flex;margin-bottom:16px;animation:rise .32s cubic-bezier(.2,.7,.3,1) both}
+@keyframes rise{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.turn.right{justify-content:flex-end}
+.bub{max-width:76%;padding:12px 15px;border-radius:20px;background:var(--card);
+  box-shadow:0 1px 2px #00000010;border:1px solid var(--rule)}
+.turn.right .bub{background:var(--mine);border-color:#00000000;box-shadow:none}
+.who{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+  margin-bottom:6px;display:flex;gap:8px;align-items:baseline}
+.turn.right .who{justify-content:flex-end}
+.txt{white-space:pre-wrap;word-break:break-word}
+.big{font-size:16px}
 
-/* ---------- mobile: model on top, chat underneath ---------- */
-@media(max-width:600px){
-  html,body{height:auto;min-height:100%;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:auto}
-  #world{position:relative;inset:auto;height:70svh;min-height:500px}
-  #console{position:relative;left:auto;right:auto;bottom:auto;height:auto;min-height:60svh;display:block;
-    padding-bottom:calc(10px + env(safe-area-inset-bottom))}
-  #refCard{width:104px;padding:6px;border-radius:12px}
-  #refCard img{height:60px}
-  #refName,#scoreCap,#settled{font-size:6.5px}
-  #worldScore{font-size:28px}
-  #stateCard{left:120px;right:8px;max-width:none;font-size:6.6px;line-height:1.4;max-height:64px;
-    overflow:hidden;padding:6px 8px}
-  /* Stacked from the bottom edge up, in this order and with no overlaps:
-     buttons 8 · bar 54 · shots 100 · phase 186. Laid out by eye instead, the phase
-     card sat underneath the three captures and neither could be read. */
-  #nowCard{left:8px;right:8px;top:auto;bottom:186px;padding:6px 8px}
-  #phaseLabel{font-size:7px}
-  #phaseText{max-height:2.7em;font-size:8.5px;line-height:1.35}
-  #shots{left:8px;right:8px;bottom:100px;max-width:none}
-  .shot{flex:0 0 29vw}
-  .shot span{font-size:6px}
-  #makingBar{bottom:58px;grid-template-columns:38px minmax(0,1fr) 74px;padding:6px 8px}
-  #makingNote{font-size:7.5px}
-  .wbtn{min-height:42px;padding:0 8px;font-size:7.2px}
-  #diffLegend{font-size:6.5px;max-width:150px}
-  #ledger{height:38px;position:sticky;top:0;z-index:30;background:#080a0dfb;font-size:7.5px}
-  /* the two correspondents become swipeable full-width columns, as in the builder */
-  #agents{height:auto;display:flex;grid-template-columns:none;overflow-x:auto;
-    scroll-snap-type:x mandatory;scrollbar-width:none}
-  #agents::-webkit-scrollbar{display:none}
-  .agent{flex:0 0 92vw;min-width:92vw;height:56svh;min-height:400px;
-    grid-template-rows:34px minmax(0,1fr);scroll-snap-align:start}
-  .agentHead{padding:10px 11px;font-size:9px}
-  .mobileHint{display:inline}
-  .log{padding:9px 10px}
-  .msg{padding:10px;margin-bottom:10px;border-radius:10px;font-size:10.5px;line-height:1.52}
-  .msg .r{font-size:7.5px;margin-bottom:5px}
-  .msg .sc{font-size:20px}
-  .clip{max-height:11em}
+.note{text-align:center;font-size:11.5px;color:var(--faint);margin:0 0 16px;letter-spacing:0}
+.note b{color:var(--soft);font-weight:500}
+.note.warn b{color:var(--alarm)}
+
+.verdict{display:flex;gap:14px;align-items:flex-start}
+.verdict .n{font-size:30px;line-height:.95;font-weight:300;letter-spacing:-.04em;
+  font-variant-numeric:tabular-nums;flex:none;min-width:44px}
+.verdict .n small{display:block;font-size:9px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--faint);margin-top:4px;font-weight:400}
+
+.shots{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:0 0 10px}
+.shots figure{margin:0}
+.shots img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:9px;
+  background:#fff;border:1px solid var(--rule);cursor:zoom-in}
+.shots figcaption{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-top:5px}
+
+.opener .bub{max-width:100%;width:100%;text-align:center;padding:18px 16px 16px}
+.opener img{display:block;width:100%;max-width:340px;margin:0 auto 12px;border-radius:12px;
+  border:1px solid var(--rule);cursor:zoom-in}
+.opener .big{font-weight:500}
+
+.raw{margin-top:9px}
+.raw button{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding:0}
+.raw button:hover{color:var(--soft)}
+.raw pre{display:none;margin:9px 0 0;padding:11px 12px;background:var(--paper);border:1px solid var(--rule);
+  border-radius:11px;font:400 11.5px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;
+  white-space:pre-wrap;word-break:break-word;color:var(--soft);max-height:280px;overflow:auto;letter-spacing:0}
+.raw.on pre{display:block}
+
+.typing .bub{padding:14px 16px}
+.dots{display:flex;gap:4px}
+.dots i{width:6px;height:6px;border-radius:50%;background:var(--faint);animation:blink 1.25s infinite}
+.dots i:nth-child(2){animation-delay:.18s}.dots i:nth-child(3){animation-delay:.36s}
+@keyframes blink{0%,60%,100%{opacity:.25}30%{opacity:.85}}
+
+/* ---------------- chrome ---------------- */
+
+#lb{position:fixed;inset:0;z-index:60;background:#f7f6f3f2;display:none;place-items:center;
+  padding:24px;cursor:zoom-out}
+#lb.on{display:grid}
+#lb img{max-width:100%;max-height:88vh;border-radius:12px;box-shadow:0 20px 60px #00000022}
+#lb b{position:fixed;top:18px;left:50%;transform:translateX(-50%);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint);font-weight:400}
+
+#docs{position:fixed;inset:0;z-index:70;background:var(--paper);display:none;overflow:auto}
+#docs.on{display:block}
+#docs .wrap{padding:44px 20px 60px}
+#docs h2{font-size:22px;font-weight:500;letter-spacing:-.02em;margin:0 0 14px}
+#docs h3{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
+  margin:34px 0 10px;font-weight:400}
+#docs p,#docs li{color:#3a3833;margin:0 0 12px}
+#docs pre{background:#fff;border:1px solid var(--rule);border-radius:12px;padding:14px;overflow:auto;
+  font:400 11.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--soft);
+  white-space:pre-wrap;letter-spacing:0}
+#docs a{color:var(--ink)}
+#docsClose{position:fixed;top:16px;right:18px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--soft);background:#fff;border-radius:99px;padding:8px 14px;box-shadow:0 1px 3px #00000014}
+
+#boot{position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:var(--paper);
+  color:var(--faint);font-size:12px;letter-spacing:.1em;text-align:center;padding:24px}
+
+@media(max-width:700px){
+  #app{grid-template-rows:auto minmax(0,38%) minmax(0,1fr)}
+  /* Everything must fit 390px. Overflowing, the header widened the document, and
+     `right:12px` on the score then measured from an edge that was off the screen —
+     so the suck score, the one number this page exists to show, was invisible. */
+  header{padding:9px 10px;gap:6px}
+  header .name{display:none}
+  header select,header button,header label{font-size:11px;padding:6px 9px}
+  header select{flex:1 1 auto;max-width:none;min-width:0;text-overflow:ellipsis}
+  .wide{display:none}.narrow{display:inline}
+  #ref{width:76px;top:12px;left:12px}
+  #meter{top:12px;right:12px}
+  #score{font-size:32px}
+  #meterNote{display:none}
+  .bub{max-width:86%}
+  .wrap{padding:0 14px}
+  }
+@media(prefers-reduced-motion:reduce){
+  .turn{animation:none}.dots i{animation:none;opacity:.5}#thread{scroll-behavior:auto}
 }
 </style>
 </head>
 <body>
 <div id="boot">reading the trace…</div>
 
-<div id="world">
-  <canvas id="gl"></canvas>
-  <div id="shade"></div>
-
-  <div id="refCard">
-    <div id="refName">—</div>
-    <img id="refimg" alt="the reference">
-    <div id="scoreCap">SUCK SCORE</div>
-    <div id="worldScore">—</div>
-    <div id="settled">FUCKED UNTIL PROVEN OTHERWISE</div>
-  </div>
-
-  <div id="stateCard">—</div>
-
-  <div id="nowCard">
-    <span id="phaseLabel">—</span>
-    <span id="phaseText">—</span>
-  </div>
-
-  <div id="empty">NOTHING WAS BUILT<span>the world rejected every operation — the blank captures below are the truth, not a fault in this page</span></div>
-
-  <div id="shots"></div>
-
-  <div id="makingBar">
-    <div id="makingNote">—</div>
-    <button id="tracePlay">▶</button>
-    <input id="traceScrub" type="range" min="0" max="0" value="0">
-    <div id="traceTick">—</div>
-  </div>
-
-  <div id="diffLegend"><span class="a">■</span> ADDED &nbsp;<span class="c">■</span> CHANGED
-    &nbsp;<span class="r">■</span> REMOVED</div>
-  <div id="worldButtons">
-    <button class="wbtn" id="spinBtn">SPIN</button>
-    <button class="wbtn" id="docsBtn">READ ME</button>
-  </div>
-</div>
-
-<div id="console">
-  <div id="ledger">
-    <span>TRACE <b id="lIntent">—</b></span>
-    <span>MODEL <b id="lModel">—</b></span>
-    <span>CYCLE <b id="lCycle">—</b></span>
-    <span>OBJECTS <b id="lObjects">—</b></span>
-    <span>Δ <b id="lDiff">—</b></span>
+<div id="app">
+  <header>
+    <span class="name">Operative Builder Trace</span>
+    <span class="sp"></span>
     <select id="pick"></select>
-    <label class="btn">OPEN A TRACE<input id="file" type="file" accept="application/json" hidden></label>
-  </div>
-  <div id="agents">
-    <div class="agent">
-      <div class="agentHead">BUILDER <span style="color:var(--dim)">— answers only in JSON</span><span class="mobileHint"> · SWIPE FOR THE CRITIC →</span></div>
-      <div class="log" id="builderLog"></div>
+    <label><span class="wide">Open a trace</span><span class="narrow">Open</span>
+      <input id="file" type="file" accept="application/json" hidden></label>
+    <button id="docsBtn"><span class="wide">How to read this</span><span class="narrow">Read me</span></button>
+  </header>
+
+  <section id="stage">
+    <canvas id="gl"></canvas>
+
+    <div id="ref">
+      <img id="refimg" alt="the reference">
+      <div class="cap" id="refname">reference</div>
     </div>
-    <div class="agent">
-      <div class="agentHead" style="color:var(--hot)">CRITIC <span style="color:var(--dim)">— fucked until proven otherwise</span></div>
-      <div class="log" id="criticLog"></div>
+
+    <div id="meter">
+      <div class="cap">suck score</div>
+      <div id="score">—</div>
+      <div id="meterNote">fucked until proven otherwise</div>
     </div>
-  </div>
+
+    <div id="emptyPlate"><div><b>Nothing was built.</b>
+      <span>Every operation was rejected, so the captures below are blank. That is the trace being honest, not a fault in this page.</span></div></div>
+
+    <div id="bar">
+      <button class="round" id="play">▶</button>
+      <input id="seek" type="range" min="0" max="0" value="0">
+      <span id="tick">—</span>
+    </div>
+  </section>
+
+  <section id="thread"><div class="wrap" id="log"></div></section>
 </div>
 
-<div id="lightbox"><b id="lbCap"></b><img id="lbImg" alt=""></div>
-<div id="docs">
-  <div id="docsHead"><span>HOW TO READ A TRACE</span><button id="docsClose">CLOSE</button></div>
-  <div id="docsBody"></div>
-</div>
+<div id="lb"><b id="lbcap"></b><img id="lbimg" alt=""></div>
+<div id="docs"><button id="docsClose">Close</button><div class="wrap" id="docsBody"></div></div>
 
 <script type="importmap">
 { "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/" } }
@@ -254,83 +223,75 @@ button,input,select{font:inherit;touch-action:manipulation;-webkit-tap-highlight
 <script type="module">
 import * as THREE from 'three';
 
-// OPERATIVE_BUILDER_TRACE_V1 — a complete record of one argument. A reference
-// photograph is pinned; a BUILDER may answer only in JSON operations on a world of
-// primitives; a CRITIC is told the building is fucked until proven otherwise, is
-// shown the render against the reference, and returns a suck score and one concrete
-// accusation. The accusation becomes the next prompt.
+// A trace is one argument: a reference photograph, a BUILDER that may answer only in
+// JSON operations, and a CRITIC told the building is fucked until proven otherwise.
+// The critic's accusation becomes the builder's next prompt.
 //
-// Nothing here is re-run and nothing is re-scored. This is a reader, not a judge —
-// with one exception that is not a judgement: the world is rebuilt in 3D from the
-// object list each cycle carries, because a 36 kB thumbnail of a castle is not a
-// castle you can turn round.
+// Which is why the raw file reads so badly as a conversation: every accusation is in
+// it three times — as the critic's verdict, as the bridge that carries it, and again
+// inside the next prompt, wrapped in sixteen hundred characters of identical
+// boilerplate. Four logs, fifty-four entries, and perhaps twenty things actually
+// said. This page says each of them once, and keeps the full text one tap away.
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-const clock = (ts) => new Date(ts).toISOString().slice(11, 19);
-let idx = null, trace = null, moments = [], at = 0, playing = false, timer = null, spin = true;
+let idx = null, trace = null, msgs = [], at = 0, playing = false, timer = null;
 
-// --------------------------------------------------------------- timeline
-// The file keeps four independently timestamped logs — builder turns, critic turns,
-// per-cycle history, events. Read separately they are four accounts of the same
-// argument; interleaved by their own clocks they are the argument.
-function timeline(t) {
+// ------------------------------------------------------------------ the thread
+function thread(t) {
+  const out = [{ kind: 'opener', ref: t.reference, intent: t.intent, name: t.reference_name }];
   const T = (s) => (s ? Date.parse(s) : 0);
-  const cycleOf = (ts) => {
-    let c = t.history[0] ? t.history[0].cycle : 1;
-    for (const h of t.history) if (T(h.ts) <= ts + 1) c = h.cycle;
-    return c;
-  };
-  const out = [];
-  for (const b of t.builder_log || []) {
-    const ts = T(b.ts);
-    const kind = b.cls === 'receipt' ? 'receipt' : b.cls === 'bridge' ? 'bridge'
-      : b.role === 'error' ? 'error' : b.role === 'assistant' ? 'reply' : 'prompt';
-    out.push({ ts, cycle: cycleOf(ts), side: kind === 'bridge' ? 'critic' : 'builder', kind, text: b.text });
+  const prompts = (t.builder_log || []).filter(b => b.role === 'user');
+  const errs = (t.builder_log || []).filter(b => b.role === 'error');
+
+  for (const h of t.history) {
+    const ok = (h.receipts || []).filter(r => !/^REJECT/.test(r)).length;
+    const no = (h.receipts || []).length - ok;
+    // The prompt that opened this cycle, kept whole for anyone who wants it and
+    // folded away for everyone else — the only part that ever differs is the
+    // accusation, and the critic already said that in its own words.
+    const p = prompts.filter(x => T(x.ts) <= T(h.ts)).pop();
+    out.push({ kind: 'builder', cycle: h.cycle, text: h.summary || '',
+               ops: (h.operations || []).length, ok, no, raw: p ? p.text : null, history: h });
+    if (no) out.push({ kind: 'note', warn: true, cycle: h.cycle,
+      text: `${no} of ${ok + no} operations rejected — nothing was built` });
+    const c = (h.critiques || [])[0];
+    if (c) out.push({ kind: 'critic', cycle: h.cycle, score: c.score, text: c.criticism || '',
+                      shots: h, view: c.view });
   }
-  for (const c of t.critic_log || []) {
-    const ts = T(c.ts);
-    out.push({ ts, cycle: cycleOf(ts), side: 'critic',
-      kind: c.role === 'assistant' ? 'verdict' : 'observe', text: c.text });
+  // The dead connection, said once with a count rather than six identical times.
+  if (errs.length) {
+    const msg = errs[0].text;
+    const anchor = out.map((m, i) => [m, i]).filter(([m]) => m.kind === 'critic').slice(-2)[0];
+    const line = { kind: 'note', warn: true,
+      text: errs.length > 1 ? `${msg} — the loop retried ${errs.length} times before it caught` : msg };
+    out.splice(anchor ? anchor[1] + 1 : out.length, 0, line);
   }
-  for (const h of t.history)
-    out.push({ ts: T(h.ts), cycle: h.cycle, side: 'builder', kind: 'render', history: h, text: h.summary || '' });
-  out.sort((a, b) => a.ts - b.ts || (a.kind === 'render' ? -1 : 0));
   return out;
 }
-const worldAt = (i) => { for (let k = i; k >= 0; k--) if (moments[k].kind === 'render') return moments[k].history; return null; };
 
-// --------------------------------------------------------------- the rebuild
-const renderer = new THREE.WebGLRenderer({ canvas: $('#gl'), antialias: true });
+// ------------------------------------------------------------------ the model
+const renderer = new THREE.WebGLRenderer({ canvas: $('#gl'), antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x9fb5c7);            // the builder's own sky
-const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 900);
-scene.add(new THREE.HemisphereLight(0xffffff, 0x6d7a84, 1.15));
-const sun = new THREE.DirectionalLight(0xfff6e8, 1.05); sun.position.set(26, 42, 20); scene.add(sun);
-const rim = new THREE.DirectionalLight(0xbcd6f5, .4); rim.position.set(-30, 18, -26); scene.add(rim);
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400),
-  new THREE.MeshStandardMaterial({ color: 0x8fa392, roughness: 1 }));
-ground.rotation.x = -Math.PI / 2; ground.position.y = -0.02; scene.add(ground);
+const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 900);
+scene.add(new THREE.HemisphereLight(0xffffff, 0xb9bdb4, 1.25));
+const sun = new THREE.DirectionalLight(0xfffaf0, .95); sun.position.set(28, 44, 22); scene.add(sun);
+const rim = new THREE.DirectionalLight(0xd7e4f2, .35); rim.position.set(-30, 18, -28); scene.add(rim);
+const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(600, 600),
+  new THREE.MeshBasicMaterial({ color: 0xdedbd4 }));
+shadowPlane.rotation.x = -Math.PI / 2; shadowPlane.position.y = -0.05; scene.add(shadowPlane);
 const worldGroup = new THREE.Group(), rings = new THREE.Group(); scene.add(worldGroup, rings);
 
-const orbit = { az: -0.75, el: 0.36, dist: 46, target: new THREE.Vector3(0, 3, 0) };
-function placeCamera() {
-  const c = Math.cos(orbit.el);
-  camera.position.set(orbit.target.x + orbit.dist * Math.cos(orbit.az) * c,
-                      orbit.target.y + orbit.dist * Math.sin(orbit.el),
-                      orbit.target.z + orbit.dist * Math.sin(orbit.az) * c);
-  camera.lookAt(orbit.target);
-}
+const orbit = { az: -0.72, el: 0.33, dist: 46, target: new THREE.Vector3(0, 3, 0) };
+let spin = true, framed = null;
 
-/** The five primitives the builder is allowed. A gable is a prism, which is what it
- *  means by it and what it was rendered as when the critic looked. */
 function meshFor(o) {
   const [sx, sy, sz] = o.size || [1, 1, 1];
   let g;
-  if (o.primitive === 'cylinder') g = new THREE.CylinderGeometry(sx / 2, sx / 2, sy, 20);
-  else if (o.primitive === 'cone') g = new THREE.ConeGeometry(sx / 2, sy, 20);
-  else if (o.primitive === 'sphere') g = new THREE.SphereGeometry(sx / 2, 18, 14);
+  if (o.primitive === 'cylinder') g = new THREE.CylinderGeometry(sx / 2, sx / 2, sy, 22);
+  else if (o.primitive === 'cone') g = new THREE.ConeGeometry(sx / 2, sy, 22);
+  else if (o.primitive === 'sphere') g = new THREE.SphereGeometry(sx / 2, 20, 14);
   else if (o.primitive === 'gable') {
     const s = new THREE.Shape();
     s.moveTo(-sx / 2, -sy / 2); s.lineTo(sx / 2, -sy / 2); s.lineTo(0, sy / 2); s.closePath();
@@ -338,220 +299,209 @@ function meshFor(o) {
   } else g = new THREE.BoxGeometry(sx, sy, sz);
   const metal = o.material === 'metal';
   const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({
-    color: new THREE.Color(o.color || '#9aa3ad'), roughness: metal ? .35 : .9, metalness: metal ? .6 : .04 }));
+    color: new THREE.Color(o.color || '#9aa3ad'), roughness: metal ? .4 : .92, metalness: metal ? .5 : .03 }));
   const [px, py, pz] = o.position || [0, 0, 0];
   m.position.set(px, py, pz); m.rotation.y = o.rotation_y || 0;
   const [ax, ay, az] = o.scale || [1, 1, 1]; m.scale.set(ax, ay, az);
   return m;
 }
 
-let framed = null;
 function drawWorld(h) {
   worldGroup.clear(); rings.clear();
-  if (!h) return;
-  const objs = (h.afterWorld && h.afterWorld.length) ? h.afterWorld : [];
+  const objs = (h && h.afterWorld && h.afterWorld.length) ? h.afterWorld : [];
+  $('#emptyPlate').classList.toggle('on', !!h && !objs.length);
+  if (!objs.length) return;
   const added = new Set((h.diff && h.diff.added) || []);
   const changed = new Set((h.diff && h.diff.changed) || []);
   for (const o of objs) {
     const m = meshFor(o); worldGroup.add(m);
-    // What this move did, ringed on the thing it did it to — taken from the trace's
-    // own diff, not re-derived, so it marks exactly what the critic was told changed.
-    const col = added.has(o.id) ? 0x2de2d0 : changed.has(o.id) ? 0xefbd4d : null;
+    const col = added.has(o.id) ? 0x2f8f84 : changed.has(o.id) ? 0xb08a2e : null;
     if (col) {
       const hx = new THREE.Box3Helper(new THREE.Box3().setFromObject(m), new THREE.Color(col));
-      hx.material.depthTest = false; hx.material.transparent = true; hx.renderOrder = 5; rings.add(hx);
+      hx.material.depthTest = false; hx.material.transparent = true;
+      hx.material.opacity = .8; hx.renderOrder = 5; rings.add(hx);
     }
   }
-  if (objs.length) {
-    const b = new THREE.Box3().setFromObject(worldGroup);
-    if (!b.isEmpty()) {
-      orbit.target.copy(b.getCenter(new THREE.Vector3()));
-      const s = b.getSize(new THREE.Vector3());
-      // A phone is portrait and a castle is wide, so the horizontal fit is the one
-      // that decides. Framed on the largest dimension alone, the whole thing came
-      // back cropped to two towers on any screen narrower than it was tall.
-      const aspect = Math.max(0.35, camera.aspect || 1);
-      const span = Math.max(s.x, s.z);
-      const fitH = (span / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2) * aspect);
-      const fitV = (Math.max(s.y, span * 0.6) / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-      const want = Math.max(fitH, fitV) * 1.35 + 6;
-      // Held steady across a run, and only ever opened out, so the eye watches the
-      // castle change rather than the camera move.
-      orbit.dist = framed ? Math.max(framed, want) : want; framed = orbit.dist;
-    }
-  }
+  const b = new THREE.Box3().setFromObject(worldGroup);
+  if (b.isEmpty()) return;
+  orbit.target.copy(b.getCenter(new THREE.Vector3()));
+  const s = b.getSize(new THREE.Vector3());
+  // A phone is portrait and a castle is wide, so the horizontal fit decides. Held
+  // steady across a run and only ever opened out, so the eye watches the castle
+  // change rather than the camera move.
+  const aspect = Math.max(0.35, camera.aspect || 1);
+  const span = Math.max(s.x, s.z);
+  const half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const want = Math.max((span / 2) / (half * aspect), (Math.max(s.y, span * .55) / 2) / half) * 1.3 + 6;
+  orbit.dist = framed ? Math.max(framed, want) : want; framed = orbit.dist;
 }
 
-// --------------------------------------------------------------- the console
-const HEAD = {
-  prompt:  ['WHAT THE BUILDER WAS ASKED', ''],
-  reply:   ['WHAT THE BUILDER SAID', ''],
-  render:  ['WHAT GOT BUILT', ''],
-  receipt: ['WHAT THE WORLD ACCEPTED', 'receipt'],
-  error:   ['THE LOOP FELL OVER', 'err'],
-  bridge:  ['THE ACCUSATION, PASSED BACK', 'bridge'],
-  observe: ['WHAT THE CRITIC WAS SHOWN', 'critic'],
-  verdict: ['WHAT THE CRITIC SAID', 'critic']
+// ------------------------------------------------------------------ rendering
+const scoreInk = (n) => n == null ? 'var(--faint)'
+  : n >= 85 ? 'var(--alarm)' : n >= 70 ? '#b4622f' : n >= 50 ? '#8a7a33' : 'var(--calm)';
+
+function bubble(m, i) {
+  if (m.kind === 'opener') return `
+    <div class="turn opener" data-i="${i}"><div class="bub">
+      <img src="${m.ref}" data-cap="the reference" alt="the reference">
+      <div class="cap">build this</div>
+      <div class="big" style="margin-top:5px">${esc(m.intent)}</div>
+    </div></div>`;
+
+  if (m.kind === 'note') return `
+    <div class="note ${m.warn ? 'warn' : ''}" data-i="${i}"><b>${esc(m.text)}</b></div>`;
+
+  if (m.kind === 'critic') {
+    const h = m.shots;
+    const shots = ['beforeShot', 'afterShot', 'diffShot'].filter(k => h && h[k]);
+    const caps = { beforeShot: 'before', afterShot: 'after', diffShot: 'what changed' };
+    // A capture of an empty world is a white rectangle. Left uncaptioned it reads as
+    // a broken image when it is in fact the point.
+    const blank = { beforeShot: h && !(h.beforeWorld || []).length,
+                    afterShot: h && !(h.afterWorld || []).length,
+                    diffShot: h && !(h.afterWorld || []).length };
+    return `
+    <div class="turn" data-i="${i}"><div class="bub">
+      <div class="who"><span>critic</span><span>cycle ${m.cycle}</span></div>
+      ${shots.length ? `<div class="shots">${shots.map(k =>
+        `<figure><img src="${h[k]}" data-cap="${caps[k]} · cycle ${m.cycle}" alt="${caps[k]}">
+           <figcaption>${caps[k]}${blank[k] ? ' · blank' : ''}</figcaption></figure>`).join('')}</div>` : ''}
+      <div class="verdict">
+        <div class="n" style="color:${scoreInk(m.score)}">${m.score}<small>suck</small></div>
+        <div class="txt">${esc(m.text)}</div>
+      </div>
+    </div></div>`;
+  }
+
+  return `
+    <div class="turn right" data-i="${i}"><div class="bub">
+      <div class="who"><span>cycle ${m.cycle}</span><span>builder</span></div>
+      <div class="txt">${esc(m.text)}</div>
+      ${m.raw ? `<div class="raw"><button data-raw="${i}">what it was asked</button>
+        <pre>${esc(m.raw)}</pre></div>` : ''}
+    </div></div>`;
+}
+
+function paint() {
+  $('#log').innerHTML = msgs.slice(0, at + 1).map((m, i) => bubble(m, i)).join('');
+  const cyc = worldFor(at);
+  if (cyc !== paint._h) { drawWorld(cyc); paint._h = cyc; }
+  const score = lastScore(at);
+  $('#score').textContent = score ?? '—';
+  $('#score').style.color = scoreInk(score);
+  $('#seek').value = String(at);
+  $('#tick').textContent = `${at + 1} / ${msgs.length}`;
+}
+const worldFor = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].history) return msgs[k].history; return null; };
+const lastScore = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].kind === 'critic') return msgs[k].score; return null; };
+
+const atBottom = () => {
+  const t = $('#thread');
+  return t.scrollHeight - t.scrollTop - t.clientHeight < 90;
 };
-const scoreColour = (n) => n == null ? 'var(--dim)'
-  : n >= 85 ? 'var(--hot)' : n >= 70 ? 'var(--warn)' : n >= 50 ? '#d8d264' : 'var(--ok)';
+const toBottom = () => { const t = $('#thread'); t.scrollTop = t.scrollHeight; };
 
-function card(m, i) {
-  const [title, cls] = HEAD[m.kind] || [m.kind, ''];
-  let body;
-  if (m.kind === 'render') {
-    const h = m.history, d = h.diff || {};
-    const ok = (h.receipts || []).filter(r => !/^REJECT/.test(r)).length;
-    const no = (h.receipts || []).length - ok;
-    body = esc(m.text) +
-      `<div><span class="pill ${ok ? 'y' : ''}">${ok} ACCEPTED</span>` +
-      (no ? `<span class="pill n">${no} REJECTED</span>` : '') +
-      `<span class="pill">+${(d.added || []).length} ~${(d.changed || []).length} −${(d.removed || []).length}</span>` +
-      `<span class="pill">${(h.afterWorld || []).length} OBJECTS</span></div>`;
-  } else if (m.kind === 'verdict') {
-    const s = /SUCK SCORE:\s*(\d+)/.exec(m.text);
-    const n = s ? +s[1] : null;
-    body = `<span class="sc" style="color:${scoreColour(n)}">${n ?? '—'}</span>` +
-      esc(m.text.replace(/SUCK SCORE:\s*\d+\s*/, '').replace(/^WHAT SUCKS:\s*/, ''));
-  } else body = esc(m.text);
-  return `<div class="msg ${cls}" data-i="${i}"><span class="r">${title} · CYCLE ${m.cycle} · ${clock(m.ts)}</span>` +
-         `<div class="clip">${body}</div></div>`;
-}
-
-function renderLogs() {
-  $('#builderLog').innerHTML = moments.map((m, i) => m.side === 'builder' ? card(m, i) : '').join('');
-  $('#criticLog').innerHTML  = moments.map((m, i) => m.side === 'critic'  ? card(m, i) : '').join('');
-}
-
-function renderShots(h) {
-  const cards = [];
-  const bare = h && !(h.afterWorld && h.afterWorld.length);
-  if (h) for (const [k, cap] of [['beforeShot', 'BEFORE'], ['afterShot', 'AFTER'], ['diffShot', 'GEOMETRY DIFF']])
-    if (h[k]) cards.push(`<div class="shot"><img src="${h[k]}" data-cap="${cap} · CYCLE ${h.cycle}" alt="${cap}">` +
-      `<span>${cap}${bare && k !== 'beforeShot' ? ' · BLANK' : ''}</span></div>`);
-  $('#shots').innerHTML = cards.join('');
-  // A capture of an empty world is a white frame. Shown without a word it reads as a
-  // broken image, when it is in fact the most important thing in the file.
-  $('#empty').classList.toggle('on', !!bare);
-}
-
-function show(i, { scroll = true } = {}) {
-  at = Math.max(0, Math.min(moments.length - 1, i));
-  const m = moments[at], h = worldAt(at);
-  if (h !== show._h) { drawWorld(h); renderShots(h); show._h = h; }
-
-  const c = h && h.critiques && h.critiques[0];
-  const score = c ? c.score : null;
-  $('#worldScore').textContent = score ?? '—';
-  $('#worldScore').style.color = scoreColour(score);
-  $('#settled').textContent = score == null ? 'FUCKED UNTIL PROVEN OTHERWISE'
-    : score === 0 ? 'THIS VIEW FOUND NOTHING — NOT FINISHED' : 'FUCKED UNTIL PROVEN OTHERWISE';
-
-  const d = h ? (h.diff || {}) : {};
-  $('#lCycle').textContent = m.cycle;
-  $('#lObjects').textContent = h ? (h.afterWorld || []).length : 0;
-  $('#lDiff').textContent = h ? `+${(d.added || []).length} ~${(d.changed || []).length} −${(d.removed || []).length}` : '—';
-  $('#stateCard').innerHTML = h
-    ? `CYCLE <b>${h.cycle}</b> · WORLD v<b>${h.worldVersion}</b><br>OBJECTS <b>${(h.afterWorld || []).length}</b>` +
-      ` · Δ <b class="cyan">+${(d.added || []).length}</b> <b class="warn">~${(d.changed || []).length}</b> <b class="bad">−${(d.removed || []).length}</b>` +
-      `<br>VIEW <b>${h.repairView || 'FRONT'}</b>`
-    : 'NOTHING BUILT YET';
-
-  const [title] = HEAD[m.kind] || [m.kind];
-  $('#phaseLabel').textContent = `${title} · CYCLE ${m.cycle}`;
-  $('#phaseText').textContent = m.kind === 'verdict'
-    ? m.text.replace(/SUCK SCORE:\s*\d+\s*/, '').replace(/^WHAT SUCKS:\s*/, '')
-    : (m.kind === 'render' ? m.text : m.text.slice(0, 400));
-  $('#makingNote').textContent = h ? `CYCLE ${h.cycle} — ${h.summary || ''}` : 'NOTHING BUILT YET';
-  $('#traceScrub').value = String(at);
-  $('#traceTick').textContent = `${at + 1}/${moments.length}`;
-
-  for (const el of document.querySelectorAll('.msg.now')) el.classList.remove('now');
-  const node = document.querySelector(`.msg[data-i="${at}"]`);
-  if (node) {
-    node.classList.add('now');
-    // Scroll the column, never the document. `scrollIntoView` walks every scrollable
-    // ancestor, and on a phone the outermost one is the page — so following the
-    // argument quietly dragged the model, the reference and the score off the top of
-    // the screen, which is the one thing this layout exists to prevent.
-    if (scroll) {
-      const log = node.closest('.log');
-      if (log) log.scrollTo({ top: node.offsetTop - log.clientHeight / 2 + node.offsetHeight / 2,
-                              behavior: 'smooth' });
-    }
+/** Reveal the next message the way a message arrives: someone is typing, then it lands. */
+async function advance() {
+  if (at >= msgs.length - 1) return stop();
+  const next = msgs[at + 1];
+  const stick = atBottom();
+  if (next.kind !== 'note') {
+    const side = next.kind === 'builder' ? 'right' : '';
+    $('#log').insertAdjacentHTML('beforeend',
+      `<div class="turn typing ${side}" id="typing"><div class="bub"><div class="dots"><i></i><i></i><i></i></div></div></div>`);
+    if (stick) toBottom();
+    await new Promise(r => setTimeout(r, next.kind === 'critic' ? 900 : 700));
+    const t = document.getElementById('typing'); if (t) t.remove();
+    if (!playing) return;
   }
+  at++;
+  paint();
+  if (stick) toBottom();
 }
 
-// --------------------------------------------------------------- transport
-function play() { playing = true; $('#tracePlay').textContent = '❚❚'; clearInterval(timer);
-  timer = setInterval(() => { if (at >= moments.length - 1) return stop(); show(at + 1); }, 1600); }
-function stop() { playing = false; $('#tracePlay').textContent = '▶'; clearInterval(timer); }
-$('#tracePlay').onclick = () => playing ? stop() : play();
-$('#traceScrub').oninput = e => { stop(); show(+e.target.value); };
+function show(i) {
+  at = Math.max(0, Math.min(msgs.length - 1, i));
+  paint(); toBottom();
+}
+
+// ------------------------------------------------------------------ transport
+function play() {
+  playing = true; $('#play').textContent = '❚❚';
+  clearInterval(timer);
+  timer = setInterval(async () => { if (playing) await advance(); }, 2300);
+  advance();
+}
+function stop() {
+  playing = false; $('#play').textContent = '▶'; clearInterval(timer);
+  const t = document.getElementById('typing'); if (t) t.remove();
+}
+$('#play').onclick = () => playing ? stop() : play();
+$('#seek').oninput = e => { stop(); show(+e.target.value); };
 addEventListener('keydown', e => {
   if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
   if (e.key === ' ') { e.preventDefault(); playing ? stop() : play(); }
   if (e.key === 'ArrowRight') { stop(); show(at + 1); }
   if (e.key === 'ArrowLeft') { stop(); show(at - 1); }
 });
+
 document.addEventListener('click', e => {
-  const msg = e.target.closest('.msg');
-  if (msg) { stop(); show(+msg.dataset.i, { scroll: false });
-    msg.querySelector('.clip').classList.toggle('clip'); return; }
-  const img = e.target.closest('#shots img, #refCard img');
-  if (img) { $('#lbImg').src = img.src; $('#lbCap').textContent = img.dataset.cap || 'THE REFERENCE';
-    $('#lightbox').classList.add('on'); }
+  const raw = e.target.closest('[data-raw]');
+  if (raw) { const box = raw.parentElement; box.classList.toggle('on');
+    raw.textContent = box.classList.contains('on') ? 'hide' : 'what it was asked'; return; }
+  const img = e.target.closest('.shots img, .opener img, #ref img');
+  if (img) { $('#lbimg').src = img.src; $('#lbcap').textContent = img.dataset.cap || 'the reference';
+    $('#lb').classList.add('on'); return; }
+  const turn = e.target.closest('.turn');
+  if (turn && !e.target.closest('.raw')) { stop(); show(+turn.dataset.i); }
 });
-$('#lightbox').onclick = () => $('#lightbox').classList.remove('on');
-$('#spinBtn').onclick = () => { spin = !spin; $('#spinBtn').classList.toggle('on', spin); };
+$('#lb').onclick = () => $('#lb').classList.remove('on');
 $('#docsBtn').onclick = () => $('#docs').classList.add('on');
 $('#docsClose').onclick = () => $('#docs').classList.remove('on');
 
-// orbit
 let drag = null;
 const gl = $('#gl');
-gl.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; spin = false;
-  $('#spinBtn').classList.remove('on'); gl.setPointerCapture(e.pointerId); });
+gl.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; spin = false; gl.setPointerCapture(e.pointerId); });
 gl.addEventListener('pointerup', () => { drag = null; });
 gl.addEventListener('pointermove', e => { if (!drag) return;
   orbit.az -= (e.clientX - drag.x) * .007;
-  orbit.el = Math.max(-.05, Math.min(1.4, orbit.el + (e.clientY - drag.y) * .006));
+  orbit.el = Math.max(0, Math.min(1.3, orbit.el + (e.clientY - drag.y) * .006));
   drag = { x: e.clientX, y: e.clientY }; });
-gl.addEventListener('wheel', e => { e.preventDefault();
-  orbit.dist = Math.max(8, Math.min(320, orbit.dist * (1 + Math.sign(e.deltaY) * .12))); framed = orbit.dist; },
-  { passive: false });
 
+function placeCamera() {
+  const c = Math.cos(orbit.el);
+  camera.position.set(orbit.target.x + orbit.dist * Math.cos(orbit.az) * c,
+                      orbit.target.y + orbit.dist * Math.sin(orbit.el),
+                      orbit.target.z + orbit.dist * Math.sin(orbit.az) * c);
+  camera.lookAt(orbit.target);
+}
 function resize() {
-  const r = $('#world').getBoundingClientRect();
+  const r = $('#stage').getBoundingClientRect();
   if (!r.width || !r.height) return;
   renderer.setSize(r.width, r.height, false);
   const was = camera.aspect;
   camera.aspect = r.width / r.height; camera.updateProjectionMatrix();
-  // Turning a phone changes which dimension has to fit, so the framing is thrown
-  // away and taken again rather than kept from the shape the screen used to be.
-  if (Math.abs((was || 0) - camera.aspect) > 0.01) { framed = null; drawWorld(show._h); }
+  if (Math.abs((was || 0) - camera.aspect) > .01) { framed = null; drawWorld(paint._h); }
 }
 addEventListener('resize', resize);
-let last = performance.now();
+let last = 0;
 (function tick(now) {
   const dt = Math.min(.05, ((now || 0) - last) / 1000); last = now || 0;
-  if (spin) orbit.az += dt * 0.12;
+  if (spin) orbit.az += dt * .1;
   placeCamera(); renderer.render(scene, camera); requestAnimationFrame(tick);
 })();
 
-// --------------------------------------------------------------- loading
+// ------------------------------------------------------------------ loading
 function curtain(msg) { const b = $('#boot'); if (!b) return;
   b.style.display = msg ? 'grid' : 'none'; if (msg) b.textContent = msg; }
 
 function open(t, { autoplay = false } = {}) {
-  trace = t; moments = timeline(t); framed = null; show._h = undefined;
-  $('#lIntent').textContent = t.intent;
-  $('#lModel').textContent = t.model;
-  $('#refName').textContent = t.reference_name || 'REFERENCE';
+  trace = t; msgs = thread(t); at = 0; framed = null; paint._h = undefined; spin = true;
   $('#refimg').src = t.reference || '';
-  $('#traceScrub').max = String(moments.length - 1);
-  renderLogs(); resize(); show(0, { scroll: false });
-  if (autoplay) play();
+  $('#refname').textContent = t.reference_name || 'reference';
+  $('#seek').max = String(msgs.length - 1);
+  resize(); paint(); $('#thread').scrollTop = 0;
+  if (autoplay) setTimeout(play, 700);
 }
 
 $('#pick').onchange = async e => {
@@ -565,82 +515,71 @@ $('#file').onchange = async e => {
   try {
     const t = JSON.parse(await f.text());
     if (t.format !== 'OPERATIVE_BUILDER_TRACE_V1') throw new Error('not an OPERATIVE_BUILDER_TRACE_V1 file');
-    open(t, { autoplay: false });
+    open(t, { autoplay: true });
   } catch (err) { alert('could not read that trace: ' + err.message); }
 };
 
 function renderDocs() {
   $('#docsBody').innerHTML = `
-  <p>A trace is the complete record of one argument. A reference photograph is
-  pinned — it is the card at the top left, and it never leaves the screen. A
-  <b>BUILDER</b> may answer only in JSON operations on a world of primitives. A
-  <b>CRITIC</b> is told the building is fucked until proven otherwise, is shown the
-  render against that reference, and returns a suck score and one concrete
-  accusation. The accusation becomes the next prompt. That is the whole loop.</p>
-  <p>It is a <b>suck</b> score, so it falls as the building improves, and zero would
-  mean only that this view failed to find a discrepancy — never that the thing is
-  finished.</p>
+  <h2>How to read this</h2>
+  <p>A trace is the complete record of one argument. A reference photograph is pinned.
+  A <b>builder</b> may answer only in JSON operations on a world of primitives. A
+  <b>critic</b> is told the building is fucked until proven otherwise, is shown the
+  render against that reference, and returns a suck score and one concrete accusation.
+  The accusation becomes the builder's next prompt. That is the whole loop.</p>
+  <p>It is a <em>suck</em> score, so it falls as the building improves — and zero would
+  mean only that this view failed to find a discrepancy, never that the thing is done.</p>
 
-  <h3>WHAT YOU ARE LOOKING AT</h3>
-  <ul>
-    <li><b>The world</b> is rebuilt here in 3D from the object list that cycle
-    carries. Rings mark what the move touched: cyan added, amber changed, taken from
-    the trace's own diff rather than re-derived. Drag to turn it; SPIN puts it back.</li>
-    <li><b>The three shots</b> along the bottom are the captures the critic was
-    actually handed — before, after, and the geometry diff. Tap to enlarge.</li>
-    <li><b>The two columns</b> are the correspondence, interleaved by the file's own
-    clocks. Tap any card to jump the world to that moment and to unclip the text.</li>
-  </ul>
+  <h3>Why this reads shorter than the file</h3>
+  <p>Every accusation is in the raw trace three times: as the critic's verdict, as the
+  bridge that carries it across, and again inside the next prompt, wrapped in sixteen
+  hundred characters of boilerplate that is identical every cycle. Four logs,
+  fifty-four entries, about twenty things actually said. Each is said once here. The
+  full prompt is under <em>what it was asked</em> on every builder message, verbatim.</p>
 
-  <h3>WHERE THE LOOP SHOWS ITS SEAMS</h3>
+  <h3>The three pictures</h3>
+  <p>Each critic message carries what it was actually shown: the render before the
+  move, after it, and the geometry diff — cyan added, amber changed, red removed. The
+  model above is that same world rebuilt in 3D from the object list the cycle carries,
+  ringed where the move touched it. Drag to turn it.</p>
+
+  <h3>Where the loop shows its seams</h3>
   <p>In both castle runs, cycle 1 proposed forty objects and the world rejected every
-  one of them — <b>ADD missing id</b> — so nothing was built. The critic, looking at
-  an empty stage, scored it 100 and said so. The builder read that accusation and
-  rebuilt. Nothing hides this; it is in the receipts.</p>
-  <p>The six-cycle run also carries six <b>Failed to fetch</b> errors between cycles
-  5 and 12, where the loop kept retrying a dead connection. That is why its last
-  cycle is numbered 12 and not 6.</p>
+  one — <b>ADD missing id</b> — so nothing was built. The critic, looking at an empty
+  stage, scored it 100 and said so, and the builder rebuilt from that. The six-cycle
+  run also lost its connection and retried six times, which is why its last cycle is
+  numbered 12.</p>
 
-  <h3>THE TWO RULES THE MODELS WERE UNDER</h3>
-  <p style="color:var(--dim)">BUILDER</p><pre>${esc((idx && idx.prompts && idx.prompts.builder) || '—')}</pre>
-  <p style="color:var(--dim)">CRITIC</p><pre>${esc((idx && idx.prompts && idx.prompts.critic) || '—')}</pre>
-
-  <h3>THE FILE</h3>
+  <h3>The file</h3>
   <pre>{
   "format": "OPERATIVE_BUILDER_TRACE_V1",
-  "intent": "Castle",              // what was asked for
-  "reference": "data:image/…",     // the photograph, embedded
+  "intent": "Castle",
+  "reference": "data:image/…",
   "model": "gpt-5.6-sol",
   "current_world": [ {id, primitive, role, position, size, rotation_y, color, material, scale} ],
   "history": [ {
     cycle, worldVersion, summary,
-    operations: [ {op, object} ],  // what the builder asked for
-    receipts:   [ "ADD keep_main", "REJECT ? · ADD missing id" ],
-    beforeWorld, afterWorld,       // full object lists — this page rebuilds them
+    operations, receipts,
+    beforeWorld, afterWorld,
     diff: {added, changed, removed},
     beforeShot, afterShot, diffShot,
     critiques: [ {view, score, criticism} ]
   } ],
-  "builder_log": [ {role, text, cls, ts} ],
-  "critic_log":  [ {role, text, cls, ts} ],
-  "events":      [ {type, data, ts, cycle} ]
+  "builder_log", "critic_log", "events"
 }</pre>
 
-  <h3>MAKING YOUR OWN</h3>
+  <h3>Making your own</h3>
   <p>Run <a href="operative-builder-scan.html">the operative builder</a>, pin a
-  reference, let the loop go, then export. Drop the file on <b>OPEN A TRACE</b> and
-  it plays here. Nothing is uploaded and no key is needed to read one.</p>`;
+  reference, let the loop go, then export. Drop the file on <b>Open a trace</b> and it
+  plays here. Nothing is uploaded and no key is needed to read one.</p>`;
 }
 
 (async () => {
   try {
     idx = await (await fetch('assets/traces/index.json')).json();
     $('#pick').innerHTML = idx.traces.map(t =>
-      `<option value="${t.file}">${t.intent.toUpperCase()} · ${t.cycles} CYCLES · ${t.note}</option>`).join('');
+      `<option value="${t.file}">${t.intent} · ${t.cycles} cycles · ${t.note}</option>`).join('');
     renderDocs();
-    $('#spinBtn').classList.add('on');
-    // Straight into the longest run, playing. The list of runs is a control on the
-    // ledger, not a front door.
     const t = await (await fetch('assets/traces/' + idx.traces[0].file)).json();
     curtain(null);
     open(t, { autoplay: true });
