@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d1014">
+<title>Walk the Trailer — Gunnar's Depot</title>
+<link rel="icon" href="assets/branding/favicon.svg">
+<style>
+  :root{ --bg:#0d1014; --ink:#e8edf3; --dim:#8b97a6; --line:#1e2732; --hot:#38bdf8;
+         --bad:#ef4444; --warn:#f97316; --good:#86efac; --safe-b: env(safe-area-inset-bottom,0px); }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font:13px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+  canvas.locked{cursor:none}
+  .panel{position:fixed;z-index:5;background:#0f151cee;border:1px solid var(--line);border-radius:10px;
+    backdrop-filter:blur(6px)}
+  #head{top:0;left:0;right:0;z-index:6;padding:calc(env(safe-area-inset-top,0px) + 9px) 12px 9px;
+    background:linear-gradient(#0d1014f2,#0d101400);display:flex;gap:10px;align-items:baseline;
+    font-size:10px;letter-spacing:.12em;text-transform:uppercase;position:fixed}
+  #head b{color:#e8edf3;letter-spacing:.14em;font-size:11px}
+  #head span{color:var(--dim)}
+  #head .tag{padding:2px 8px;border-radius:99px;font-size:9px;background:#0d2c18;color:var(--good)}
+  #head .tag.bad{background:#3a1010;color:#fca5a5}
+  #side{top:52px;left:10px;width:232px;max-height:calc(100% - 130px);overflow:auto;padding:4px}
+  #side h4{margin:10px 8px 5px;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+  .row{display:block;width:100%;text-align:left;background:none;border:0;color:#cbd5e1;font:inherit;
+    padding:5px 8px;border-radius:6px;cursor:pointer;display:flex;gap:6px;align-items:baseline}
+  .row:hover{background:#18222e}
+  .row.on{background:#16334a;color:#e8edf3}
+  .row i{font-style:normal;font-size:10px;color:var(--dim);margin-left:auto;white-space:nowrap}
+  .row i.bad{color:#fca5a5} .row i.ok{color:var(--good)}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;padding:2px 8px 8px}
+  .chip{background:#16202c;border:1px solid #263445;color:#cbd5e1;padding:4px 8px;border-radius:99px;
+    font-size:11px;cursor:pointer}
+  .chip.on{background:#16334a;border-color:#2f6d96;color:#e8edf3}
+  #read{right:10px;top:52px;width:250px;padding:10px 12px;font-size:12px;color:#cbd5e1;line-height:1.5}
+  #read b{display:block;color:#e8edf3;font-size:12px;letter-spacing:.03em}
+  #read .k{color:var(--dim);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
+  #read .m{color:#fcd34d;font-size:11px;display:block;margin-top:4px}
+  #foot{left:50%;transform:translateX(-50%);bottom:calc(12px + var(--safe-b));padding:8px 10px;
+    display:flex;gap:8px;align-items:center;font-size:11px;color:var(--dim);white-space:nowrap}
+  #foot b{color:#e8edf3}
+  #cross{position:fixed;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;z-index:4;
+    pointer-events:none;opacity:0;transition:opacity .2s}
+  #cross.on{opacity:.75}
+  #cross:before,#cross:after{content:"";position:absolute;background:#e8edf3}
+  #cross:before{left:6px;top:0;width:2px;height:14px} #cross:after{top:6px;left:0;height:2px;width:14px}
+  #boot{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:var(--bg);
+    color:var(--dim);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+  @media (max-width:820px){ #side{width:170px} #read{display:none} }
+</style>
+</head>
+<body>
+<canvas id="v"></canvas>
+<div id="cross"></div>
+<div id="boot">loading the trailer…</div>
+
+<div id="head">
+  <b>Walk the Trailer</b>
+  <span id="hcount">—</span>
+  <span class="tag" id="htag">—</span>
+  <span id="hmode">orbit — drag to turn, scroll to zoom, <b>W</b> to walk in</span>
+</div>
+
+<div class="panel" id="side">
+  <h4>show</h4>
+  <div class="chips" id="layers"></div>
+  <h4>somebody doing something</h4>
+  <div id="acts"></div>
+  <h4>putting a hand on it</h4>
+  <div id="stns"></div>
+</div>
+
+<div class="panel" id="read"><span class="k">look at anything</span><b>—</b></div>
+<div class="panel" id="foot"><span id="pos">—</span></div>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+// ---------------------------------------------------------------- the world
+// Z is up and the unit is the inch, because that is how the trailer is drawn and
+// converting it here would mean every number on screen disagreeing with every
+// number in the model.
+const doc = await (await fetch('assets/walkthrough/trailer.json?v=' + Date.now())).json();
+const D = doc.datum;
+const FLOOR = D.deckTop;
+
+const MATERIAL = { treated_wood:0xb08968, wood:0xc9a227, plywood:0xd6b16a, osb:0xcaa06a,
+  steel:0x9fb3c8, corrugated_metal:0xa8b6c4, foam:0xf2e8c9, glass:0x86d3f2, tile:0xe2e8f0,
+  fabric:0xa78bfa, copper:0xd08c60, plastic:0xcbd5e1, rubber:0x64748b, tape:0x94a3b8 };
+const SYSTEM = { water:0x38bdf8, waste:0x8b5cf6, power:0xf59e0b, propane:0xf87171, venting:0x94a3b8 };
+const LAYERS = ['foundation','frame','walls','roof','interior','services'];
+
+const canvas = document.getElementById('v');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d1014);
+scene.fog = new THREE.Fog(0x0d1014, 400, 900);
+const camera = new THREE.PerspectiveCamera(62, 1, 1, 2000);
+camera.up.set(0, 0, 1);
+
+scene.add(new THREE.HemisphereLight(0xdfe9f5, 0x1a2028, 1.15));
+const sun = new THREE.DirectionalLight(0xffffff, 1.05); sun.position.set(-160, -220, 320); scene.add(sun);
+const fill = new THREE.DirectionalLight(0x9fc6ff, .35); fill.position.set(220, 160, 60); scene.add(fill);
+// A trailer lit only from outside is a black box once you are in it. This rides on
+// the camera and only burns while you are walking.
+const lamp = new THREE.PointLight(0xfff0dd, 260, 260, 1.7);
+lamp.visible = false; camera.add(lamp); scene.add(camera);
+
+const unit = new THREE.BoxGeometry(1, 1, 1);
+const shell = new THREE.Group(), services = new THREE.Group();
+scene.add(shell, services);
+const meshes = new Map();
+const byLayer = Object.fromEntries(LAYERS.map(l => [l, []]));
+
+for (const e of doc.elements) {
+  if (e.kind === 'opening' || e.kind === 'port') continue;
+  const isSvc = e.layer === 'services' || e.kind === 'run';
+  const colour = isSvc ? (SYSTEM[e.system] || 0x94a3b8) : (MATERIAL[e.material] || 0x9aa3ad);
+  const mat = new THREE.MeshStandardMaterial({ color: colour,
+    roughness: e.material === 'steel' ? .42 : .88,
+    metalness: e.material === 'steel' ? .5 : .05,
+    transparent: true, opacity: 1 });
+  const m = new THREE.Mesh(unit, mat);
+  m.position.set(e.p[0], e.p[1], e.p[2]);
+  m.scale.set(Math.max(e.s[0], .05), Math.max(e.s[1], .05), Math.max(e.s[2], .05));
+  m.userData = e;
+  (isSvc ? services : shell).add(m);
+  meshes.set(e.id, m);
+  (byLayer[e.layer] || (byLayer[e.layer] = [])).push(m);
+}
+
+// --------------------------------------------------------------- the bodies
+// One capsule per body mass, drawn where the solver put it. The arms in these are
+// solved rather than posed, so what you see reaching into the sink is the same
+// geometry the collision test was run against — not an illustration of it.
+const bodyGroup = new THREE.Group(); scene.add(bodyGroup);
+// Not a skin tone. Against pine and OSB a flesh-coloured figure disappears, and
+// the whole point of drawing him is that you can see where he is.
+const SKIN = new THREE.MeshStandardMaterial({ color:0x38bdf8, roughness:.45, metalness:.05,
+  emissive:0x0b3a52, emissiveIntensity:.55 });
+const CLASHED = new THREE.MeshStandardMaterial({ color:0xef4444, roughness:.6,
+  emissive:0x7f1d1d, emissiveIntensity:.5 });
+function drawBody(segments, hitBones = new Set()) {
+  bodyGroup.clear();
+  for (const g of segments) {
+    const a = new THREE.Vector3(...g.a), b = new THREE.Vector3(...g.z);
+    const len = a.distanceTo(b);
+    const geo = new THREE.CapsuleGeometry(g.r, len, 6, 12);
+    const m = new THREE.Mesh(geo, hitBones.has(g.b) ? CLASHED : SKIN);
+    m.position.copy(a).add(b).multiplyScalar(.5);
+    if (len > 1e-4) m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), b.clone().sub(a).normalize());
+    bodyGroup.add(m);
+  }
+}
+const markGroup = new THREE.Group(); scene.add(markGroup);
+function mark(p, colour = 0xfcd34d) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 10),
+    new THREE.MeshBasicMaterial({ color: colour, depthTest: false, transparent: true, opacity: .95 }));
+  m.position.set(...p); m.renderOrder = 12; markGroup.add(m);
+}
+function clearMarks() { markGroup.clear(); }
+
+/**
+ * Point the orbit at whatever was just drawn and pull in close enough to see it.
+ *
+ * Aimed at the fixture's plan position with a fixed distance, a six foot man forty
+ * feet down the trailer came out four pixels tall behind an opaque wall, which is
+ * a picture of nothing. Frame the body, and open the skin so there is a body to
+ * frame.
+ */
+function frameOn(segments, extra = []) {
+  if (walking) return;
+  const pts = segments.flatMap(g => [g.a, g.z]).concat(extra);
+  if (!pts.length) return;
+  const lo = [0,1,2].map(i => Math.min(...pts.map(p => p[i])));
+  const hi = [0,1,2].map(i => Math.max(...pts.map(p => p[i])));
+  orbit.target.set((lo[0]+hi[0])/2, (lo[1]+hi[1])/2, (lo[2]+hi[2])/2);
+  const span = Math.max(hi[0]-lo[0], hi[1]-lo[1], hi[2]-lo[2], 24);
+  // Stand in the aisle, not in the next county. Framed at two and a half times the
+  // span the camera ended up fourteen feet back, which in a trailer eight feet wide
+  // is outside it, and the shot came back as the bathroom partition. The trailer is
+  // narrow: everything in it is looked at from the aisle, across the room.
+  orbit.dist = Math.max(46, span * 1.25);
+  orbit.az = orbit.target.x < 50 ? 0.35 : Math.PI - 0.35;
+  orbit.el = 0.42;
+  setXray(true);
+}
+
+// ------------------------------------------------------------- where you fit
+// The walk is clamped to the cells `inhabit.js` proved a body fits in. You cannot
+// walk through the galley here, because you cannot walk through it there — which
+// is the only reason this is worth walking rather than flying.
+const FIT = doc.fit;
+const bits = Uint8Array.from(atob(FIT.bits.WALK), c => c.charCodeAt(0));
+const stand = Uint8Array.from(atob(FIT.bits.STAND), c => c.charCodeAt(0));
+const fits = (x, y) => {
+  const i = Math.floor((x - FIT.lo[0]) / FIT.step), j = Math.floor((y - FIT.lo[1]) / FIT.step);
+  if (i < 0 || j < 0 || i >= FIT.n[0] || j >= FIT.n[1]) return false;
+  const k = j * FIT.n[0] + i;
+  return !!(bits[k] || stand[k]);
+};
+
+// ------------------------------------------------------------- the two modes
+const EYE = 0.936 * 72;                       // a six foot man's eye, off the deck
+let walking = false;
+const orbit = { target: new THREE.Vector3(50, 118, 45), dist: 340, az: -0.9, el: 0.55 };
+const walk  = { at: new THREE.Vector3(50, 100, FLOOR + EYE), yaw: Math.PI * .5, pitch: 0 };
+const keys = new Set();
+
+function placeCamera() {
+  if (walking) {
+    camera.position.copy(walk.at);
+    const d = new THREE.Vector3(Math.cos(walk.yaw) * Math.cos(walk.pitch),
+                                Math.sin(walk.yaw) * Math.cos(walk.pitch), Math.sin(walk.pitch));
+    camera.lookAt(walk.at.clone().add(d));
+  } else {
+    const c = Math.cos(orbit.el);
+    camera.position.set(orbit.target.x + orbit.dist * Math.cos(orbit.az) * c,
+                        orbit.target.y + orbit.dist * Math.sin(orbit.az) * c,
+                        orbit.target.z + orbit.dist * Math.sin(orbit.el));
+    camera.lookAt(orbit.target);
+  }
+}
+
+// mouse / touch
+let drag = null;
+canvas.addEventListener('pointerdown', e => { drag = { x:e.clientX, y:e.clientY }; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointerup', e => { drag = null; });
+canvas.addEventListener('pointermove', e => {
+  if (!drag) { if (!walking) hover(e.clientX, e.clientY); return; }
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  drag = { x:e.clientX, y:e.clientY };
+  if (walking) { walk.yaw -= dx * .005; walk.pitch = Math.max(-1.4, Math.min(1.4, walk.pitch - dy * .005)); }
+  else { orbit.az -= dx * .006; orbit.el = Math.max(-1.4, Math.min(1.45, orbit.el + dy * .006)); }
+});
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  if (walking) return;
+  orbit.dist = Math.max(40, Math.min(900, orbit.dist * (1 + Math.sign(e.deltaY) * .12)));
+}, { passive:false });
+addEventListener('keydown', e => {
+  keys.add(e.key.toLowerCase());
+  if (e.key.toLowerCase() === 'escape' && walking) setMode(false);
+});
+addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
+
+function setMode(on) {
+  walking = on;
+  // Inside, the skin closes. Ghosting is for looking *at* the trailer from outside;
+  // walking in with the walls still transparent is a view of nothing in particular,
+  // and the point of being inside is that the walls are where they are.
+  if (on && xray) setXray(false);
+  lamp.visible = on;
+  document.getElementById('cross').classList.toggle('on', on);
+  canvas.classList.toggle('locked', on);
+  document.getElementById('hmode').innerHTML = on
+    ? 'walking — <b>WASD</b> to move, drag to look, <b>Esc</b> to fly out'
+    : 'orbit — drag to turn, scroll to zoom, <b>W</b> to walk in';
+}
+
+// ------------------------------------------------------------------ the loop
+let last = performance.now();
+function tick(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  const move = keys.has('w') || keys.has('a') || keys.has('s') || keys.has('d') ||
+               keys.has('arrowup') || keys.has('arrowdown');
+  if (!walking && move) setMode(true);
+  if (walking) {
+    const sp = (keys.has('shift') ? 62 : 30) * dt;
+    const f = new THREE.Vector2(Math.cos(walk.yaw), Math.sin(walk.yaw));
+    const r = new THREE.Vector2(-f.y, f.x);
+    let dx = 0, dy = 0;
+    if (keys.has('w') || keys.has('arrowup')) { dx += f.x; dy += f.y; }
+    if (keys.has('s') || keys.has('arrowdown')) { dx -= f.x; dy -= f.y; }
+    if (keys.has('d')) { dx += r.x; dy += r.y; }
+    if (keys.has('a')) { dx -= r.x; dy -= r.y; }
+    const L = Math.hypot(dx, dy) || 1;
+    // Slide along whatever you walked into rather than stopping dead against it:
+    // each axis is tried on its own, which is what makes a doorway passable.
+    const nx = walk.at.x + dx / L * sp, ny = walk.at.y + dy / L * sp;
+    if (fits(nx, walk.at.y)) walk.at.x = nx;
+    if (fits(walk.at.x, ny)) walk.at.y = ny;
+  }
+  placeCamera();
+  // Walking, the crosshair is the pointer. Left to the mouse-move handler the panel
+  // kept showing whatever you last hovered over from outside, so you could stand in
+  // the bathroom being told about the galley cupboard.
+  if (walking && now - lastLook > 160) { lastLook = now; look(); }
+  document.getElementById('pos').textContent = walking
+    ? `x ${walk.at.x.toFixed(0)}  y ${walk.at.y.toFixed(0)}  eye ${(walk.at.z - FLOOR).toFixed(0)} in off the deck`
+    : `${doc.counts.elements} parts · ${doc.fit.area.STAND} sq ft you can stand in · ${doc.fit.area.TURN} you can turn round in`;
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+
+// ---------------------------------------------------------------- what is it
+const ray = new THREE.Raycaster();
+const read = document.getElementById('read');
+let lastLook = 0;
+function at(nx, ny) {
+  ray.setFromCamera(new THREE.Vector2(nx, ny), camera);
+  const hit = ray.intersectObjects([...shell.children, ...services.children], false)
+    .find(h => h.object.visible && h.object.material.opacity > .5);
+  if (!hit) return;
+  const e = hit.object.userData;
+  read.innerHTML = `<span class="k">${e.layer} · ${e.kind}${walking ? ' · ' + hit.distance.toFixed(0) + ' in away' : ''}</span>` +
+    `<b>${e.id}</b><span class="k">${e.s.map(v => v.toFixed(1)).join(' × ')} in</span>` +
+    (e.why ? `<span class="m">${e.why}</span>` : '');
+}
+function look() { at(0, 0); }
+function hover(cx, cy) {
+  const r = canvas.getBoundingClientRect();
+  at((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height * 2 - 1));
+}
+
+// ------------------------------------------------------------------ the menu
+const layerBox = document.getElementById('layers');
+const hidden = new Set();
+let xray = false;
+// Everything that is not the fit-out goes to ghost, not just the cladding. Fading
+// the sheathing alone left forty studs and sixteen rafters standing between the
+// camera and the man at the table, which is a picture of a stud wall.
+const STRUCTURE = new Set(['foundation','frame','walls','roof']);
+function setXray(on) {
+  xray = on;
+  xrayChip.classList.toggle('on', on);
+  for (const m of shell.children) {
+    if (!STRUCTURE.has(m.userData.layer)) continue;
+    m.material.opacity = on ? .10 : 1;
+    m.material.depthWrite = !on;
+    m.renderOrder = on ? 1 : 0;
+  }
+}
+for (const l of LAYERS) {
+  const b = document.createElement('button');
+  b.className = 'chip on'; b.textContent = l;
+  b.onclick = () => {
+    hidden.has(l) ? hidden.delete(l) : hidden.add(l);
+    b.classList.toggle('on', !hidden.has(l));
+    for (const m of byLayer[l] || []) m.visible = !hidden.has(l);
+  };
+  layerBox.appendChild(b);
+}
+const xrayChip = document.createElement('button');
+xrayChip.className = 'chip'; xrayChip.textContent = 'see through the skin';
+xrayChip.onclick = () => setXray(!xray);
+layerBox.appendChild(xrayChip);
+
+function row(host, label, note, cls, fn) {
+  const b = document.createElement('button');
+  b.className = 'row';
+  b.innerHTML = `<span>${label}</span><i class="${cls}">${note}</i>`;
+  b.onclick = () => {
+    for (const o of host.parentElement.querySelectorAll('.row.on')) o.classList.remove('on');
+    b.classList.add('on'); fn();
+  };
+  host.appendChild(b);
+  return b;
+}
+
+const actBox = document.getElementById('acts');
+for (const b of doc.bodies)
+  row(actBox, b.name.toLowerCase(), b.clash ? b.clash + ' clash' : 'clear',
+      b.clash ? 'bad' : 'ok', () => {
+    clearMarks();
+    drawBody(b.segments, new Set((b.collisions || []).map(h => h.bone)));
+    if (b.work && b.work.at) mark(b.work.at);
+    read.innerHTML = `<span class="k">${b.at}</span><b>${b.name.toLowerCase()}</b>` +
+      `<span class="k">crown at ${b.headTop} in</span>` +
+      (b.clash ? `<span class="m">${[...new Set(b.collisions.map(h => h.id))].join(', ')}</span>`
+               : `<span class="m" style="color:#86efac">nothing in the way</span>`);
+    frameOn(b.segments, b.work && b.work.at ? [b.work.at] : []);
+  });
+
+const stnBox = document.getElementById('stns');
+for (const s of doc.stations)
+  row(stnBox, s.what, s.ok ? s.stance.toLowerCase() : s.verdict.toLowerCase(),
+      s.ok ? 'ok' : 'bad', () => {
+    clearMarks();
+    drawBody(s.segments);
+    mark(s.target, s.ok ? 0xfcd34d : 0xef4444);
+    read.innerHTML = `<span class="k">${s.room} · ${s.stance.toLowerCase()}</span><b>${s.what}</b>` +
+      `<span class="k">stood at ${s.from.join(', ')}</span>` +
+      (s.why ? `<span class="m">${s.why}</span>`
+             : `<span class="m" style="color:#86efac">hand on it, nothing in the way</span>`);
+    frameOn(s.segments, [s.target]);
+  });
+
+document.getElementById('hcount').textContent =
+  `${doc.counts.elements} parts · ${doc.counts.reached}/${doc.counts.stations} reached · ${doc.counts.clash} clashes`;
+const tag = document.getElementById('htag');
+tag.textContent = doc.conditions.length ? `${doc.conditions.length} condition${doc.conditions.length>1?'s':''}` : 'clean';
+tag.classList.toggle('bad', doc.conditions.length > 0);
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+// Open for inspection. The whole argument of this project is that you should be
+// able to check the claim rather than take it, and that includes this page.
+window.trailer = { doc, scene, shell, services, bodyGroup, markGroup, camera, orbit, walk, meshes };
+document.getElementById('boot').remove();
+setXray(false);
+setMode(false);
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
