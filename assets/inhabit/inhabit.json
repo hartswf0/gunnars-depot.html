@@ -1,0 +1,915 @@
+{
+  "plates": [
+    {
+      "file": "fit-stand.png",
+      "title": "STAND",
+      "why": "standing still",
+      "area": 53.4
+    },
+    {
+      "file": "fit-turn.png",
+      "title": "TURN",
+      "why": "turning round on the spot",
+      "area": 36.4
+    },
+    {
+      "file": "fit-walk.png",
+      "title": "WALK",
+      "why": "walking, arms swinging",
+      "area": 53.4
+    },
+    {
+      "file": "fit-sit.png",
+      "title": "SIT",
+      "why": "sitting",
+      "area": 36
+    },
+    {
+      "file": "fit-crouch.png",
+      "title": "CROUCH",
+      "why": "crouching to a low cupboard",
+      "area": 45.2
+    },
+    {
+      "file": "fit-reach.png",
+      "title": "REACH",
+      "why": "reaching overhead",
+      "area": 50.6
+    },
+    {
+      "file": "trail.png",
+      "title": "WHERE THEY WALKED",
+      "why": "54.9 sq ft covered by 40 ants",
+      "area": 54.9
+    },
+    {
+      "file": "cannot-turn.png",
+      "title": "STAND BUT CANNOT TURN",
+      "why": "17 sq ft of the 53.4 you can stand in",
+      "area": 17
+    }
+  ],
+  "area": {
+    "STAND": 53.4,
+    "WALK": 53.4,
+    "TURN": 36.4,
+    "PASS": 55,
+    "SIT": 36,
+    "CROUCH": 45.2,
+    "KNEEL": 36.4,
+    "REACH": 50.6
+  },
+  "postures": {
+    "STAND": {
+      "h": 72,
+      "w": 18.6,
+      "d": 11.532,
+      "why": "standing still"
+    },
+    "WALK": {
+      "h": 72,
+      "w": 21.576,
+      "d": 13.392000000000001,
+      "why": "walking, arms swinging"
+    },
+    "TURN": {
+      "h": 72,
+      "w": 19.53,
+      "d": 19.53,
+      "why": "turning round on the spot"
+    },
+    "PASS": {
+      "h": 72,
+      "w": 14.880000000000003,
+      "d": 10.230000000000002,
+      "why": "edging through sideways"
+    },
+    "SIT": {
+      "h": 37.44,
+      "w": 18.6,
+      "d": 24,
+      "why": "sitting"
+    },
+    "CROUCH": {
+      "h": 46.5,
+      "w": 18.6,
+      "d": 17.67,
+      "why": "crouching to a low cupboard"
+    },
+    "KNEEL": {
+      "h": 50.5,
+      "w": 18.6,
+      "d": 20.460000000000004,
+      "why": "kneeling to the floor"
+    },
+    "REACH": {
+      "h": 84.2,
+      "w": 18.6,
+      "d": 11.532,
+      "why": "reaching overhead"
+    }
+  },
+  "standable": 53.4,
+  "turnable": 36.4,
+  "cannotTurn": 17,
+  "covered": 54.9,
+  "reached": 103,
+  "margin": 112,
+  "findings": [
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        35,
+        111
+      ],
+      "ants": 18,
+      "hits": 161,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.561
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        63,
+        123
+      ],
+      "ants": 17,
+      "hits": 147,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.498
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        59,
+        59
+      ],
+      "ants": 20,
+      "hits": 145,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.489
+    },
+    {
+      "kind": "SQUEEZE",
+      "at": [
+        91,
+        13
+      ],
+      "ants": 8,
+      "hits": 79,
+      "detail": null,
+      "label": "only passable sideways",
+      "weight": 3.476
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        59,
+        73
+      ],
+      "ants": 20,
+      "hits": 140,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.464
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        67,
+        97
+      ],
+      "ants": 14,
+      "hits": 127,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.396
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        43,
+        123
+      ],
+      "ants": 12,
+      "hits": 126,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.388
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        27,
+        111
+      ],
+      "ants": 11,
+      "hits": 126,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.386
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        67,
+        105
+      ],
+      "ants": 17,
+      "hits": 124,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.38
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        69,
+        99
+      ],
+      "ants": 18,
+      "hits": 123,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.374
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        63,
+        31
+      ],
+      "ants": 16,
+      "hits": 123,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.374
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        61,
+        153
+      ],
+      "ants": 13,
+      "hits": 123,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.373
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        69,
+        117
+      ],
+      "ants": 18,
+      "hits": 122,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.368
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        67,
+        81
+      ],
+      "ants": 17,
+      "hits": 121,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.363
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        17,
+        107
+      ],
+      "ants": 14,
+      "hits": 120,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.356
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        63,
+        149
+      ],
+      "ants": 12,
+      "hits": 120,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.354
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        87,
+        11
+      ],
+      "ants": 10,
+      "hits": 121,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.354
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        47,
+        67
+      ],
+      "ants": 22,
+      "hits": 119,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.351
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        47,
+        61
+      ],
+      "ants": 20,
+      "hits": 119,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.351
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        47,
+        73
+      ],
+      "ants": 21,
+      "hits": 117,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.339
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        37,
+        117
+      ],
+      "ants": 14,
+      "hits": 117,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.339
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        29,
+        111
+      ],
+      "ants": 12,
+      "hits": 116,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.331
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        71,
+        59
+      ],
+      "ants": 13,
+      "hits": 115,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.326
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        67,
+        87
+      ],
+      "ants": 17,
+      "hits": 114,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.321
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        65,
+        59
+      ],
+      "ants": 14,
+      "hits": 112,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.308
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        67,
+        113
+      ],
+      "ants": 16,
+      "hits": 111,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.303
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        59,
+        67
+      ],
+      "ants": 16,
+      "hits": 111,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.303
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        51,
+        123
+      ],
+      "ants": 15,
+      "hits": 111,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.303
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        45,
+        57
+      ],
+      "ants": 15,
+      "hits": 111,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.303
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        63,
+        163
+      ],
+      "ants": 10,
+      "hits": 111,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.295
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        71,
+        119
+      ],
+      "ants": 12,
+      "hits": 110,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.294
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        71,
+        177
+      ],
+      "ants": 8,
+      "hits": 114,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.294
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        77,
+        57
+      ],
+      "ants": 11,
+      "hits": 110,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.292
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        61,
+        165
+      ],
+      "ants": 11,
+      "hits": 110,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.292
+    },
+    {
+      "kind": "SQUEEZE",
+      "at": [
+        21,
+        111
+      ],
+      "ants": 12,
+      "hits": 60,
+      "detail": null,
+      "label": "only passable sideways",
+      "weight": 3.286
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        63,
+        129
+      ],
+      "ants": 11,
+      "hits": 109,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.286
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        57,
+        123
+      ],
+      "ants": 13,
+      "hits": 108,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.283
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        69,
+        177
+      ],
+      "ants": 10,
+      "hits": 109,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.282
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        61,
+        171
+      ],
+      "ants": 10,
+      "hits": 108,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.276
+    },
+    {
+      "kind": "CANT_TURN",
+      "at": [
+        61,
+        141
+      ],
+      "ants": 12,
+      "hits": 107,
+      "detail": null,
+      "label": "you can stand here but not turn round",
+      "weight": 3.275
+    }
+  ],
+  "errands": [
+    {
+      "id": "wash up",
+      "at": "sink",
+      "posture": "STAND",
+      "room": {
+        "ok": true,
+        "d": 10,
+        "at": [
+          69,
+          97
+        ]
+      },
+      "route": {
+        "ok": true,
+        "tightest": "WALK",
+        "upright": true,
+        "why": "you can walk it"
+      },
+      "reach": {
+        "slack": 11.7,
+        "from": [
+          75,
+          119
+        ],
+        "need": 20,
+        "limit": 31.7,
+        "ok": true
+      },
+      "ok": true,
+      "why": null
+    },
+    {
+      "id": "cook",
+      "at": "cooktop",
+      "posture": "STAND",
+      "room": {
+        "ok": true,
+        "d": 8,
+        "at": [
+          77,
+          119
+        ]
+      },
+      "route": {
+        "ok": true,
+        "tightest": "WALK",
+        "upright": true,
+        "why": "you can walk it"
+      },
+      "reach": {
+        "slack": 13.9,
+        "from": [
+          79,
+          119
+        ],
+        "need": 17.8,
+        "limit": 31.7,
+        "ok": true
+      },
+      "ok": true,
+      "why": null
+    },
+    {
+      "id": "get in the fridge",
+      "at": "fridge",
+      "posture": "CROUCH",
+      "room": {
+        "ok": true,
+        "d": 9,
+        "at": [
+          75,
+          121
+        ]
+      },
+      "route": {
+        "ok": true,
+        "tightest": "WALK",
+        "upright": true,
+        "why": "you can walk it"
+      },
+      "reach": {
+        "slack": 11.7,
+        "from": [
+          75,
+          119
+        ],
+        "need": 20,
+        "limit": 31.7,
+        "ok": true
+      },
+      "ok": true,
+      "why": null
+    },
+    {
+      "id": "use the toilet",
+      "at": "wc",
+      "posture": "SIT",
+      "room": {
+        "ok": true,
+        "d": 9,
+        "at": [
+          15,
+          37
+        ]
+      },
+      "route": {
+        "ok": true,
+        "tightest": "WALK",
+        "upright": true,
+        "why": "you can walk it"
+      },
+      "reach": {
+        "ok": true,
+        "slack": null
+      },
+      "ok": true,
+      "why": null
+    },
+    {
+      "id": "wash your hands",
+      "at": "lav",
+      "posture": "STAND",
+      "room": {
+        "ok": true,
+        "d": 7,
+        "at": [
+          45,
+          29
+        ]
+      },
+      "route": {
+        "ok": true,
+        "tightest": "WALK",
+        "upright": true,
+        "why": "you can walk it"
+      },
+      "reach": {
+        "slack": 2.4,
+        "from": [
+          45,
+          29
+        ],
+        "need": 29.3,
+        "limit": 31.7,
+        "ok": true
+      },
+      "ok": true,
+      "why": null
+    },
+    {
+      "id": "shower",
+      "at": "shower.pan",
+      "posture": "STAND",
+      "room": {
+        "ok": true,
+        "d": 0,
+        "at": [
+          67,
+          9
+        ]
+      },
+      "enter": true,
+      "route": {
+        "ok": true,
+        "tightest": "WALK",
+        "upright": true,
+        "why": "you can walk it"
+      },
+      "reach": {
+        "ok": true,
+        "slack": null
+      },
+      "ok": true,
+      "why": null
+    },
+    {
+      "id": "sit down",
+      "at": "bench.W",
+      "posture": "SIT",
+      "room": {
+        "ok": true,
+        "d": 9,
+        "at": [
+          25,
+          109
+        ]
+      },
+      "route": {
+        "ok": true,
+        "tightest": "WALK",
+        "upright": true,
+        "why": "you can walk it"
+      },
+      "reach": {
+        "ok": true,
+        "slack": null
+      },
+      "ok": true,
+      "why": null
+    },
+    {
+      "id": "eat",
+      "at": "table",
+      "posture": "SIT",
+      "room": {
+        "ok": true,
+        "d": 9,
+        "at": [
+          43,
+          121
+        ]
+      },
+      "route": {
+        "ok": true,
+        "tightest": "WALK",
+        "upright": true,
+        "why": "you can walk it"
+      },
+      "reach": {
+        "ok": true,
+        "slack": null
+      },
+      "ok": true,
+      "why": null
+    },
+    {
+      "id": "go to bed",
+      "at": "bed.base",
+      "posture": "SIT",
+      "room": {
+        "ok": true,
+        "d": 9,
+        "at": [
+          43,
+          175
+        ]
+      },
+      "route": {
+        "ok": true,
+        "tightest": "WALK",
+        "upright": true,
+        "why": "you can walk it"
+      },
+      "reach": {
+        "ok": true,
+        "slack": null
+      },
+      "ok": true,
+      "why": null
+    },
+    {
+      "id": "clean the floor",
+      "at": "deck.axle",
+      "posture": "KNEEL",
+      "room": {
+        "ok": true,
+        "d": 0,
+        "at": [
+          41,
+          115
+        ]
+      },
+      "enter": true,
+      "route": {
+        "ok": true,
+        "tightest": "WALK",
+        "upright": true,
+        "why": "you can walk it"
+      },
+      "reach": {
+        "ok": true,
+        "slack": null
+      },
+      "ok": true,
+      "why": null
+    },
+    {
+      "id": "reach the high cupboard",
+      "at": "cab.galley",
+      "posture": "REACH",
+      "room": {
+        "ok": true,
+        "d": 5,
+        "at": [
+          73,
+          119
+        ]
+      },
+      "route": {
+        "ok": true,
+        "tightest": "WALK",
+        "upright": true,
+        "why": "you can walk it"
+      },
+      "reach": {
+        "slack": 11.7,
+        "from": [
+          75,
+          119
+        ],
+        "need": 20,
+        "limit": 31.7,
+        "ok": true
+      },
+      "ok": true,
+      "why": null
+    }
+  ],
+  "done": 11,
+  "of": 11,
+  "size": {
+    "w": 204,
+    "h": 560
+  }
+}
