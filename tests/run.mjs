@@ -1544,6 +1544,51 @@ check('a conductor run across the room at chest height is caught', (() => {
   return CF.sweep(w39, { fitMap: fmc }).strung.some(h => h.id === 'test.strung');
 })(), 'a wire at 54 in across the middle');
 
+// ------------------------------------------- 40. a hand on the thing
+group('can he actually put a hand on it');
+const RH = await import('../operative/reach.js');
+
+const rcal = RH.calibrate();
+check('the arm is the anthropometry\'s, not the rig\'s short one',
+  Math.abs(RH.arm(72).span - FG.figure(72).forwardReach) < 1.5,
+  `${RH.arm(72).span} in vs a forward reach of ${FG.figure(72).forwardReach.toFixed(1)}`);
+check('a point inside the arm\'s sphere is reached and one outside it is not',
+  rcal.near.reached && !rcal.far.reached && rcal.far.short > 5,
+  `near ${rcal.near.reached}, far short by ${rcal.far.short}`);
+check('the elbow swings round the reach rather than hanging in one place',
+  rcal.swing > 8, `${rcal.swing.toFixed(1)} in of elbow travel`);
+check('the hand lands on the point it was given, to the thousandth',
+  rcal.onTarget < 0.001, `${rcal.onTarget} in off`);
+
+const rr = RH.reachAll(BUILT, { fitMap: fmc });
+check('every station is reachable from somewhere a body fits',
+  rr.stations.every(s => s.reached !== false),
+  rr.stations.filter(s => s.reached === false).map(s => `${s.id} short ${s.short}`).join(', '));
+check('and nothing daily needs a crouch or a knee on the floor',
+  rr.stations.filter(s => s.daily && /CROUCH|KNEEL/.test(s.verdict)).length <= 1,
+  rr.stations.filter(s => s.daily && /CROUCH|KNEEL/.test(s.verdict)).map(s => s.id).join(', '));
+check('no arm has to pass through the building to get there',
+  rr.stations.every(s => s.verdict !== 'IN THE WAY'),
+  rr.stations.filter(s => s.verdict === 'IN THE WAY').map(s => `${s.id}: ${s.through.join('/')}`).join('; '));
+check('and no service is in the way of the hand that has to reach past it',
+  rr.stations.every(s => !s.wires || s.wires.length === 0),
+  rr.stations.flatMap(s => s.wires || []).join(', '));
+check('the report says which fittings a person operates are not in the building',
+  rr.missing.length > 0 && rr.missing.every(m => m.what),
+  rr.missing.map(m => m.what).join('; '));
+
+// It notices when something is put back in the way.
+check('a pipe hung in front of the breakers is caught', (() => {
+  const w40 = copyOf(BUILT);
+  const t = w40.get('table');
+  const p40 = w40.get('dc.panel');
+  w40.add(new (t.constructor)({ id: 'test.inway', kind: 'run', layer: 'services', material: 'copper',
+    box: mkbox([p40.hi[0] + 3, (p40.lo[1] + p40.hi[1]) / 2, (p40.lo[2] + p40.hi[2]) / 2], [0.75, 40, 0.75]),
+    meta: { role: 'conductor' } }));
+  const r40 = RH.reachAll(w40, { fitMap: fmc });
+  return (r40.stations.find(s => s.id === 'dc.panel').wires || []).includes('test.inway');
+})(), 'a pipe across the panel face');
+
 console.log(results.join('\n'));
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -124,12 +124,16 @@ export const ACTIVITIES = {
             rightUpperArm: [0, 0, -34], rightLowerArm: [0, 70, -40],
             head: [-8, 0, 0], spine: [2, 0, 0] } },
   'CLEANING THE FLOOR': {
+    // On your knees. A standing man's hand stops thirty-two inches from his shoulder
+    // and his shoulder is fifty-nine inches up, so the floor is a foot beyond him
+    // however far he leans: posed upright and stooping, this activity was measuring
+    // an impossibility and calling it a fault in the deck. You kneel to wash a floor.
     at: 'deck.fore', work: { bone: 'rightHand', to: 'floor', want: 'the floor' },
-    face: 'toward', stand: 0,
-    pose: { hipsShift: [0, -0.26, 0],
-            leftUpperLeg: [-70, 0, -6], rightUpperLeg: [-70, 0, 6],
-            leftLowerLeg: [92, 0, 0], rightLowerLeg: [92, 0, 0],
-            spine: [30, 0, 0], chest: [16, 0, 0],
+    face: 'toward', stand: 0, kneel: 10,
+    pose: { hipsShift: [0, -0.42, 0],
+            leftUpperLeg: [-92, 0, -8], rightUpperLeg: [-92, 0, 8],
+            leftLowerLeg: [88, 0, 0], rightLowerLeg: [88, 0, 0],
+            spine: [58, 0, 0], chest: [18, 0, 0],
             leftUpperArm: [-52, -10, -50], leftLowerArm: [-34, -24, 0],
             rightUpperArm: [-128, 10, 46], rightLowerArm: [-26, 22, 0] } },
   'REACHING THE HIGH SHELF': {
@@ -268,6 +272,137 @@ export function collisions(world, body, { ignore = new Set(), slack = 0.5 } = {}
   return hits.sort((a, b) => b.depth - a.depth);
 }
 
+// ---------------------------------------------------------------- the arm
+/** Arm links from the anthropometry, in inches: acromion-elbow, elbow-fingertip. */
+export function arm(stature = 72) {
+  const f = figure(stature);
+  const upper = +(f.shoulder - f.elbow).toFixed(2);
+  const fore = +(f.elbow - f.fingertip).toFixed(2);
+  const S = M_TO_IN * scaleFor(stature);
+  return { upper, fore, span: +(upper + fore).toFixed(2),
+           rUpper: 0.048 * S, rFore: 0.042 * S, rHand: 0.055 * S };
+}
+
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const mulS = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const len = (a) => Math.hypot(a[0], a[1], a[2]);
+const norm = (a) => { const l = len(a) || 1; return mulS(a, 1 / l); };
+
+/**
+ * Two links, one shoulder, one point to touch.
+ *
+ * The rig's own arm is short: shoulder joint to fingertip measures 24 in on a six
+ * foot figure where Drillis & Contini put it at 32. The rig was validated against
+ * standing heights and an arm length is not a height, so nobody noticed. Reaches
+ * are therefore solved with the anthropometry's arm and drawn with the mesh's
+ * radii — the length from figure.js, the thickness from the rig.
+ *
+ * `swivel` is the elbow's position on the cone of solutions. It is a parameter and
+ * not a guess because an arm has a swivel and a person uses it: told to hang the
+ * elbow low, the model reached across a worktop by putting its elbow inside the
+ * cupboard and then reported the cupboard.
+ */
+export function solveArm(shoulder, target, { upper, fore }, swivel = 0) {
+  const v = sub(target, shoulder);
+  const d = len(v);
+  const span = upper + fore;
+  const short = Math.abs(upper - fore);
+  const reached = d <= span + 1e-6 && d >= short - 1e-6;
+  // Out of range: the arm points at it, straight, and stops where it stops. The
+  // hand's distance from the target is then exactly how far short the reach fell.
+  const u = norm(v);
+  const dd = Math.min(Math.max(d, short), span);
+  const cos = (dd * dd + upper * upper - fore * fore) / (2 * upper * dd);
+  const th = Math.acos(Math.min(1, Math.max(-1, cos)));
+  // Two axes across the reach direction, so the elbow can be swung anywhere round
+  // it. Elbow-down was the first guess and it is wrong the moment the reach is
+  // horizontal: reaching across a worktop it put the elbow inside the cupboard and
+  // then reported the cupboard as an obstruction. An arm has a swivel. Use it.
+  let e1 = sub([0, 0, -1], mulS(u, dot([0, 0, -1], u)));
+  if (len(e1) < 0.05) e1 = sub([1, 0, 0], mulS(u, dot([1, 0, 0], u)));
+  e1 = norm(e1);
+  const e2 = norm([u[1] * e1[2] - u[2] * e1[1], u[2] * e1[0] - u[0] * e1[2], u[0] * e1[1] - u[1] * e1[0]]);
+  const off = add(mulS(e1, Math.cos(swivel)), mulS(e2, Math.sin(swivel)));
+  const elbow = add(shoulder, add(mulS(u, Math.cos(th) * upper), mulS(off, Math.sin(th) * upper)));
+  const hand = reached ? target : add(shoulder, mulS(u, span));
+  return { shoulder, elbow, hand, reached, swivel: +swivel.toFixed(2),
+           need: +d.toFixed(1), span: +span.toFixed(1),
+           short: +Math.max(0, d - span).toFixed(1),
+           effort: +Math.min(1, d / span).toFixed(2) };
+}
+
+
+/**
+ * Put the working hand on the work, and let the other arm hang.
+ *
+ * The arms were the last part of this model still being asserted rather than
+ * solved, and they were the part doing the most damage: the washing-up pose held a
+ * left arm out sideways at forty-six degrees, which at the galley sink put a hand
+ * seventeen inches into the bathroom partition and reported the partition. Nobody
+ * washes up like that. The hand goes where the work is; the elbow goes wherever it
+ * has to; the other arm hangs.
+ *
+ * The swivel is chosen the same way as in reach.js — the least obstructed of
+ * twenty-four — so what survives is a thing you genuinely cannot get an arm past.
+ */
+export function armsOn(world, body, { stature = 72, work = null, side = 'right',
+                                      rest = null, floor = -Infinity, ignore = new Set() } = {}) {
+  const A = arm(stature);
+  const obs = obstacles(world).filter(e => !ignore.has(e.id))
+    .map(e => ({ id: e.id, lo: e.lo, hi: e.hi }));
+  const other = side === 'right' ? 'left' : 'right';
+  const bones = (sd) => [`${sd}Shoulder`, `${sd}UpperArm`, `${sd}LowerArm`, `${sd}Hand`];
+  const keep = new Set([...bones('left'), ...bones('right')]);
+  const segs = body.segments.filter(g => !keep.has(g.bone));
+  const shoulderSeg = (sd) => body.segments.find(g => g.bone === `${sd}Shoulder`);
+  const limbFor = (sd, target) => {
+    const sh = body.bone[`${sd}UpperArm`];
+    let best = null;
+    for (let k = 0; k < 24; k++) {
+      const sol = solveArm(sh, target, A, (k / 24) * 2 * Math.PI);
+      const limb = [
+        { bone: `${sd}UpperArm`, a: sol.shoulder, b: sol.elbow, r: A.rUpper },
+        { bone: `${sd}LowerArm`, a: sol.elbow, b: sol.hand, r: A.rFore },
+        { bone: `${sd}Hand`, a: sol.hand, b: sol.hand, r: A.rHand }
+      ];
+      let pen = 0, n = 0;
+      for (const g of limb) {
+        const lo = [0, 1, 2].map(i => Math.min(g.a[i], g.b[i]) - g.r);
+        const hi = [0, 1, 2].map(i => Math.max(g.a[i], g.b[i]) + g.r);
+        for (const e of obs) {
+          const ov = [0, 1, 2].map(i => Math.min(hi[i], e.hi[i]) - Math.max(lo[i], e.lo[i]));
+          if (ov.some(o => o <= 0.5)) continue;
+          pen += Math.min(...ov); n++;
+        }
+      }
+      const cost = pen * 100 + n * 10 + sol.elbow[2] * 0.01;
+      if (!best || cost < best.cost) best = { cost, sol, limb };
+    }
+    return best;
+  };
+  const out = { ...body, segments: segs.slice(), reach: null };
+  for (const sd of [side, other]) {
+    const sq = shoulderSeg(sd);
+    if (sq) out.segments.push(sq);
+    // The idle arm hangs: a point a forearm's length below the shoulder and a
+    // little forward of it, which is where an arm is when it is not doing anything.
+    const knee = body.bone[`${sd}LowerLeg`];
+    const t = (sd === side && work) ? work
+      : rest === 'knees' && knee ? [knee[0], knee[1], knee[2] + 3]
+      : [body.bone[`${sd}UpperArm`][0], body.bone[`${sd}UpperArm`][1],
+         // An arm hangs until the floor stops it. On all fours the idle hand hung a
+         // full span from a shoulder already close to the deck and finished up
+         // inside joist.49 — a man scrubbing the floor with one hand through it.
+         Math.max(floor + 2, body.bone[`${sd}UpperArm`][2] - A.span * 0.92)];
+    const r = limbFor(sd, t);
+    out.segments.push(...r.limb);
+    if (sd === side && work) out.reach = r.sol;
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- the test
 /**
  * Do the work and report whether the building let you.
@@ -285,21 +420,42 @@ export function attempt(world, name, { stature = 72 } = {}) {
   const floorZ = deck.length ? Math.max(...deck.map(e => e.hi[2])) : 0;
   const partner = A.partner ? world.get(A.partner) : null;
 
+  // You stand off the run, not off the appliance dropped into it.
+  //
+  // A hob is sixteen inches by fourteen, so its "narrow side" is a coin toss, and
+  // the toss put the cook at the north end of the galley reaching down the length
+  // of it — arm through the flue chase, hip against the water heater, nine
+  // collisions, none of them about the kitchen. What you actually walk up to is the
+  // carcass the hob is set in, whose open face is not in doubt.
+  const carrier = (() => {
+    if (A.seated || A.lying) return null;
+    let best = null;
+    for (const e of world.all()) {
+      if (e.id === target.id || e.layer !== 'interior') continue;
+      if (!(e.lo[0] <= target.lo[0] + 0.5 && e.hi[0] >= target.hi[0] - 0.5 &&
+            e.lo[1] <= target.lo[1] + 0.5 && e.hi[1] >= target.hi[1] - 0.5)) continue;
+      const area = (e.hi[0] - e.lo[0]) * (e.hi[1] - e.lo[1]);
+      if (!best || area > best.area) best = { el: e, area };
+    }
+    return best ? best.el : null;
+  })();
+  const stood = carrier || target;
   // where to stand: in front of the fixture's nearest long face, or on it
   const c = [0, 1].map(i => (target.lo[i] + target.hi[i]) / 2);
-  const along = (target.hi[0] - target.lo[0]) > (target.hi[1] - target.lo[1]) ? 1 : 0;
+  const along = (stood.hi[0] - stood.lo[0]) > (stood.hi[1] - stood.lo[1]) ? 1 : 0;
   const mid = [(world.datum ? 50 : 50), 120];
-  const sgn = c[along] > mid[along] ? -1 : 1;
+  const sgn = (stood.lo[along] + stood.hi[along]) / 2 > mid[along] ? -1 : 1;
   const at = c.slice();
   // You stand off a fixture's narrow side and face it. Offsetting in x and then
   // facing along y put the figure beside the galley with its back to the wall and
   // its legs inside the cupboard, which read as seventeen collisions.
   let facing = along === 0 ? (sgn > 0 ? Math.PI / 2 : -Math.PI / 2) : (sgn > 0 ? Math.PI : 0);
+  if (A.face === 'toward') facing = Math.atan2(c[1] - at[1], c[0] - at[0]) - Math.PI / 2;
   // Stand off the near face, on the side you are approaching from. Inverted, this
   // put the figure fourteen inches *inside* the galley run and then reported
   // sixteen collisions with it — a person standing in a cupboard, blamed on the
   // cupboard.
-  if (A.stand) at[along] = (sgn > 0 ? target.hi[along] : target.lo[along]) + sgn * A.stand;
+  if (A.stand) at[along] = (sgn > 0 ? stood.hi[along] : stood.lo[along]) + sgn * A.stand;
   if (A.face === 'away') facing += Math.PI;
   if (A.face === 'along') facing = Math.PI / 2;
   if (A.face === 'partner' && partner) {
@@ -311,20 +467,77 @@ export function attempt(world, name, { stature = 72 } = {}) {
   const surface = (A.seated || A.lying) ? target.hi[2] : floorZ;
   const fk = solve(A.pose);
   // the hips of a seated pose are already dropped by hipsShift; put the seat under them
-  const body = place(fk, { stature, at, floor: surface, facing,
-    rest: A.seated ? 'hips' : A.lying ? 'spine' : null });
+  let body = place(fk, { stature, at, floor: surface, facing,
+    // Lying, what holds you up is whatever touches first — the shoulder blades, the
+    // buttocks, the heels — so it is the lowest point of the whole body. Dropped by
+    // the spine alone the hips hung five inches inside the mattress.
+    rest: A.seated ? 'hips' : null });
 
   const ignore = new Set([A.at]);
   if (A.seated || A.lying) { if (partner) ignore.add(partner.id); }
   if (A.at === 'mattress') ignore.add('bed.base');
+  if (carrier) ignore.add(carrier.id);
   // You do not stand in a doorway with the door shut.
   if (A.at === 'door.entry') for (const e of world.all()) if (e.kind === 'leaf') ignore.add(e.id);
+
+  // Where the working hand has to arrive: on the surface, a third of the way in
+  // from the edge you are standing at, which is where you put a hand rather than on
+  // the front lip or against the back wall.
+  const f = figure(stature);
+  let workPoint = null;
+  if (A.work && (A.work.bone === 'rightHand' || A.work.bone === 'leftHand')) {
+    const surfZ = A.work.to === 'floor' ? floorZ
+      : A.work.to === 'over' ? target.hi[2] + 24 : target.hi[2];
+    const pt = [c[0], c[1], surfZ + 2];
+    // The floor is not a fixture with a centre you reach for; it is under your feet.
+    // Aimed at the middle of `deck.fore` the hand came back ten inches short of a
+    // floor the man was standing on.
+    if (A.work.to === 'floor') {
+      const fwd = [Math.sin(facing) * -1, Math.cos(facing)];
+      const d = A.kneel || 16;
+      pt[0] = at[0] + fwd[0] * d; pt[1] = at[1] + fwd[1] * d; pt[2] = floorZ + 2;
+    } else {
+      const d = [target.hi[0] - target.lo[0], target.hi[1] - target.lo[1]];
+      const k = Math.abs(at[0] - c[0]) > Math.abs(at[1] - c[1]) ? 0 : 1;
+      pt[k] = c[k] + Math.sign(at[k] - c[k]) * d[k] / 6;
+    }
+    workPoint = pt;
+  }
+  // Only where a hand has a job. A lying figure's arms were solved to "hanging
+  // below the shoulder", which for a man on his back is straight down through the
+  // mattress, the bed base and the water tank: seven collisions, and every one of
+  // them the instrument's.
+  // Sitting down, the hands go on the knees. Left in the authored pose they were
+  // braced twenty inches out from the centreline, which on the WC is a forearm
+  // through the vanity — a man sitting like a gunslinger, reported as a fit-out
+  // fault.
+  if (!workPoint && A.seated) {
+    body = armsOn(world, body, { stature, rest: 'knees', floor: surface, ignore });
+  }
+  if (workPoint) {
+    // Reaching into a bowl means going past its rim, and the rim of an undermounted
+    // sink is the worktop it is hung from. Counted flat it is the counter stopping
+    // you from using the sink in it.
+    for (const e of world.all())
+      if (e.hi[0] > target.lo[0] && e.lo[0] < target.hi[0] &&
+          e.hi[1] > target.lo[1] && e.lo[1] < target.hi[1] &&
+          e.lo[2] >= target.hi[2] - 0.5 && e.layer === 'interior') ignore.add(e.id);
+    body = armsOn(world, body, { stature, work: workPoint, floor: floorZ,
+      side: A.work.bone === 'leftHand' ? 'left' : 'right', ignore });
+  }
   const hits = collisions(world, body, { ignore });
 
   // did the work arrive?
-  const f = figure(stature);
   let work = null;
-  if (A.work) {
+  if (workPoint) {
+    // Solved, not posed: the hand is either on the point or it is short of it, and
+    // "short of it" is now a statement about the trailer rather than about the
+    // three euler angles somebody typed for this activity.
+    const r = body.reach;
+    work = { bone: A.work.bone, want: A.work.want, at: workPoint.map(v => +v.toFixed(1)),
+             reached: !!(r && r.reached), off: r ? r.short : null,
+             effort: r ? r.effort : null, ok: !!(r && r.reached) };
+  } else if (A.work) {
     // Where the body actually touches, not where its joint centre is. The hip
     // joint sits five inches above what you sit on, which is the hip capsule's own
     // radius, and reporting that as "five inches too high" was the metric being

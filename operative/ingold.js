@@ -137,9 +137,13 @@ export function interior(w, log = []) {
   // Set back on the axis you approach it from. Recessed in x while the vanity is
   // walked up to from the north, the toe kick was three inches of nothing on a
   // face nobody stands at.
-  put('kick.lav',  'plinth',  [46, 13.5], 0, [20, 15, 4], { why: 'plinth, set back 3 in from the face you stand at' });
-  put('lav.cab',   'cabinet', [46, 15], 4,  [20, 18, 26],  { hollow: true, why: 'vanity beside the head, on a toe-kick plinth' });
-  put('lav',       'sink',    [46, 15], 21, [16, 14, 8],   { material: 'tile', system: 'water', host: 'lav.cab', why: 'basin undermounted, rim at 29 in' });
+  // Four inches east. The head's centreline is at x=20 and the vanity's near face
+  // was at x=36 — sixteen inches, which passes a clearance rule written about walls
+  // and fails a man, whose elbow arrives there. There are seven inches of nothing
+  // between the vanity and the shower; four of them are better spent here.
+  put('kick.lav',  'plinth',  [50, 13.5], 0, [20, 15, 4], { why: 'plinth, set back 3 in from the face you stand at' });
+  put('lav.cab',   'cabinet', [50, 15], 4,  [20, 18, 26],  { hollow: true, why: 'vanity beside the head, clear of a seated elbow' });
+  put('lav',       'sink',    [50, 15], 21, [16, 14, 8],   { material: 'tile', system: 'water', host: 'lav.cab', why: 'basin undermounted, rim at 29 in' });
   put('shower.pan','shower',  [80, 22], 0,  [34, 32, 3],   { material: 'tile', system: 'waste', why: '34 x 32 pan: 32 deep leaves 26 in to dry off in' });
 
   // --- galley, y 68..114, along the east wall ------------------------------
@@ -175,12 +179,20 @@ export function interior(w, log = []) {
   // standing on the floor under this top is in the knee space by definition — the
   // leg at x=50 left 15.5 in of shin room. Carried on a bracket off the bench
   // instead, which is what a table this size is anyway.
-  put('table.bracket', 'bracket', [28, 148], 18, [10, 30, 9],
-    { why: 'off the bench top to the table underside, so there is nothing on the floor to kick' });
+  // Two end fins, not one slab. A bracket spanning the table's full 36 in of width
+  // sat from the seat to the tabletop right through the sitter — hips 9 in deep,
+  // both thighs, the small of the back. The seated body is 14 in across and lands
+  // at y 141-155; the table's ends, y 130-133 and 163-166, are empty. So the
+  // support goes there, which is the end panel a built-in dinette has anyway, and
+  // the 30 in between them is seat with nothing in it.
+  for (const [tag, y] of [['S', 131.5], ['N', 164.5]])
+    put(`table.fin.${tag}`, 'bracket', [21, y], 18, [14, 3, 9],
+      { why: 'end fin off the bench, carrying the table clear of where a body sits' });
 
   // --- bed, y 184..236 -----------------------------------------------------
   put('bed.base', 'bed',      [50.5, 210], 0,  [75, 52, 16], { hollow: true, why: 'platform with storage under' });
   put('mattress', 'mattress', [50.5, 210], 16, [75, 52, 8],  { material: 'fabric', why: '52 in is what the axle left' });
+
   return log;
 }
 
@@ -290,18 +302,27 @@ export function services(w, log = []) {
   // to no water at all. A riser goes to the fixture.
   const under = (id, fallback) => { const e = w.get(id); return e ? +(e.lo[2] + 1).toFixed(2) : fallback; };
   const LAV_IN = under('lav', D + 15), SINK_IN = under('sink', D + 12);
+  // The riser goes up inside the vanity carcass, wherever the vanity is. Written as
+  // the literal 42 it stayed put when the vanity moved and fed the floor beside it.
+  const lavEl = w.get('lav');
+  const X_LAV = lavEl ? +((lavEl.lo[0] + lavEl.hi[0]) / 2 - 4).toFixed(2) : 42;
 
   // --- cold: tank -> pump -> trunk -> fixtures and heater ------------------
   const TEE = [70, 120, COLD];
   log.push(step(w, 'route', { system: 'water', run: 'cold.main', dia: 0.75,
-    path: [[42, Y_TANK, D + 8.5], [70, Y_PUMP, D + 5], [70, bay(190), COLD], TEE] }, 'cold trunk forward in the joist bay'));
+    // Down into the bay at the pump, not eleven inches forward of it. Routed to the
+    // front edge first, the trunk lay along the floor of the bed locker at exactly
+    // the height of a kneeling man's shins — in the one square foot of the building
+    // you have to kneel in to service the pump it feeds.
+    path: [[42, Y_TANK, D + 8.5], [70, Y_PUMP, D + 5], [70, Y_PUMP, COLD], [70, bay(190), COLD], TEE] },
+    'cold trunk forward in the joist bay'));
   log.push(step(w, 'route', { system: 'water', run: 'cold.sink', dia: 0.5,
     path: [TEE, [86, 100, COLD], [86, Y_SINK, COLD], [86, Y_SINK, SINK_IN]] }, 'cold up to the galley sink'));
   log.push(step(w, 'route', { system: 'water', run: 'cold.heater', dia: 0.5,
     path: [TEE, [94.5, 118, COLD], [94.5, 118, 42]] }, 'cold to the tankless heater'));
   const BATH_TEE = [42, Y_BATHTEE, COLD];
   log.push(step(w, 'route', { system: 'water', run: 'cold.bath', dia: 0.5,
-    path: [TEE, [70, 40, COLD], BATH_TEE, [42, Y_LAV, COLD], [42, Y_LAV, LAV_IN]] }, 'cold on to the vanity'));
+    path: [TEE, [70, 40, COLD], BATH_TEE, [X_LAV, Y_LAV, COLD], [X_LAV, Y_LAV, LAV_IN]] }, 'cold on to the vanity'));
   log.push(step(w, 'route', { system: 'water', run: 'cold.shower', dia: 0.5,
     path: [BATH_TEE, [95.5, SB.mid, COLD], [95.5, SB.mid, 44]] }, 'cold to the shower'));
 
@@ -310,7 +331,7 @@ export function services(w, log = []) {
     path: [[94.5, 118, 50], [86, 100, 50], [86, Y_SINK, 50], [86, Y_SINK, SINK_IN]] }, 'hot back to the galley sink'));
   const HOT_TEE = [42, Y_BATHTEE, HOT];
   log.push(step(w, 'route', { system: 'water', run: 'hot.bath', dia: 0.5,
-    path: [[94.5, 118, 50], [94.5, 118, HOT], [60, 40, HOT], HOT_TEE, [42, Y_LAV, HOT], [42, Y_LAV, LAV_IN]] }, 'hot forward to the vanity'));
+    path: [[94.5, 118, 50], [94.5, 118, HOT], [60, 40, HOT], HOT_TEE, [X_LAV, Y_LAV, HOT], [X_LAV, Y_LAV, LAV_IN]] }, 'hot forward to the vanity'));
   log.push(step(w, 'route', { system: 'water', run: 'hot.shower', dia: 0.5,
     path: [HOT_TEE, [95.5, SB.mid, HOT], [95.5, SB.mid, 44]] }, 'hot to the shower'));
 
@@ -320,7 +341,7 @@ export function services(w, log = []) {
   log.push(step(w, 'route', { system: 'waste', run: 'drain.sink', dia: 1.5,
     path: [[86, Y_SINK, SINK_IN], [86, Y_SINK, MAIN_HI], [50, Y_SINK, MAIN_HI]] }, 'galley sink down and across'));
   log.push(step(w, 'route', { system: 'waste', run: 'drain.lav', dia: 1.25,
-    path: [[42, Y_LAV, LAV_IN], [42, Y_LAV, drainAt(Y_LAV, 22, MAIN_LO)], [50, 22, MAIN_LO]] }, 'vanity to the exit'));
+    path: [[X_LAV, Y_LAV, LAV_IN], [X_LAV, Y_LAV, drainAt(Y_LAV, 22, MAIN_LO)], [50, 22, MAIN_LO]] }, 'vanity to the exit'));
   log.push(step(w, 'route', { system: 'waste', run: 'drain.shower', dia: 1.5,
     path: [[80, Y_SHOWER, D], [80, Y_SHOWER, drainAt(80, 50, MAIN_LO)], [50, 22, MAIN_LO]] }, 'the shower pan is the lowest fixture on the trailer'));
 
@@ -535,30 +556,43 @@ export function electrical(w, log = []) {
   // because nothing in this file ever asked what held them.
   log.push(step(w, 'mountAll', {}, 'hang the equipment before pulling wire to it'));
 
+  // In the bay, not on the face of it. A cable at x=4.25 is three quarters of an inch
+  // proud of the stud it is supposedly fixed to, which is to say it is in the room:
+  // the reach test found a hand landing on the bank feed while trying to get at the
+  // breakers it feeds. Cable clipped to a stud face is covered by the lining; cable
+  // run along a wall goes through the studs. Mid-stud is where it goes.
+  const WALLW = w.walls.W.at, WALLE = w.walls.E.at;
+  // Out of the wall in a bay, not through the middle of the stud the gear is screwed
+  // to. Every run turned for the panel at y=112.75, which is stud.W.113's centreline:
+  // a 0.6 in hole there leaves 0.45 in of stud where the code wants 0.625, and six
+  // EDGE_CLEARANCE conditions appeared the moment the cables went into the wall
+  // instead of across the face of it. The panels are nine inches tall, so a turn at
+  // 115.5 is still behind the panel and clear of the stud.
+  const YP = 115.5;
   // wiring — deliberately gauged the way it would be guessed, so the drop can answer
   const R = (run, path, dia, amps, awg, why, volts) =>
     log.push(step(w, 'route', { system: 'power', run, path, dia, amps, awg, volts: volts || 12 }, why));
-  R('pv.string', [[26, 70, ROOF_TOP], [76, 70, ROOF_TOP], [76, 104.75, ROOF_TOP], [5, 104.75, ROOF_TOP], [5, 104.75, 82], [5, 112.75, 82]], 0.5, 17, '10', 'across both panels, then down through a rafter bay — dropped on the rafter line it bored 0.5 in from its edge');
-  R('mppt.bank', [[5, 112.75, 82], [40, 226, D + 8]], 0.6, 30, '8', 'controller to the bank');
+  R('pv.string', [[26, 70, ROOF_TOP], [76, 70, ROOF_TOP], [76, 104.75, ROOF_TOP], [5, 104.75, ROOF_TOP], [WALLW, 104.75, 82], [WALLW, YP, 82], [5, YP, 82]], 0.5, 17, '10', 'across both panels, then down through a rafter bay — dropped on the rafter line it bored 0.5 in from its edge');
+  R('mppt.bank', [[5, YP, 82], [40, 226, D + 8]], 0.6, 30, '8', 'controller to the bank');
   R('bank.inverter', [[40, 226, D + 8], [62, 226, D + 8]], 1.0, 167, '8', 'bank to the inverter');
-  R('bank.dc', [[40, 226, D + 8], [4.25, 226, D + 8], [4.25, 226, 60], [4.25, 112.75, 60], [5, 112.75, 60]],
+  R('bank.dc', [[40, 226, D + 8], [WALLW, 226, D + 8], [WALLW, 226, 60], [WALLW, YP, 60], [5, YP, 60]],
     0.6, 40, '8', 'bank to the fuse block, west along the bed base then up the wall');
   // Against the wall and over your head, never across the room. Routed straight to
   // the panel, `axial` broke the diagonal into a run at z=70 — fifty-four inches,
   // chest height — strung across the middle of the trailer for nine feet. Seven
   // square feet of floor where a standing body walks into a live conductor, and no
   // collision test in this project could see it, because `solids()` drops runs.
-  R('inv.ac', [[62, 226, D + 8], [4.25, 226, D + 8], [4.25, 226, 70], [4.25, 112.75, 70], [5, 112.75, 70]],
+  R('inv.ac', [[62, 226, D + 8], [WALLW, 226, D + 8], [WALLW, 226, 70], [WALLW, YP, 70], [5, YP, 70]],
     0.5, 17, '12', 'inverter to the breakers, west along the bed base then up the wall', 120);
-  R('dc.lights', [[5, 112.75, 60], [50.5, 208.75, 104], [50.5, 16.75, 104]], 0.3, 1.5, '18', 'one run down the centre for the pucks');
-  R('dc.fridge', [[5, 112.75, 60], [86, 120, 100], [86, 104, D + 8]], 0.3, 3.8, '14', 'fridge circuit');
-  R('dc.pumpfeed', [[5, 112.75, 60], [70, 196, D + 5]], 0.3, 5, '14', 'pump circuit');
-  R('dc.fan', [[5, 112.75, 60], [80, 30, 100], [80, 16.75, 104]], 0.3, 1.3, '18', 'bath extract');
-  R('ac.outlets', [[5, 112.75, 70], [4.25, 112.75, D + 20], [4.25, 192.75, D + 20], [4.25, 48.75, D + 20]],
+  R('dc.lights', [[5, YP, 60], [50.5, 208.75, 104], [50.5, 16.75, 104]], 0.3, 1.5, '18', 'one run down the centre for the pucks');
+  R('dc.fridge', [[5, YP, 60], [86, 120, 100], [86, 104, D + 8]], 0.3, 3.8, '14', 'fridge circuit');
+  R('dc.pumpfeed', [[5, YP, 60], [70, 196, D + 5]], 0.3, 5, '14', 'pump circuit');
+  R('dc.fan', [[5, YP, 60], [80, 30, 100], [80, 16.75, 104]], 0.3, 1.3, '18', 'bath extract');
+  R('ac.outlets', [[5, YP, 70], [WALLW, YP, D + 20], [WALLW, 192.75, D + 20], [WALLW, 48.75, D + 20]],
     0.3, 3, '14', 'outlet ring west: down the wall, then along it at socket height', 120);
   // The one run that has to cross the trailer crosses it in the ceiling, where the
   // lighting circuit already goes — a hundred inches, twelve above a six foot crown.
-  R('ac.outlets.e', [[5, 112.75, 70], [4.25, 112.75, 100], [96.75, 112.75, 100], [96.75, 160.75, D + 20], [96.75, 144.75, D + 20]],
+  R('ac.outlets.e', [[5, YP, 70], [WALLW, YP, 100], [WALLE, YP, 100], [WALLE, 160.75, D + 20], [WALLE, 144.75, D + 20]],
     0.3, 3, '14', 'and east, crossing overhead rather than through the room', 120);
   return log;
 }
