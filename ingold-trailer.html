@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0d1014">
+<title>Ingold Trailer — Gunnar's Depot</title>
+<link rel="icon" href="assets/branding/favicon.svg">
+<style>
+  :root{ --bg:#0d1014; --ink:#e8edf3; --dim:#8b97a6; --line:#1e2732; --safe-b: env(safe-area-inset-bottom, 0px); }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font:14px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  #viewport{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+
+  #head{position:fixed;top:0;left:0;right:0;z-index:5;padding:calc(env(safe-area-inset-top,0px) + 9px) 12px 8px;
+    background:linear-gradient(#0d1014ee,#0d101400);display:flex;gap:9px;align-items:baseline;
+    font-size:10px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;overflow:hidden}
+  #head b{color:#e8edf3;letter-spacing:.14em}
+  #head span{color:var(--dim)}
+  #state{padding:2px 8px;border-radius:99px;font-size:9px}
+  #state.building{background:#3a2a08;color:#fcd34d}
+  #state.settled{background:#0d2c18;color:#86efac}
+
+  #foot{position:fixed;left:0;right:0;bottom:0;z-index:6;padding:12px 12px calc(12px + var(--safe-b));
+    background:linear-gradient(#0d101400,#0d1014f2 30%);display:flex;flex-direction:column;gap:9px}
+  #say{min-height:42px;font-size:13px;color:#cbd5e1;border-left:2px solid #2b3949;padding:5px 0 5px 10px}
+  #say b{display:block;color:#e8edf3;font-size:13px}
+  #say i{font-style:normal;color:#64748b;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+  #say .ans{display:block;color:#fcd34d;font-size:12px;margin-top:3px}
+  #say .cl{display:block;color:#86efac;font-size:12px;margin-top:3px}
+  #bar{display:flex;gap:10px;align-items:center}
+  #scrub{flex:1;-webkit-appearance:none;appearance:none;height:26px;background:transparent}
+  #scrub::-webkit-slider-runnable-track{height:2px;background:#2b3949}
+  #scrub::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+    background:#38bdf8;margin-top:-7px;box-shadow:0 0 0 4px rgba(56,189,248,.18)}
+  #scrub::-moz-range-track{height:2px;background:#2b3949}
+  #scrub::-moz-range-thumb{width:16px;height:16px;border:0;border-radius:50%;background:#38bdf8}
+  button{background:#16202c;border:1px solid #263445;color:var(--ink);padding:8px 12px;
+    border-radius:9px;font-size:12px;font-family:inherit}
+  #tick{color:var(--dim);font-size:11px;min-width:52px;text-align:right;font-variant-numeric:tabular-nums}
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+</head>
+<body>
+  <canvas id="viewport"></canvas>
+  <div id="head">
+    <b>INGOLD TRAILER</b><span>8'-6" &times; 20'-0"</span><span id="state" class="building">building</span><a href="making-of.html" style="color:#7dd3fc;text-decoration:none;margin-left:auto">making of &rarr;</a>
+  </div>
+  <div id="foot">
+    <div id="say"><b>Reading the sheet&hellip;</b></div>
+    <div id="bar">
+      <button id="play">▶</button>
+      <input id="scrub" type="range" min="0" max="0" value="0" step="1">
+      <span id="tick">—</span>
+    </div>
+  </div>
+
+<script type="module">
+import { World, Element } from './operative/world.js';
+import { build } from './operative/ingold.js';
+import { View } from './operative/view.js';
+
+const $ = (s) => document.querySelector(s);
+const view = new View($('#viewport'));
+view.xray = true;
+view.tintByLayer = true;   // foundation, frame, walls, roof, interior, services
+view.start();
+
+// a slow turn while the film runs, so the trailer is seen in the round
+let orbiting = false;
+(function turn() {
+  if (orbiting) {
+    const c = view.controls, cam = view.camera, t = c.target;
+    const dx = cam.position.x - t.x, dy = cam.position.y - t.y, a = 0.0022;
+    cam.position.x = t.x + dx * Math.cos(a) - dy * Math.sin(a);
+    cam.position.y = t.y + dx * Math.sin(a) + dy * Math.cos(a);
+    c.update();
+  }
+  requestAnimationFrame(turn);
+})();
+
+const say = (title, sub, opened = [], closed = []) => {
+  const n = $('#say');
+  n.innerHTML = '';
+  const b = document.createElement('b'); b.textContent = title; n.appendChild(b);
+  if (sub) { const i = document.createElement('i'); i.textContent = sub; n.appendChild(i); }
+  for (const c of closed.slice(0, 2)) { const d = document.createElement('span'); d.className = 'cl'; d.textContent = 'closed · ' + c.message; n.appendChild(d); }
+  for (const c of opened.slice(0, 2)) { const d = document.createElement('span'); d.className = 'ans'; d.textContent = 'the world answers · ' + c.message; n.appendChild(d); }
+};
+
+/** A frame is a state the trailer was actually in, taken from the journal. */
+function worldFromSnapshot(snap, walls, datum) {
+  const w = new World();
+  for (const e of snap.elements) w.add(new Element(e));
+  w.walls = walls; w.datum = datum;
+  return w;
+}
+
+let frames = [], finished = null, idx = 0, playing = false, timer = null;
+
+function show(i) {
+  idx = Math.max(0, Math.min(frames.length - 1, i));
+  const f = frames[idx];
+  view.sync(f.world);
+  $('#scrub').value = String(idx);
+  $('#tick').textContent = `${idx} / ${frames.length - 1}`;
+  say(f.title, f.sub, f.opened, f.closed);
+  if (f.changed && f.changed.length) view.flash(f.changed.slice(0, 40), 0x38bdf8, 900);
+}
+
+function play() {
+  playing = true; orbiting = true; $('#play').textContent = '❚❚';
+  clearInterval(timer);
+  timer = setInterval(() => {
+    if (idx >= frames.length - 1) return stop();
+    show(idx + 1);
+  }, 260);
+}
+function stop() { playing = false; orbiting = false; $('#play').textContent = '▶'; clearInterval(timer); }
+
+$('#play').addEventListener('click', () => (playing ? stop() : play()));
+$('#scrub').addEventListener('input', (e) => { stop(); show(+e.target.value); });
+
+// touch a member: what it is, and what passed through it
+$('#viewport').addEventListener('pointerup', (e) => {
+  const id = view.pick(e.clientX, e.clientY);
+  if (!id || !finished) return;
+  const el = finished.get(id);
+  if (!el) return;
+  const g = finished.grounded();
+  const bears = (g.under.get(id) || []).filter(x => x.via === 'bear').map(x => x.id);
+  const last = el.trace[el.trace.length - 1];
+  say(id, `${el.kind}${el.section ? ' ' + el.section : ''} · ${el.material.replace(/_/g, ' ')}` +
+      (bears.length ? ` · bears on ${bears.slice(0, 3).join(', ')}` : ''),
+      [], last ? [{ message: last.note }] : []);
+});
+
+// --- build it, then play the making back
+setTimeout(() => {
+  const t0 = performance.now();
+  const { world, loop } = build();
+  finished = world;
+  const secs = ((performance.now() - t0) / 1000).toFixed(1);
+
+  const recs = world.history;
+  frames = [];
+  for (let i = 0; i < recs.length; i++) {
+    const after = recs[i + 1] && recs[i + 1].snapshot;
+    const snap = after || { elements: world.all().map(e => JSON.parse(JSON.stringify({
+      id: e.id, kind: e.kind, layer: e.layer, box: e.box, shear: e.shear, material: e.material,
+      system: e.system, section: e.section, meta: e.meta, ports: e.ports, trace: e.trace })) ) };
+    frames.push({
+      world: worldFromSnapshot(snap, world.walls, world.datum),
+      title: recs[i].note || recs[i].kind,
+      sub: `t${recs[i].t} · ${recs[i].op || recs[i].kind}` + (recs[i].cause ? ` · answering ${recs[i].cause}` : ''),
+      opened: recs[i].opened || [], closed: recs[i].closed || [], changed: recs[i].elements || []
+    });
+  }
+  view.frame(world);            // frame once, on the finished trailer, so the film holds still
+  $('#scrub').max = String(frames.length - 1);
+  const settled = loop.state === 'SETTLED' && loop.open.length === 0;
+  $('#state').className = settled ? 'settled' : 'building';
+  $('#state').textContent = `${loop.state.toLowerCase()} · ${world.elements.size} members`;
+  // The loop's own count, not the journal's: moves it tried and walked back leave
+  // no trace in the building, and the honest number says how many it took.
+  const walked = loop.trace.filter(t => t.kept === false).length;
+  say(`${world.elements.size} members, ${world.joints.size} joints, ` +
+      (loop.open.length ? `${loop.open.length} still open` : 'nothing outstanding'),
+      `${loop.steps} decisions in ${secs}s` + (walked ? `, ${walked} walked back` : '') +
+      ` — press play to watch it happen`);
+  show(0);
+  window.trailer = { world, frames, show };
+  setTimeout(play, 700);
+}, 60);
+</script>
+</body>
+</html>

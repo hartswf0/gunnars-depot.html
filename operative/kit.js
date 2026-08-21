@@ -1,0 +1,381 @@
+// operative/kit.js — the seed build.
+//
+// Not decoration: every member here is an individually addressable element with
+// a real section, a real span, and a real place in the support graph. The
+// dimensions are the ones discovered in assets/models/*.stl (deck top z=14,
+// shell 72 x 144, wall top z=76, shed roof rising across the width).
+import { World, Element, SECTIONS } from './world.js';
+import { box } from './geom.js';
+
+export const KIT = Object.freeze({
+  width: 72, length: 144,
+  padTop: 1.75,            // blocking under the chassis (a parked trailer bears here)
+  railDepth: 6.0,
+  deckTop: 14.0, deckThick: 0.75,
+  joistSection: '2x6', joistSpacing: 16,
+  plateSection: '2x4', studSpacing: 16,
+  wallTop: 76.0,
+  rafterSection: '2x6', rafterSpacing: 16, roofRise: 0, eave: 3.0,   // the seed roof is dead flat on purpose; the reference has an opinion about that
+  // An overhang across the width and an overhang along the length are not the same
+  // decision. The road caps the width at 102 in, so a side eave is illegal on a
+  // trailer and a drip edge has to do its job; the length has no such limit.
+  eaveX: null, eaveY: null,
+  wheelInboard: false, railInset: 6,
+  sheathing: 0.5
+});
+
+const S = (name) => SECTIONS[name];
+
+/** Even o.c. layout across a run, always landing a member at both ends. */
+export function layout(runStart, runEnd, spacing, thickness) {
+  const pts = [];
+  const first = runStart + thickness / 2;
+  const last = runEnd - thickness / 2;
+  for (let c = first; c < last - 0.01; c += spacing) pts.push(c);
+  pts.push(last);
+  return pts;
+}
+
+/**
+ * `spec` overrides the kit defaults, so the same construction logic can build a
+ * 6x12 utility shell or the 8'-6" x 20'-0" envelope the reference sheets specify.
+ * The 6x12 remains the default; nothing that already worked changes.
+ */
+export const MIN_EAVE = 2;   // in — below this, water is running on the wall
+
+export function seedTrailer(world = new World(), spec = {}) {
+  const K = { ...KIT, ...spec };
+  const [jT, jD] = S(K.joistSection);
+  const [pT, pD] = S(K.plateSection);      // 1.5 thick, 3.5 deep
+  const [rT, rD] = S(K.rafterSection);
+
+  const deckBot = K.deckTop - K.deckThick;     // 13.25
+  const joistTop = deckBot, joistBot = joistTop - jD;   // 7.75
+  const railTop = joistBot, railBot = railTop - K.railDepth; // 1.75
+  const add = (o) => world.add(new Element(o));
+
+  // ---- foundation: blocking, chassis rails, crossmembers, wheels ----
+  const railX = [K.railInset, K.width - K.railInset];
+  const padY = [12, K.length - 12];
+  for (const x of railX) {
+    for (const y of padY) {
+      add({ id: `pad.${x}.${y}`, kind: 'pad', layer: 'foundation', material: 'concrete',
+            box: box([x, y, K.padTop / 2], [10, 10, K.padTop]), meta: { role: 'bearing point' } });
+    }
+    add({ id: `rail.${x < K.width / 2 ? 'L' : 'R'}`, kind: 'chassis', layer: 'foundation', material: 'steel',
+          section: 'C6', box: box([x, K.length / 2, (railBot + railTop) / 2], [3, K.length, K.railDepth]),
+          meta: { role: 'main rail', spanAxis: 'y' } });
+  }
+  // Crossmembers fit *between* the rail webs and are welded, not seated. Cutting
+  // them through the rails (the first attempt) read as interpenetration, which is
+  // what it would have been in steel.
+  const railInner = K.railInset + 1.5, railOuter = K.width - K.railInset - 1.5;
+  const crossY = [];
+  for (let y = 12; y <= K.length - 6; y += 36) crossY.push(y);
+  crossY.push(K.length - 6);
+  for (const y of crossY) {
+    add({ id: `cross.${y}`, kind: 'chassis', layer: 'foundation', material: 'steel', section: 'C4',
+          box: box([(railInner + railOuter) / 2, y, railBot + 2], [railOuter - railInner, 2, 4]),
+          meta: { role: 'crossmember', spanAxis: 'x', joint: 'welded to rail web' } });
+  }
+  // Wheels ride outside the deck. Placed inboard first, they drove a bore-sized
+  // hole through rail, deck, sole plate, stud and shell all at once; the world
+  // reported six overlaps and the axle moved out where it belongs.
+  // Tandem axles sit under the load, spaced by length; a 20-footer does not carry
+  // its weight where a 12-footer does.
+  const axleY = K.length > 180 ? [K.length * 0.55, K.length * 0.55 + 34] : [K.length * 0.66];
+  // Outboard axles put the 8'-6" sheet envelope at 120 in overall. On a real
+  // road-legal trailer the wheels tuck inside the width and the floor is cut
+  // around them, which is what `wheelInboard` asks for here.
+  // Outboard of the main rails, inboard of the sheathing: the only place an axle
+  // fits on an 8'-6" overall trailer. The floor then has to be cut around it.
+  const wheelX = K.wheelInboard
+    ? [K.railInset - 1.5 - 4.5, K.width - (K.railInset - 1.5 - 4.5)]
+    : [-5, K.width + 5];
+  for (const x of wheelX) {   // clear of the 0.5 in exterior shell
+    const side = x < K.width / 2 ? 'L' : 'R';
+    axleY.forEach((y, i) => {
+      add({ id: `wheel.${side}${axleY.length > 1 ? i + 1 : ''}`, kind: 'wheel', layer: 'foundation', material: 'steel',
+            box: box([x, y, 13], [8, 26, 26]), meta: { role: 'axle assembly', radius: 13 } });
+    });
+  }
+
+  // ---- the tongue -----------------------------------------------------------
+  // A 20 lb propane bottle has sat on this trailer's tongue since the propane
+  // stage was written, and the tongue was not in the model. So the bottle hung in
+  // space; a repair that tried to catch it dragged it into the floor joists. A
+  // thing that is not there cannot hold anything up.
+  //
+  // Straight channel tongue rather than an A-frame: a member is a box or a box
+  // sheared in z, and shear cannot swing a rail inward in plan. An A-frame drawn
+  // as two boxes both reaching the centreline is two rails welded through each
+  // other, which is what the world reported the first time.
+  const tongueLen = 30, noseW = 4;
+  for (const x of railX) {
+    add({ id: `tongue.${x < K.width / 2 ? 'L' : 'R'}`, kind: 'chassis', layer: 'foundation',
+          material: 'steel', section: 'C5',
+          box: box([x, -tongueLen / 2, (railBot + railTop) / 2], [3, tongueLen, K.railDepth]),
+          meta: { role: 'tongue rail', spanAxis: 'y', joint: 'welded to the main rail' } });
+  }
+  // Between the webs, like every other crossmember here — cut through them and the
+  // world reports interpenetration, which is what it would be in steel.
+  const tongueInner = railX[0] + 1.5, tongueOuter = railX[1] - 1.5;
+  add({ id: 'tongue.nose', kind: 'chassis', layer: 'foundation', material: 'steel', section: 'C4',
+        box: box([(tongueInner + tongueOuter) / 2, -tongueLen + noseW / 2, (railBot + railTop) / 2],
+                 [tongueOuter - tongueInner, noseW, K.railDepth]),
+        meta: { role: 'nose crossmember', spanAxis: 'x', joint: 'welded both tongue rails' } });
+  add({ id: 'coupler', kind: 'chassis', layer: 'foundation', material: 'steel',
+        box: box([K.width / 2, -tongueLen + 2, railTop + 2], [5, 8, 4]),
+        meta: { role: '2-5/16 in coupler, sitting on the nose' } });
+  // The tray reaches both rails. Floating between them it was a shelf held by the
+  // same nothing that used to hold the bottle.
+  add({ id: 'tongue.plate', kind: 'chassis', layer: 'foundation', material: 'steel',
+        box: box([K.width / 2, -16, railTop + 0.125], [tongueOuter - tongueInner + 6, 16, 0.25]),
+        meta: { role: 'bottle tray across the tongue rails' } });
+
+  // ---- wheel wells ----------------------------------------------------------
+  // Not a styling choice. At 102 in overall the axles must sit inside the width,
+  // and at 126 in overall height the floor cannot be lifted above a 26 in wheel
+  // (rails over the tyre put the deck at 32.5 in, which busts the height by 5 in).
+  // So the floor stops at the rail over the axles and the wheel comes up into the
+  // room inside a boxed well. The geometry decided this, not the drawing.
+  const wellTop = K.deckTop + 13.5;   // a 15 in ledge above the floor, wherever the floor ends up
+  const wells = [];
+  if (K.wheelInboard) {
+    const y0 = Math.min(...axleY) - 17, y1 = Math.max(...axleY) + 17;
+    wells.push({ side: 'W', x0: 0, x1: railInner, y0, y1 },
+               { side: 'E', x0: railOuter, x1: K.width, y0, y1 });
+  }
+  const inWell = (y) => wells.length && y > wells[0].y0 - jT && y < wells[0].y1 + jT;
+
+  // ---- foundation: floor joists + deck ----
+  for (const y of layout(0, K.length, K.joistSpacing, jT)) {
+    // Over the axles a joist stops at the rails — but it has to land *on* them, not
+    // beside them. Trimmed to the inner face it bore on nothing, and seventeen
+    // members above it were left hanging.
+    const railOut = K.railInset - 1.5, railFar = K.width - K.railInset + 1.5;
+    const x0 = inWell(y) ? railOut : 0, x1 = inWell(y) ? railFar : K.width;
+    add({ id: `joist.${y.toFixed(0)}`, kind: 'joist', layer: 'foundation', material: 'treated_wood',
+          section: K.joistSection, box: box([(x0 + x1) / 2, y, joistBot + jD / 2], [x1 - x0, jT, jD]),
+          meta: { spanAxis: 'x', clearSpan: 60, trimmed: inWell(y) } });
+  }
+  if (!wells.length) {
+    add({ id: 'deck', kind: 'deck', layer: 'foundation', material: 'plywood',
+          box: box([K.width / 2, K.length / 2, deckBot + K.deckThick / 2], [K.width, K.length, K.deckThick]),
+          meta: { role: 'floor sheathing' } });
+  } else {
+    const { y0, y1 } = wells[0];
+    const panel = (id, ax0, ax1, ay0, ay1) => add({ id, kind: 'deck', layer: 'foundation', material: 'plywood',
+      box: box([(ax0 + ax1) / 2, (ay0 + ay1) / 2, deckBot + K.deckThick / 2], [ax1 - ax0, ay1 - ay0, K.deckThick]),
+      meta: { role: 'floor sheathing' } });
+    panel('deck.fore', 0, K.width, 0, y0);
+    // The deck stops at the wells' inboard faces. Run out to the rails (where the
+    // trimmed joists end) and it occupies the same 0.75 in as the well boards —
+    // six overlaps, reported the moment the joists were widened to bear.
+    panel('deck.axle', railInner, railOuter, y0, y1);
+    panel('deck.aft', 0, K.width, y1, K.length);
+    for (const w of wells) {
+      const cx = (w.x0 + w.x1) / 2, cy = (y0 + y1) / 2;
+      add({ id: `well.${w.side}.cap`, kind: 'wellcap', layer: 'foundation', material: 'plywood',
+            box: box([cx, cy, wellTop + 0.75], [w.x1 - w.x0, y1 - y0, 1.5]),
+            meta: { role: 'wheel well cap — the wall above bears on this', side: w.side } });
+      const inner = w.side === 'W' ? w.x1 - 0.375 : w.x0 + 0.375;
+      add({ id: `well.${w.side}.side`, kind: 'wellside', layer: 'foundation', material: 'plywood',
+            box: box([inner, cy, (deckBot + wellTop) / 2], [0.75, y1 - y0, wellTop - deckBot]),
+            meta: { role: 'wheel well inboard face', side: w.side } });
+      // the end boards butt against the inboard face rather than running through it
+      const ex0 = w.side === 'W' ? w.x0 : w.x0 + 0.75;
+      const ex1 = w.side === 'W' ? w.x1 - 0.75 : w.x1;
+      for (const [tag, ey] of [['fore', y0 + 0.375], ['aft', y1 - 0.375]])
+        add({ id: `well.${w.side}.${tag}`, kind: 'wellside', layer: 'foundation', material: 'plywood',
+              box: box([(ex0 + ex1) / 2, ey, (deckBot + wellTop) / 2], [ex1 - ex0, 0.75, wellTop - deckBot]),
+              meta: { role: 'wheel well end', side: w.side } });
+    }
+  }
+
+  // ---- frame: plates + studs on four walls ----
+  const plateBot = K.deckTop;
+  const soleTop = plateBot + pT;                 // 15.5
+  const topPlateBot = K.wallTop - 2 * pT;        // 73.0
+  const studLen = topPlateBot - soleTop;         // 57.5
+
+  const walls = [
+    { id: 'W', axis: 'y', at: pD / 2,            from: 0, to: K.length, normal: [-1, 0, 0] },
+    { id: 'E', axis: 'y', at: K.width - pD / 2,  from: 0, to: K.length, normal: [1, 0, 0] },
+    { id: 'S', axis: 'x', at: pD / 2,            from: pD, to: K.width - pD, normal: [0, -1, 0] },
+    { id: 'N', axis: 'x', at: K.length - pD / 2, from: pD, to: K.width - pD, normal: [0, 1, 0] }
+  ];
+  for (const w of walls) {
+    const along = w.axis; // members are spaced along this axis
+    const plateSize = along === 'y' ? [pD, w.to - w.from, pT] : [w.to - w.from, pD, pT];
+    const plateP = (z) => along === 'y'
+      ? [w.at, (w.from + w.to) / 2, z] : [(w.from + w.to) / 2, w.at, z];
+    const wellHere = wells.find(x => x.side === w.id);
+    if (!wellHere) {
+      add({ id: `sole.${w.id}`, kind: 'plate', layer: 'frame', material: 'treated_wood', section: K.plateSection,
+            box: box(plateP(plateBot + pT / 2), plateSize), meta: { role: 'sole plate', wall: w.id } });
+    } else {
+      // the sole plate stops either side of the well; over it the wall bears on the cap
+      const segs = [[w.from, wellHere.y0], [wellHere.y1, w.to]];
+      segs.forEach(([a, b2], i) => {
+        if (b2 - a < 6) return;
+        add({ id: `sole.${w.id}.${i}`, kind: 'plate', layer: 'frame', material: 'treated_wood', section: K.plateSection,
+              box: box([w.at, (a + b2) / 2, plateBot + pT / 2], [pD, b2 - a, pT]),
+              meta: { role: 'sole plate', wall: w.id } });
+      });
+      add({ id: `sole.${w.id}.well`, kind: 'plate', layer: 'frame', material: 'treated_wood', section: K.plateSection,
+            box: box([w.at, (wellHere.y0 + wellHere.y1) / 2, wellTop + 1.5 + pT / 2], [pD, wellHere.y1 - wellHere.y0, pT]),
+            meta: { role: 'sole plate on the wheel well cap', wall: w.id } });
+    }
+    for (let i = 0; i < 2; i++) {
+      add({ id: `top${i + 1}.${w.id}`, kind: 'plate', layer: 'frame', material: 'engineered_lumber', section: K.plateSection,
+            box: box(plateP(topPlateBot + pT / 2 + i * pT), plateSize),
+            meta: { role: i ? 'upper top plate' : 'lower top plate', wall: w.id } });
+    }
+    for (const u of layout(w.from, w.to, K.studSpacing, pT)) {
+      // A stud over the wheel well is shorter: it starts on the well's own plate,
+      // not on the floor, because the floor is not there.
+      const overWell = !!(wellHere && u > wellHere.y0 && u < wellHere.y1);
+      const base = overWell ? wellTop + 1.5 + pT : soleTop;
+      const len = topPlateBot - base;
+      const p = along === 'y' ? [w.at, u, base + len / 2] : [u, w.at, base + len / 2];
+      const s = along === 'y' ? [pD, pT, len] : [pT, pD, len];
+      add({ id: `stud.${w.id}.${u.toFixed(0)}`, kind: 'stud', layer: 'frame', material: 'treated_wood',
+            section: K.plateSection, box: box(p, s),
+            meta: { wall: w.id, u, bearing: w.axis === 'y', spanAxis: 'z', overWell } });
+    }
+  }
+
+  // ---- walls: exterior sheathing, one panel per wall ----
+  // The bottom edge runs down past the sole plate to the underside of the deck.
+  //
+  // It used to start at the top of the sole plate, which put the sheathing
+  // *above* the plate and *outboard* of it — meeting it along a single line, with
+  // no overlapping face anywhere. Twenty panel-to-plate pairs that IRC R602.10
+  // covers had nothing to put a nail through, so the wall could not transfer
+  // shear to the floor at all, and no check in the project noticed for the entire
+  // life of the model. Lapping the plate is not a detail; it is what makes a
+  // sheathed wall a shear wall.
+  const shellBot = deckBot;
+  for (const w of walls) {
+    const t = K.sheathing;
+    const outward = w.axis === 'y' ? 0 : 1;
+    const p = outward === 0
+      ? [w.at + w.normal[0] * (pD / 2 + t / 2), K.length / 2, (shellBot + K.wallTop) / 2]
+      : [K.width / 2, w.at + w.normal[1] * (pD / 2 + t / 2), (shellBot + K.wallTop) / 2];
+    const s = outward === 0 ? [t, K.length, K.wallTop - shellBot] : [K.width, t, K.wallTop - shellBot];
+    add({ id: `shell.${w.id}`, kind: 'sheathing', layer: 'walls', material: 'siding',
+          box: box(p, s), meta: { wall: w.id, role: 'exterior shell' } });
+  }
+
+  // ---- roof: shed rafters rising west -> east, plus cover ----
+  // Sheared members: the rafter is a parallelepiped, not a block. Its low end
+  // bears on the west top plate, its high end on the east.
+  const rise = K.roofRise;
+  const eaveX = K.eaveX === null || K.eaveX === undefined ? K.eave : K.eaveX;
+  const eaveY = K.eaveY === null || K.eaveY === undefined ? K.eave : K.eaveY;
+  const rafterWidth = K.width + 2 * eaveX;
+  const rafterRise = rise * (rafterWidth / K.width);
+  const rafterZ = K.wallTop + rD / 2;
+  const rafterY = layout(0, K.length, K.rafterSpacing, rT);
+  for (const y of rafterY) {
+    add({ id: `rafter.${y.toFixed(0)}`, kind: 'rafter', layer: 'roof', material: 'treated_wood', section: K.rafterSection,
+          box: box([K.width / 2, y, rafterZ + rise / 2], [rafterWidth, rT, rD]),
+          shear: { axis: 'x', rise: rafterRise },
+          meta: { spanAxis: 'x', clearSpan: K.width - 2 * pD, rise, role: 'shed rafter' } });
+  }
+  // Where the road forbids an overhang, the detail has to do the work an overhang
+  // would have done. This is not decoration: with 0.5 in of projection every gallon
+  // that lands on the roof runs down the cladding and into the deck-to-wall joint.
+  if (rise && eaveX < MIN_EAVE) {
+    const lowX = rafterRise < 0 ? K.width : 0;
+    // Inside the envelope, not past it. Projecting the 0.75 in a drip edge would
+    // normally have put the trailer at 103.3 in overall — wider than the road —
+    // which is the same constraint that forbade the eave in the first place. So it
+    // is flush with the skin and turns *down* over it instead of out past it.
+    const skin = lowX ? K.width + 0.5 : -0.5;              // outer face of the cladding
+    const inward = lowX ? -1 : 1;
+    // The cover is sheared, so its underside at the low edge is not its centre.
+    const coverBottomAtLowEdge = rafterZ + rise / 2 + rD / 2 - Math.abs(rafterRise) / 2;
+    // From the face of the cladding to the end of the rafter tail, and no further:
+    // an inch and a half of it ran back inside the roof and clashed with all
+    // sixteen rafters. A drip edge is a folded sheet over the fascia.
+    const x0 = skin, x1 = lowX;
+    add({ id: 'drip.low', kind: 'flashing', layer: 'roof', material: 'steel',
+          box: box([(x0 + x1) / 2, K.length / 2, coverBottomAtLowEdge - 2],
+                   [Math.abs(x1 - x0), K.length + 2 * eaveY, 4]),
+          meta: { role: 'drip edge', seals: 'roof.cover', turnsDown: 4,
+                  why: 'the towing width forbids an eave, so the flashing does its job' } });
+  }
+  // ---- closing the top of the wall ------------------------------------------
+  // The wall skin stops at the top plate and the roof starts at the underside of
+  // the rafters, so a pitched roof leaves a band of open air right round the
+  // building — 6 in on the high side, ramping on the ends, filled only by rafters
+  // at 16 in centres. Every check passed. None of them was ever about the
+  // envelope being *closed*, and the only reason anyone noticed is that a
+  // three-quarter photograph showed daylight under the roof.
+  const soffit = (x) => rafterZ + rise / 2 + rafterRise * ((x - K.width / 2) / rafterWidth) - rD / 2;
+  for (const w of walls) {
+    const t = K.sheathing;
+    const along = w.axis === 'y';                       // W and E run in y, facing x
+    if (along) {
+      // A side wall meets the roof at one height, so one panel closes it.
+      const h = soffit(w.at) - K.wallTop;
+      if (h < 0.5) continue;
+      add({ id: `gable.${w.id}`, kind: 'sheathing', layer: 'walls', material: 'siding',
+            box: box([w.at + w.normal[0] * (pD / 2 + t / 2), K.length / 2, K.wallTop + h / 2],
+                     [t, K.length, h]),
+            meta: { wall: w.id, role: 'infill between the top plate and the roof' } });
+      continue;
+    }
+    // An end wall under a shed roof is a triangle, and a sheared box is a
+    // parallelogram — drawn as one, its low corner dropped 3 in below the top
+    // plate and straight through the wall skin. It gets framed the way it is
+    // actually framed: stepped strips, each one as tall as the roof is above it.
+    const strips = 8;
+    for (let i = 0; i < strips; i++) {
+      const x0 = (K.width / strips) * i, x1 = (K.width / strips) * (i + 1);
+      const h = soffit((x0 + x1) / 2) - K.wallTop;
+      if (h < 0.5) continue;
+      add({ id: `gable.${w.id}.${i}`, kind: 'sheathing', layer: 'walls', material: 'siding',
+            box: box([(x0 + x1) / 2, w.at + w.normal[1] * (pD / 2 + t / 2), K.wallTop + h / 2],
+                     [x1 - x0, t, h]),
+            meta: { wall: w.id, role: 'stepped infill up to the roof', step: i } });
+    }
+  }
+
+  // ---- bird blocking -------------------------------------------------------
+  // Between the top of the wall and the underside of the roof there is one
+  // rafter's depth of nothing, all the way round, interrupted only by the rafters
+  // themselves. On the east side that is 188 inches of continuous open eave, and
+  // the only thing that ever mentioned it was a ray scanner: filled with light,
+  // the trailer drew that gap on its own exterior as a line.
+  //
+  // A framer closes it with a block in every bay. It is called bird blocking
+  // because of what gets in otherwise.
+  if (rise) {
+    for (const w of walls) {
+      if (w.axis !== 'y') continue;                   // the long walls; the ends are gable strips
+      const xw = w.at, top = soffit(xw), bot = top, capZ = top + rD;
+      for (let i = 0; i < rafterY.length - 1; i++) {
+        const y0 = rafterY[i] + rT / 2, y1 = rafterY[i + 1] - rT / 2;
+        if (y1 - y0 < 1) continue;
+        add({ id: `bird.${w.id}.${rafterY[i].toFixed(0)}`, kind: 'blocking', layer: 'roof',
+              material: 'treated_wood', section: K.rafterSection,
+              box: box([xw, (y0 + y1) / 2, (bot + capZ - 0.3) / 2], [pD, y1 - y0, capZ - bot - 0.3]),
+              meta: { wall: w.id, role: 'bird blocking, closing the eave' } });
+      }
+    }
+  }
+
+  add({ id: 'roof.cover', kind: 'panel', layer: 'roof', material: 'corrugated_metal',
+        box: box([K.width / 2, K.length / 2, rafterZ + rise / 2 + rD / 2 + 0.5], [rafterWidth, K.length + 2 * eaveY, 1.0]),
+        shear: { axis: 'x', rise: rafterRise },
+        meta: { role: 'roof cover', slope: `${rise}:${K.width}` } });
+
+  world.walls = Object.fromEntries(walls.map(w => [w.id,
+    { ...w, thickness: pD, sillTop: soleTop, topPlateBot, wallTop: K.wallTop }]));
+  world.datum = { deckTop: K.deckTop, wallTop: K.wallTop, plateBot, soleTop, topPlateBot, studLen, width: K.width, length: K.length, rise: K.roofRise };
+  world.record({ kind: 'seed', note: `seed trailer kit placed: ${world.elements.size} elements`, elements: [] });
+  return world;
+}

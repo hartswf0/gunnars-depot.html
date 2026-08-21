@@ -1,0 +1,370 @@
+{
+ "of": "ingold-trailer",
+ "rays": 78720,
+ "escapes": 20,
+ "viaOpening": 3659,
+ "leakFraction": 0.0003,
+ "calibration": {
+  "noiseFloor": 0,
+  "sealedIsSealed": true,
+  "findsAKnownHole": true,
+  "knownHoleReads": 196,
+  "cast": 1152,
+  "verdict": "the instrument is honest"
+ },
+ "clusters": [
+  {
+   "n": 2,
+   "at": [
+    36.4,
+    248,
+    41.7
+   ],
+   "face": "+y",
+   "extent": [
+    7.7,
+    0,
+    0.1
+   ],
+   "bounded": [
+    "shell.N.win_bed.below (7.5 in)",
+    "cripple.N.36.sill (8.0 in)",
+    "shell.N.win_bed.near (9.9 in)"
+   ]
+  },
+  {
+   "n": 2,
+   "at": [
+    56.4,
+    248,
+    41.7
+   ],
+   "face": "+y",
+   "extent": [
+    7.7,
+    0,
+    0.1
+   ],
+   "bounded": [
+    "shell.N.win_bed.below (7.5 in)",
+    "cripple.N.52.sill (8.7 in)"
+   ]
+  },
+  {
+   "n": 1,
+   "at": [
+    101.5,
+    9.8,
+    43.7
+   ],
+   "face": "+x",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": [
+    "shell.E.win_galley.near (0.0 in)",
+    "shell.E.win_galley.below (0.1 in)",
+    "stud.E.17 (6.2 in)",
+    "stud.S.97 (7.5 in)",
+    "block.shower (7.7 in)",
+    "stud.E.1 (8.3 in)"
+   ]
+  },
+  {
+   "n": 1,
+   "at": [
+    101.5,
+    49.8,
+    43.7
+   ],
+   "face": "+x",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": [
+    "shell.E.win_galley.near (0.0 in)",
+    "shell.E.win_galley.below (0.1 in)",
+    "stud.E.49 (0.6 in)"
+   ]
+  },
+  {
+   "n": 1,
+   "at": [
+    101.5,
+    129.8,
+    43.7
+   ],
+   "face": "+x",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": [
+    "shell.E.win_galley.far (0.0 in)",
+    "shell.E.win_galley.below (0.1 in)",
+    "stud.E.129 (0.6 in)",
+    "heater (7.0 in)"
+   ]
+  },
+  {
+   "n": 1,
+   "at": [
+    101.5,
+    149.8,
+    43.7
+   ],
+   "face": "+x",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": [
+    "shell.E.win_galley.far (0.0 in)",
+    "shell.E.win_galley.below (0.1 in)",
+    "stud.E.145 (4.3 in)",
+    "outlet.2 (7.8 in)"
+   ]
+  },
+  {
+   "n": 1,
+   "at": [
+    101.5,
+    169.8,
+    43.7
+   ],
+   "face": "+x",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": [
+    "shell.E.win_galley.far (0.0 in)",
+    "shell.E.win_galley.below (0.1 in)",
+    "stud.E.177 (6.2 in)",
+    "stud.E.161 (8.3 in)"
+   ]
+  },
+  {
+   "n": 1,
+   "at": [
+    101.5,
+    189.8,
+    43.7
+   ],
+   "face": "+x",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": [
+    "shell.E.win_galley.far (0.0 in)",
+    "shell.E.win_galley.below (0.1 in)",
+    "stud.E.193 (2.3 in)"
+   ]
+  },
+  {
+   "n": 1,
+   "at": [
+    0.3,
+    248,
+    41.6
+   ],
+   "face": "+y",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": [
+    "shell.N.win_bed.below (7.5 in)",
+    "shell.N.win_bed.near (7.5 in)",
+    "stud.W.239 (8.0 in)",
+    "shell.W.door_entry.far (8.0 in)",
+    "stud.N.4 (8.6 in)"
+   ]
+  },
+  {
+   "n": 1,
+   "at": [
+    34,
+    248,
+    109.1
+   ],
+   "face": "+y",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": [
+    "roof.cover (2.4 in)",
+    "gable.N.2 (7.6 in)",
+    "rafter.239 (8.0 in)",
+    "shell.N.win_bed.above (8.1 in)",
+    "gable.N.3 (8.5 in)",
+    "top2.N (8.6 in)"
+   ]
+  },
+  {
+   "n": 1,
+   "at": [
+    16.7,
+    -32,
+    117
+   ],
+   "face": "-y",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": []
+  },
+  {
+   "n": 1,
+   "at": [
+    50.8,
+    -32,
+    53.6
+   ],
+   "face": "-y",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": []
+  },
+  {
+   "n": 1,
+   "at": [
+    101.5,
+    40.1,
+    43.7
+   ],
+   "face": "+x",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": [
+    "shell.E.win_galley.near (0.0 in)",
+    "shell.E.win_galley.below (0.1 in)",
+    "stud.E.33 (6.6 in)",
+    "stud.E.49 (7.9 in)",
+    "block.shower (8.1 in)"
+   ]
+  },
+  {
+   "n": 1,
+   "at": [
+    101.5,
+    100.1,
+    43.7
+   ],
+   "face": "+x",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": [
+    "shell.E.win_galley.far (0.0 in)",
+    "shell.E.win_galley.below (0.1 in)",
+    "stud.E.97 (2.6 in)",
+    "jack.win.galley.1 (4.6 in)",
+    "top.galley (7.2 in)",
+    "cab.galley (8.5 in)"
+   ]
+  },
+  {
+   "n": 1,
+   "at": [
+    101.5,
+    140.1,
+    43.7
+   ],
+   "face": "+x",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": [
+    "shell.E.win_galley.far (0.0 in)",
+    "shell.E.win_galley.below (0.1 in)",
+    "stud.E.145 (3.9 in)",
+    "outlet.2 (7.6 in)"
+   ]
+  },
+  {
+   "n": 1,
+   "at": [
+    101.5,
+    180.1,
+    43.7
+   ],
+   "face": "+x",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": [
+    "shell.E.win_galley.far (0.0 in)",
+    "shell.E.win_galley.below (0.1 in)",
+    "stud.E.177 (2.6 in)"
+   ]
+  },
+  {
+   "n": 1,
+   "at": [
+    101.5,
+    200.1,
+    43.7
+   ],
+   "face": "+x",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": [
+    "shell.E.win_galley.far (0.0 in)",
+    "shell.E.win_galley.below (0.1 in)",
+    "stud.E.193 (6.6 in)",
+    "stud.E.209 (7.9 in)"
+   ]
+  },
+  {
+   "n": 1,
+   "at": [
+    72.5,
+    248,
+    41.7
+   ],
+   "face": "+y",
+   "extent": [
+    0,
+    0,
+    0
+   ],
+   "bounded": [
+    "shell.N.win_bed.far (7.5 in)",
+    "shell.N.win_bed.below (7.5 in)",
+    "king.win.bed.1 (8.0 in)",
+    "jack.win.bed.1 (8.1 in)",
+    "cripple.N.68.sill (8.7 in)"
+   ]
+  }
+ ]
+}

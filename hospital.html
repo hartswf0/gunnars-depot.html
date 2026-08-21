@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hospital — diagnostic imaging for buildings</title>
+<link rel="icon" href="assets/branding/favicon.svg">
+<style>
+  :root { --bg:#07090c; --panel:#0d1116; --ink:#e8edf3; --dim:#7c8894; --line:#1a222b;
+          --bad:#ef4444; --mid:#f59e0b; --ok:#22c55e; --cyan:#38bdf8; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent }
+  html,body { margin:0; min-height:100%; background:var(--bg); color:var(--ink);
+    font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace }
+  h1 { font-size:12px; letter-spacing:.16em; margin:0; font-weight:600 }
+  h2 { font-size:10px; letter-spacing:.16em; color:var(--dim); margin:18px 0 6px; font-weight:600 }
+  p  { margin:0 0 8px; color:var(--dim) }
+  a  { color:var(--cyan) }
+
+  header { position:sticky; top:0; z-index:5; background:rgba(7,9,12,.94); backdrop-filter:blur(8px);
+           border-bottom:1px solid var(--line); padding:8px 10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap }
+  select,button,input[type=file] { font:inherit; font-size:11px; background:#121922; color:var(--ink);
+    border:1px solid var(--line); padding:5px 8px; cursor:pointer; max-width:100% }
+  button:disabled { opacity:.35; cursor:default }
+  button.go { background:#152633; border-color:#24455c }
+  .grow { flex:1 }
+
+  main { padding:10px; max-width:1180px; margin:0 auto }
+  #stage { position:relative; height:44vh; min-height:240px; border:1px solid var(--line); background:#080b0e }
+  #stage canvas { display:block; width:100%; height:100% }
+  #admit { position:absolute; top:0; left:0; padding:7px 9px; font-size:10px; line-height:1.6;
+           background:linear-gradient(180deg,rgba(7,9,12,.9),rgba(7,9,12,0)); pointer-events:none }
+  #admit b { color:var(--ink); font-weight:600 }
+
+  .cal { border:1px solid var(--line); padding:7px 9px; margin:10px 0; font-size:11px }
+  .cal.ok { border-color:#14532d; background:#08160e } .cal.bad { border-color:#7f1d1d; background:#1a0a0b }
+
+  .studies { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0 }
+  .plates { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:8px }
+  figure { margin:0; background:var(--panel); border:1px solid var(--line) }
+  figure canvas { display:block; width:100%; height:auto; image-rendering:pixelated; background:#04060a }
+  figcaption { padding:5px 7px; font-size:10px; color:var(--dim) }
+  .scrub { display:flex; gap:6px; align-items:center; padding:5px 7px; border-top:1px solid var(--line) }
+  .scrub input[type=range] { flex:1 }
+
+  table { border-collapse:collapse; width:100%; font-size:11px }
+  th,td { text-align:left; padding:3px 8px 3px 0; border-bottom:1px solid #12181f; vertical-align:top }
+  th { color:var(--dim); font-size:9px; letter-spacing:.1em; text-transform:uppercase }
+  td.n { font-variant-numeric:tabular-nums; white-space:nowrap }
+  .sev3 { color:var(--bad) } .sev2 { color:var(--mid) } .sev1 { color:var(--dim) }
+  #log { font-size:11px; white-space:pre-wrap; color:var(--dim); border-left:2px solid var(--line);
+         padding:4px 0 4px 8px; max-height:170px; overflow-y:auto }
+  .sheet { display:grid; grid-template-columns:repeat(auto-fill,minmax(104px,1fr)); gap:5px }
+  .sheet figure canvas { height:104px }
+  .sheet figcaption { font-size:8px; word-break:break-all; padding:3px 4px }
+  .pill { display:inline-block; padding:1px 6px; border:1px solid var(--line); border-radius:99px;
+          font-size:9px; letter-spacing:.1em; color:var(--dim) }
+</style>
+</head>
+<body>
+<header>
+  <h1>HOSPITAL</h1>
+  <select id="patient" style="min-width:210px"></select>
+  <input id="file" type="file" accept=".stl,.dae,.glb,.gltf">
+  <button id="admitBtn" class="go">ADMIT</button>
+  <span class="grow"></span>
+  <span class="pill" id="who">no patient</span>
+</header>
+
+<main>
+  <div id="stage"><canvas id="c"></canvas><div id="admit">waiting for a patient</div></div>
+  <div id="calbox" class="cal">calibrating…</div>
+
+  <h2>Studies</h2>
+  <div class="studies" id="studies"></div>
+  <div id="log">ready.</div>
+
+  <div id="out"></div>
+
+  <h2>What this is</h2>
+  <p>A diagnostic bay. Any model in this repository can be admitted &mdash; a built
+  world with a full chart, or a bare mesh in STL, Collada or glTF &mdash; and the same
+  instruments run on it. Nothing here needs a key or a network.</p>
+  <p>Every study is calibrated before it is believed: the ray scanner is fired at a
+  box known to be sealed, and at the same box with a wall taken off. If the sealed
+  box leaks, the instrument is broken and nothing it says about a building means
+  anything. That is the only reading here that can tell <b>the building is wrong</b>
+  from <b>our eyes are wrong</b>.</p>
+  <p><a href="whats-fucked.html">what&#39;s fucked</a> &middot;
+     <a href="ingold-trailer.html">the trailer</a> &middot;
+     <a href="making-of.html">how it was made</a> &middot;
+     <a href="OPERATIVE_BUILDER.md">how it works</a></p>
+</main>
+
+<script type="importmap">
+{"imports":{"three":"./vendor/three/three.module.min.js","three/addons/":"./vendor/three/addons/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { View } from './operative/view.js';
+import { build } from './operative/ingold.js';
+import { seedTrailer } from './operative/kit.js';
+import { commit } from './operative/ops.js';
+import { loadMesh, standardise, meshBounds } from './operative/mesh.js';
+import * as R from './operative/radiography.js';
+import * as T from './operative/tomography.js';
+import { shake } from './operative/loads.js';
+import { rain } from './operative/weather.js';
+import { artificial, daylight } from './operative/light.js';
+import { compareToSheet } from './operative/spec.js';
+
+const $ = (s) => document.querySelector(s);
+const el = (t, cls, html) => { const n = document.createElement(t); if (cls) n.className = cls;
+  if (html !== undefined) n.innerHTML = html; return n; };
+const say = (m) => { $('#log').textContent = m + '\n' + $('#log').textContent.split('\n').slice(0, 12).join('\n'); };
+
+// ---------------------------------------------------------------- the ward
+// Every model in the repository, plus the two the builder makes itself. A patient
+// is either a world (which has a chart) or a mesh (which has only images).
+const WARD = [
+  { id: 'ingold', name: 'Ingold trailer — built', kind: 'world' },
+  { id: 'seed',   name: 'Seed kit — bare frame',  kind: 'world' },
+  ...['contractor-reality', 'wright-usonian', 'shigeru-ban-shelter',
+      'lacaton-vassal-economy', 'alexander-pattern-cabin'].flatMap(n =>
+    ['stl', 'dae', 'glb'].map(f => ({
+      id: `${n}.${f}`, name: `${n.replace(/-/g, ' ')} · ${f.toUpperCase()}`,
+      kind: 'mesh', url: `assets/models/concepts/${n}-trailer.${f}` }))),
+  ...['foundation-base', 'structural-frame', 'walls-exterior-shell',
+      'roof-cover-system', 'interior-finish-layer'].flatMap(n =>
+    ['stl', 'dae', 'glb'].map(f => ({
+      id: `${n}.${f}`, name: `${n.replace(/-/g, ' ')} · ${f.toUpperCase()}`,
+      kind: 'mesh', url: `assets/models/modules/${n}.${f}` })))
+];
+$('#patient').innerHTML = WARD.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+
+// ---------------------------------------------------------------- the table
+const view = new View($('#c'));
+// View draws on demand unless you start its loop. Without this the stage is a
+// black rectangle and everything else on the page works perfectly, which is a
+// convincing way to look broken.
+view.start();
+let PAUSED = false;
+const realRender = view.render.bind(view);
+view.render = function () { if (!PAUSED) realRender(); };
+view.controls.enableDamping = true;
+let meshGroup = null;
+let patient = null;                       // { world? tris? occ, air, name, format }
+
+function showWorld(world) {
+  if (meshGroup) { view.scene.remove(meshGroup); meshGroup = null; }
+  view.sync(world); view.resize(); view.frame(world);
+}
+function showMesh(tris) {
+  for (const [id, m] of view.meshes) { m.visible = false; }
+  if (meshGroup) view.scene.remove(meshGroup);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(tris, 3));
+  g.computeVertexNormals();
+  meshGroup = new THREE.Mesh(g, new THREE.MeshStandardMaterial({
+    color: 0xb08a5a, roughness: .85, metalness: .05, side: THREE.DoubleSide, flatShading: true }));
+  view.scene.add(meshGroup);
+  const b = meshBounds(tris);
+  view.resize();
+  view.camera.fov = 45; view.camera.updateProjectionMatrix();
+  const d = Math.max(...b.size) * 1.6;
+  view.camera.position.set(b.c[0] + d * .6, b.c[1] - d * .7, b.c[2] + d * .5);
+  view.camera.up.set(0, 0, 1);
+  view.controls.target.set(b.c[0], b.c[1], b.c[2]);
+  view.controls.update();
+}
+
+// ---------------------------------------------------------------- admission
+async function admit() {
+  const spec = WARD.find(p => p.id === $('#patient').value);
+  say(`admitting ${spec.name}…`);
+  $('#out').innerHTML = '';
+  if (spec.kind === 'world') {
+    const w = spec.id === 'ingold' ? build({ budget: 200 }).world
+                                   : (() => { const s = seedTrailer(); commit(s, 'nailOff', {}); return s; })();
+    patient = { name: spec.name, kind: 'world', world: w,
+                occ: R.occludersOf(w), air: R.occludersOf(w, { medium: 'air' }),
+                format: 'operative world' };
+    showWorld(w);
+  } else {
+    const res = await fetch(spec.url);
+    if (!res.ok) { say(`cannot fetch ${spec.url}`); return; }
+    const buf = await res.arrayBuffer();
+    admitMesh(spec.name, spec.url, buf);
+  }
+  describe();
+}
+function admitMesh(name, filename, buf) {
+  const m = loadMesh(filename, buf);
+  const st = standardise(m.tris, { upAxis: m.upAxis, format: m.format });
+  const occ = R.fromTriangles(st.tris);
+  patient = { name, kind: 'mesh', tris: st.tris, mesh: m, occ, air: occ,
+              parts: T.partsOf(m, st.tris), format: m.format,
+              upAxis: m.upAxis, scale: st.scale };
+  showMesh(st.tris);
+}
+function describe() {
+  const p = patient;
+  const b = R.bounds(p.occ.solids);
+  const ft = (n) => `${Math.floor(n / 12)}'-${Math.round(n % 12)}"`;
+  const lines = [
+    `<b>${p.name}</b>`,
+    `${p.format}${p.upAxis ? ` · ${p.upAxis}` : ''}${p.scale && p.scale !== 1 ? ` · ×${p.scale.toFixed(2)} to inches` : ''}`,
+    p.kind === 'world'
+      ? `${p.world.elements.size} members · ${p.world.joints.size} joints · ${p.world.conditions.length} open`
+      : `${p.occ.solids.length} triangles · ${p.parts.length} named parts`,
+    `${ft(b.size[0])} × ${ft(b.size[1])} × ${ft(b.size[2])}`
+  ];
+  $('#admit').innerHTML = lines.join('<br>');
+  $('#who').textContent = p.kind === 'world' ? 'has a chart' : 'images only';
+  say(`admitted. ${p.kind === 'world' ? 'Full chart available.' : 'No chart — this patient can only be imaged.'}`);
+}
+
+// ---------------------------------------------------------------- calibration
+function calibrate() {
+  const c = R.calibrate({ rays: 192 });
+  const box = $('#calbox');
+  box.className = 'cal ' + (c.sealedIsSealed && c.findsAKnownHole ? 'ok' : 'bad');
+  box.innerHTML = `<b>${c.verdict}</b><br>` +
+    `A box known to be sealed leaks <b>${c.noiseFloor}</b> of ${c.cast} rays. ` +
+    `The same box with one wall removed reads <b>${c.knownHoleReads}</b>. ` +
+    `Anything below the first number is the instrument, not the building.`;
+  return c;
+}
+
+// ---------------------------------------------------------------- plates
+function paint(canvas, w, h, px, peak, floor = 0.42) {
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const im = ctx.createImageData(w, h);
+  for (let i = 0; i < w * h; i++) {
+    const v = px[i] <= 0 || peak <= 0 ? 0 : floor + (1 - floor) * (Math.log1p(px[i]) / Math.log1p(peak));
+    im.data[i * 4] = Math.round(255 * Math.max(0, (v - 0.55) / 0.45) ** 0.9);
+    im.data[i * 4 + 1] = Math.round(255 * Math.max(0, (v - 0.25) / 0.75) ** 0.8);
+    im.data[i * 4 + 2] = Math.round(255 * Math.min(1, v / 0.35) ** 0.7);
+    im.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(im, 0, 0);
+}
+const LABEL_RGB = { 0: [8, 12, 18], 1: [226, 232, 240], 2: [56, 189, 248] };
+function paintLabels(canvas, s) {
+  canvas.width = s.w; canvas.height = s.h;
+  const ctx = canvas.getContext('2d');
+  const im = ctx.createImageData(s.w, s.h);
+  for (let i = 0; i < s.w * s.h; i++) {
+    const c = LABEL_RGB[s.px[i]] || LABEL_RGB[0];
+    im.data[i * 4] = c[0]; im.data[i * 4 + 1] = c[1]; im.data[i * 4 + 2] = c[2]; im.data[i * 4 + 3] = 255;
+  }
+  ctx.putImageData(im, 0, 0);
+}
+function plate(caption) {
+  const f = el('figure'); const c = el('canvas'); f.appendChild(c);
+  f.appendChild(el('figcaption', null, caption));
+  return { fig: f, canvas: c, caption: f.lastChild };
+}
+function section(title, note) {
+  const s = el('section');
+  s.appendChild(el('h2', null, title));
+  if (note) s.appendChild(el('p', null, note));
+  $('#out').appendChild(s);
+  return s;
+}
+
+// ---------------------------------------------------------------- studies
+const STUDIES = [];
+const study = (id, label, needs, run) => STUDIES.push({ id, label, needs, run });
+
+study('chart', 'CHART', 'world', () => {
+  const w = patient.world;
+  const s = section('Chart', 'Every deterministic check, and what the sheet asked for.');
+  const cs = w.conditions;
+  const t = el('table');
+  t.innerHTML = '<tr><th>code</th><th>says</th></tr>' + (cs.length
+    ? cs.map(c => `<tr class="sev${c.severity}"><td class="n">${c.code}</td><td>${c.message}</td></tr>`).join('')
+    : '<tr><td colspan="2">nothing outstanding — which is not the same as nothing wrong, ' +
+      'only that no check knows about it</td></tr>');
+  s.appendChild(t);
+  const cmp = compareToSheet(w);
+  const t2 = el('table');
+  t2.innerHTML = '<tr><th>asked</th><th>specified</th><th>built</th></tr>' +
+    cmp.rows.map(r => `<tr><td>${r.of}</td><td class="n">${r.want} ${r.unit || ''}</td>` +
+      `<td class="n" style="color:${r.meets ? 'var(--ok)' : 'var(--bad)'}">${r.got} ${r.unit || ''}</td></tr>`).join('');
+  s.appendChild(t2);
+});
+
+study('vitals', 'VITALS', 'world', () => {
+  const w = patient.world;
+  const s = section('Vitals', 'Weight, the road, the weather, and whether you can see.');
+  const sh = shake(w), rn = rain(w), ni = artificial(w), dy = daylight(w);
+  const rows = [
+    ['weight', `${sh.weight} lb`, ''],
+    ['road', `${sh.failures.length} joints over capacity`, 'FMCSA 393.102, plus a 2 g landing'],
+    ['roof', rn.drip ? `${rn.drip.slope} in per foot` : 'no roof found', 'IRC R905.10.1 wants 0.25'],
+    ['penetrations', `${rn.penetrations.filter(p => !p.flashed).length} of ${rn.penetrations.length} unflashed`, ''],
+    ['ponding', `${rn.ponds.length} surfaces`, ''],
+    ['light', ni ? `${ni.watts} W → ${ni.average} fc` : '—', ni ? `${ni.target} fc is habitable` : ''],
+    ['daylight', dy ? `${dy.glazingArea} of ${dy.floorArea} sq ft (${(dy.glazingFraction * 100).toFixed(1)}%)` : '—',
+      'IRC R303.1 wants 8%']
+  ];
+  const t = el('table');
+  t.innerHTML = '<tr><th>vital</th><th>reading</th><th>against</th></tr>' +
+    rows.map(r => `<tr><td>${r[0]}</td><td class="n">${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+  s.appendChild(t);
+});
+
+study('scan', 'ESCAPE SCAN', 'any', () => {
+  const p = patient;
+  const em = p.kind === 'world' ? R.emittersFor(p.world, { step: 20 })
+                                : R.interiorOf(p.occ, { step: Math.max(10, Math.hypot(...R.bounds(p.occ.solids).size) / 16) });
+  if (!em.length) { say('no interior found to stand a lamp in'); return; }
+  const sc = R.scan(p.occ, em, { rays: 256 });
+  const cl = R.clusters(sc.escapes, 10);
+  const s = section('Escape scan',
+    `${em.length} lamps, ${sc.cast} rays. ${sc.escapes.length} got out where they should not; ` +
+    `${sc.viaOpening.length} through an opening. The plate is the building unfolded — roof on top, ` +
+    `underside at the bottom, the four walls between. A seam draws itself as a line.`);
+  const g = el('div', 'plates');
+  const u = R.unwrap(sc.escapes, sc.bounds, 200);
+  const a = plate(`LEAKS — ${sc.escapes.length} rays, brightest pixel ${u.peak}`);
+  paint(a.canvas, u.w, u.h, u.px, Math.max(u.peak, 1)); g.appendChild(a.fig);
+  const uo = R.unwrap(sc.viaOpening, sc.bounds, 200);
+  const b = plate(`THROUGH OPENINGS — ${sc.viaOpening.length} rays. The control group: ` +
+                  `if this is empty, the openings are not openings.`);
+  paint(b.canvas, uo.w, uo.h, uo.px, Math.max(uo.peak, 1)); g.appendChild(b.fig);
+  s.appendChild(g);
+  if (cl.length) {
+    const t = el('table');
+    t.innerHTML = '<tr><th>rays</th><th>face</th><th>at</th><th>extent</th><th>bounded by</th></tr>' +
+      cl.slice(0, 20).map(c => `<tr><td class="n">${c.n}</td><td>${c.face}</td><td class="n">${c.at.join(', ')}</td>` +
+        `<td class="n">${c.extent.join(' × ')}</td><td>${p.kind === 'world'
+          ? R.around(p.world, c.at, 10).slice(0, 3).map(x => x.id).join(', ') : '—'}</td></tr>`).join('');
+    s.appendChild(t);
+  }
+});
+
+study('ct', 'CT', 'any', () => {
+  const p = patient;
+  const step = Math.max(1.5, Math.hypot(...R.bounds(p.occ.solids).size) / 140);
+  const v = T.flood(T.voxelise(p.air, { step }));
+  const cav = T.cavities(v);
+  const s = section('CT',
+    `A grid at ${step.toFixed(1)} in, flooded with air from the outside inward. What the flood ` +
+    `cannot reach is enclosed: the rooms, the stud bays, and any pocket nobody meant to make. ` +
+    `White is material, blue is enclosed air, black is outside. ` +
+    `<b>Anything narrower than ${step.toFixed(1)} in reads as sealed</b> — the escape scan is the ` +
+    `instrument for holes smaller than that, and the two disagreeing is information.`);
+  const stat = el('table');
+  const totalCf = (n) => +(n * step ** 3 / 1728).toFixed(1);
+  stat.innerHTML = '<tr><th></th><th>cells</th><th>cu ft</th></tr>' +
+    [['material', v.material], ['enclosed', v.enclosed], ['outside', v.outside]]
+      .map(([k, n]) => `<tr><td>${k}</td><td class="n">${n}</td><td class="n">${totalCf(n)}</td></tr>`).join('');
+  s.appendChild(stat);
+  // Is the inside actually inside?
+  if (p.kind === 'world') {
+    const b = R.bounds(p.occ.solids);
+    const route = T.escapeRoute(v, [b.c[0], b.c[1], b.lo[2] + b.size[2] * 0.4]);
+    s.appendChild(el('p', null, route.sealed
+      ? 'From the middle of the building, air has no path out. Sealed, at this resolution.'
+      : `From the middle of the building, air walks out at ${route.out.join(', ')} in ${route.cells} steps.`));
+  }
+  if (cav.length) {
+    const t = el('table');
+    t.innerHTML = '<tr><th>cu ft</th><th>from</th><th>to</th></tr>' + cav.slice(0, 12)
+      .map(c => `<tr><td class="n">${c.volume}</td><td class="n">${c.lo.join(', ')}</td><td class="n">${c.hi.join(', ')}</td></tr>`).join('');
+    s.appendChild(t);
+  }
+  const g = el('div', 'plates');
+  for (const [axis, label] of [[0, 'SAGITTAL — across the width'], [1, 'CORONAL — across the length'], [2, 'AXIAL — the plan cut']]) {
+    const n = T.sliceCount(v, axis);
+    const f = el('figure'); const c = el('canvas'); f.appendChild(c);
+    const cap = el('figcaption', null, label);
+    f.appendChild(cap);
+    const bar = el('div', 'scrub');
+    const range = el('input'); range.type = 'range'; range.min = 0; range.max = n - 1;
+    range.value = Math.floor(n / 2);
+    const at = el('span', 'n');
+    const draw = () => { const sl = T.slice(v, axis, +range.value);
+      paintLabels(c, sl); at.textContent = `${sl.at} in`; };
+    range.oninput = draw;
+    bar.appendChild(range); bar.appendChild(at);
+    f.appendChild(bar);
+    g.appendChild(f); draw();
+  }
+  s.appendChild(g);
+});
+
+study('xray', 'RADIOGRAPH', 'any', () => {
+  const p = patient;
+  const s = section('Radiographs',
+    'Parallel rays through the whole thing, each carrying how much material it passed through. ' +
+    'This finds nothing on its own; it shows density, and a part that is not where anyone thought ' +
+    'it was shows up as a shadow in the wrong place.');
+  const g = el('div', 'plates');
+  for (const [axis, label] of [[0, 'ALONG X'], [1, 'ALONG Y'], [2, 'ALONG Z — plan']]) {
+    const im = R.radiograph(p.occ, axis, { w: 300, h: 300 });
+    const f = plate(label);
+    paint(f.canvas, im.w, im.h, im.px, im.peak, 0);
+    g.appendChild(f.fig);
+  }
+  s.appendChild(g);
+});
+
+study('exposure', 'EXPOSURE', 'any', () => {
+  const p = patient;
+  const step = Math.max(1.5, Math.hypot(...R.bounds(p.occ.solids).size) / 120);
+  const v = T.flood(T.voxelise(p.air, { step }));
+  const subjects = p.kind === 'mesh' ? p.parts : null;
+  const ex = T.exposure(p.air, { rays: 32, subjects, enclosure: v });
+  const un = T.unexpectedExposure(p.air, ex, { subjects });
+  const s = section('Exposure',
+    'The lamp goes on each part in turn, standing in the enclosed air beside it, and the reading is ' +
+    'how much sky that part can see. An exterior panel is supposed to see sky. A cabinet is not. ' +
+    `<br><span class="pill">${un.basis || ''}</span>`);
+  const t = el('table');
+  t.innerHTML = '<tr><th>sees sky</th><th>part</th><th>layer</th><th>which way out</th></tr>' +
+    (un.length ? un : ex).slice(0, 24).map(x =>
+      `<tr><td class="n">${(x.fraction * 100).toFixed(1)}%</td><td>${x.id}</td><td>${x.layer || ''}</td>` +
+      `<td class="n">${Object.entries(x.faces).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([f, n]) => `${f}:${n}`).join(' ')}</td></tr>`).join('');
+  s.appendChild(t);
+  s.appendChild(el('p', null,
+    `${ex.filter(x => x.outside).length} parts had nowhere inside to stand a lamp — they are the ` +
+    `outside of the building, which is what that means.`));
+});
+
+study('sheet', 'CONTACT SHEET', 'any', () => {
+  const p = patient;
+  const s = section('Contact sheet',
+    'A close-up of each part. One sheet of tiles can be compared to itself; ninety separate images ' +
+    'cannot. Difference is easier to see than absence.' + (p.kind === 'world'
+      ? ' The subject is lit and its neighbours are ghosted.'
+      : ' A mesh is one object with named parts rather than addressable members, so the subject is ' +
+        'caged rather than painted, and the shell is made translucent to see the cage through it.'));
+  const g = el('div', 'sheet');
+  s.appendChild(g);
+  PAUSED = true;
+  if (meshGroup) { meshGroup.material.transparent = true; meshGroup.material.opacity = 0.22; }
+  const items = p.kind === 'world'
+    ? p.world.solids().filter(e => e.kind !== 'run')
+    : p.parts;
+  const stepN = Math.max(1, Math.ceil(items.length / 60));
+  const chosen = items.filter((_, i) => i % stepN === 0).slice(0, 60);
+  say(`contact sheet: ${chosen.length} of ${items.length} parts (every ${stepN})`);
+  // Render one at a time so the page stays alive on a phone.
+  let i = 0;
+  const next = () => {
+    if (i >= chosen.length) {
+      if (meshGroup) meshGroup.material.opacity = 1;
+      PAUSED = false; restoreView(); say('contact sheet done'); return;
+    }
+    const e = chosen[i++];
+    const f = el('figure'); const c = el('canvas');
+    f.appendChild(c); f.appendChild(el('figcaption', null, e.id));
+    g.appendChild(f);
+    closeUp(e, c);
+    setTimeout(next, 0);
+  };
+  next();
+});
+
+/** One tile: frame the part, light it, ghost everything else. */
+function closeUp(e, canvas) {
+  const p = patient;
+  const lo = e.lo, hi = e.hi;
+  const c = [0, 1, 2].map(i => (lo[i] + hi[i]) / 2);
+  const span = Math.max(...[0, 1, 2].map(i => hi[i] - lo[i]));
+  const dist = Math.max(span * 1.9, 22);
+  // The loop calls controls.update() every frame and OrbitControls damps the
+  // camera back toward its own target, so a tile photographed a frame later is a
+  // photograph of somewhere else. Stop the loop for the duration of the sheet.
+  view.controls.enabled = false;
+  view.camera.fov = 40; view.camera.near = 0.5;
+  view.camera.updateProjectionMatrix();
+  view.camera.position.set(c[0] + dist * 0.55, c[1] - dist * 0.66, c[2] + dist * 0.5);
+  view.camera.up.set(0, 0, 1);
+  view.camera.lookAt(c[0], c[1], c[2]);
+  view.camera.updateMatrixWorld(true);
+  if (p.kind === 'world') {
+    for (const [id, m] of view.meshes) {
+      const sub = id === e.id;
+      m.visible = true; m.material.transparent = true;
+      m.material.opacity = sub ? 1 : 0.10;
+      m.material.color.setHex(sub ? 0x38f2c8 : (paintOf(id) ?? 0x9aa3ad));
+      m.material.depthWrite = sub; m.material.depthTest = !sub ? true : false;
+      m.renderOrder = sub ? 999 : 0;
+    }
+    if (view.openingGroup) view.openingGroup.visible = false;
+  }
+  cage(e);
+  realRender();
+  const src = $('#c');
+  canvas.width = 208; canvas.height = 208;
+  canvas.getContext('2d').drawImage(src, 0, 0, src.width, src.height, 0, 0, 208, 208);
+}
+const PAINT = new Map();
+function paintOf(id) {
+  if (!PAINT.has(id)) { const m = view.meshes.get(id); PAINT.set(id, m ? m.material.color.getHex() : 0x9aa3ad); }
+  return PAINT.get(id);
+}
+let CAGE = null;
+function cage(e) {
+  if (!CAGE) {
+    CAGE = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)),
+      new THREE.LineBasicMaterial({ color: 0x38f2c8, depthTest: false }));
+    CAGE.renderOrder = 1000; view.scene.add(CAGE);
+  }
+  CAGE.visible = true;
+  CAGE.matrixAutoUpdate = false;
+  CAGE.matrix.identity();
+  CAGE.matrix.makeScale(Math.max(0.5, e.hi[0] - e.lo[0]), Math.max(0.5, e.hi[1] - e.lo[1]), Math.max(0.5, e.hi[2] - e.lo[2]));
+  CAGE.matrix.setPosition((e.lo[0] + e.hi[0]) / 2, (e.lo[1] + e.hi[1]) / 2, (e.lo[2] + e.hi[2]) / 2);
+  // With matrixAutoUpdate off, setting .matrix does not mark the world matrix
+  // stale, and every tile comes back identical while looking entirely plausible.
+  CAGE.matrixWorldNeedsUpdate = true;
+  CAGE.updateMatrixWorld(true);
+}
+function restoreView() {
+  if (CAGE) CAGE.visible = false;
+  if (view.openingGroup) view.openingGroup.visible = true;
+  for (const [id, m] of view.meshes) {
+    m.material.opacity = 1; m.material.depthWrite = true; m.material.depthTest = true;
+    m.renderOrder = 0; m.material.color.setHex(paintOf(id));
+  }
+  if (patient && patient.kind === 'world') view.frame(patient.world);
+  else if (patient) showMesh(patient.tris);
+  view.controls.enabled = true;
+  view.render();
+}
+
+// ---------------------------------------------------------------- wiring
+$('#studies').innerHTML = STUDIES.map(s =>
+  `<button data-study="${s.id}">${s.label}</button>`).join('') +
+  `<button data-study="__all" class="go">RUN ALL</button>` +
+  `<button data-study="__reset">RESET VIEW</button>`;
+$('#studies').onclick = async (ev) => {
+  const id = ev.target.dataset && ev.target.dataset.study;
+  if (!id) return;
+  if (id === '__reset') return restoreView();
+  if (!patient) return say('admit a patient first');
+  const list = id === '__all' ? STUDIES : STUDIES.filter(s => s.id === id);
+  for (const s of list) {
+    if (s.needs === 'world' && patient.kind !== 'world') { say(`${s.label}: this patient has no chart`); continue; }
+    say(`${s.label}…`);
+    await new Promise(r => setTimeout(r, 0));
+    const t0 = performance.now();
+    try { s.run(); say(`${s.label} — ${((performance.now() - t0) / 1000).toFixed(1)}s`); }
+    catch (e) { say(`${s.label} failed: ${e.message}`); }
+  }
+};
+$('#admitBtn').onclick = admit;
+$('#patient').onchange = admit;
+$('#file').onchange = (ev) => {
+  const f = ev.target.files[0]; if (!f) return;
+  const fr = new FileReader();
+  fr.onload = () => { try { admitMesh(f.name, f.name, fr.result); describe(); $('#out').innerHTML = ''; }
+                      catch (e) { say(`cannot read ${f.name}: ${e.message}`); } };
+  fr.readAsArrayBuffer(f);
+};
+addEventListener('resize', () => { view.resize(); view.render(); });
+
+calibrate();
+admit();
+window.hospital = { get patient() { return patient; }, view, R, T, STUDIES };
+</script>
+</body>
+</html>

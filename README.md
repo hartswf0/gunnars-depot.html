@@ -4,11 +4,27 @@
 
 Gunnar's Depot is a browser-based modular structure forge for builders, contractors, designers, and clients who need to see it, split it, change it, explain it, and build it.
 
-The GitHub Pages entry point is `index.html`. The new mobile-first builder base is `gunnar-thunder-builder.html`; the family game surfaces are `builders-game.html` and `city-builder-game.html`; the branded depot app remains `gunnars-depot.html`.
+The GitHub Pages entry point is `index.html`. The Three.js building environment that answers back is `operative-builder.html`; the mobile-first builder base is `gunnar-thunder-builder.html`; the family game surfaces are `builders-game.html` and `city-builder-game.html`; the branded depot app remains `gunnars-depot.html`.
 
 ## What Is Included
 
 - `index.html` - mobile-friendly launcher for GitHub Pages.
+- `hospital.html` - a diagnostic bay. Admit any model in this repository - a built world with a full chart, or a bare mesh in STL, Collada or glTF - and run the same instruments on it: escape scan, CT with a slice scrubber, radiographs, per-part exposure, contact sheet. Calibrated against a box known to be sealed before anything it says is believed. No key, no network.
+- `ant-scout.html` - a stigmergic colony that forages for defects instead of food. Ants crawl the model's surfaces, fire a small lidar fan from wherever they stand, and report daylight, clashes, cliffs, cavities and unjoined pairs. A finding is ranked by how many ants arrived at it independently, not by how loud it was; pheromone evaporates, so an uncorroborated rumour costs nothing to forget. Remove a member and watch the colony converge, with the deterministic checks and the ray survey running alongside. Works on the built trailer and on any bare mesh.
+- `whats-fucked.html` - assumes the build is wrong and goes looking. Photographs the model from twelve named views, scores each one, and runs two agents with separate context windows - a critic that only accuses, a builder that only acts. Worst view wins, never the average; a clean view moves the camera rather than ending anything.
+- `ingold-trailer.html` - the 8'-6" x 20'-0" trailer from the reference sheets: 407 members, 558 joints, five connected systems, 7,050 lb, built by the operative loop and replayed move by move.
+- `making-of.html` - a plain transcript of how it was made: what was asked for against what got built, then the consequential loops with their commands, answers and screenshots.
+- `tools/session-record.mjs` - regenerates that record from a Claude Code session transcript.
+- `operative-builder.html` - Three.js building environment where instructions become framing operations and the framing answers back. See [OPERATIVE_BUILDER.md](OPERATIVE_BUILDER.md).
+- `operative/` - the world model, deterministic checks, operations, reference comparison, and view behind it.
+- `vendor/three/` - vendored three.js (r185, MIT) so the app runs with no CDN.
+- `tests/run.mjs` - `node tests/run.mjs` runs 302 assertions against the world model and the built trailer.
+- `tools/spec-report.mjs` - rebuilds `data/spec-report.json` by running the builder and measuring the result against the spec sheet.
+- `tools/shoot.mjs` - photographs the built trailer from all twelve views into `assets/views/`, with a manifest that records which pictures are renders and which are references.
+- `tools/taxonomy.mjs` - counts what actually goes wrong, in three separate populations: what the checks caught, what went wrong writing the builder, and what a person caught by looking. Writes `data/error-taxonomy.json`.
+- `tools/flyseye.mjs` - a close-up of every part on one contact sheet, subject painted and neighbours ghosted, so a model can compare ninety of them at once instead of looking at ninety images. Writes `assets/flyseye/sheet.html`.
+- `tools/scan.mjs` - fills the building with light and records where it gets out. Calibrates against a box known to be sealed first, then writes an unfolded exposure plate, three radiographs and a list of leaks with the parts that bound each one. `--stl path` scans any existing structure instead. Writes `assets/scan/scan.html`.
+- `making-of.html` - the 18 decisions the builder made, and the session that produced the builder, as a plain transcript.
 - `gunnar-thunder-builder.html` - mobile-first parts/layers builder for importing one DAE/STL as the base and building with editable widgets.
 - `builders-game.html` - mobile Builder's Language trailer game where commands become parts on a build grid.
 - `city-builder-game.html` - mobile city-builder sim with map layers, reversible planning, Gemini advisor/drafts, roads, zones, utilities, cash, and happiness.
@@ -26,6 +42,7 @@ The GitHub Pages entry point is `index.html`. The new mobile-first builder base 
 
 Open `index.html` on GitHub Pages, then launch:
 
+- **Operative Builder**: a building environment that resists. Cut an opening and the interrupted studs say so; route a 2 in supply and the bore rules refuse it; bind one of the five concept studies and the silhouette comparison names what disagrees. Drag a member and its neighbours answer live before anything is committed; long-press it and its earlier positions stand in the world as ghosts you can argue with. Every member can report how it became what it is, every move walks back, and rules the build keeps breaking get promoted to invariants at runtime.
 - **Gunnar's Depot**: main branded modular structure tool.
 - **Gunnar Thunder Builder**: sharper builder surface with widgets, scene hierarchy, layer visibility, haptics, sound, DAE/STL import, and STL/JSON export.
 - **Builder's Game**: family-friendly mobile game where block, pillar, slab, and beam commands become trailer-building actions.

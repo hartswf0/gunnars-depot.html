@@ -1,0 +1,207 @@
+[
+  {
+    "activity": "AT THE SINK",
+    "at": "sink",
+    "headTop": 84,
+    "work": {
+      "bone": "rightHand",
+      "want": "basin",
+      "at": [
+        83.3,
+        84,
+        56.8
+      ],
+      "reached": true,
+      "off": 0,
+      "effort": 0.74,
+      "ok": true
+    },
+    "clash": 0,
+    "collisions": [],
+    "ok": true,
+    "file": "at-the-sink.png"
+  },
+  {
+    "activity": "COOKING",
+    "at": "cooktop",
+    "headTop": 86,
+    "work": {
+      "bone": "rightHand",
+      "want": "worktop",
+      "at": [
+        83.3,
+        104,
+        60.8
+      ],
+      "reached": true,
+      "off": 0,
+      "effort": 0.76,
+      "ok": true
+    },
+    "clash": 0,
+    "collisions": [],
+    "ok": true,
+    "file": "cooking.png"
+  },
+  {
+    "activity": "AT THE WORKTOP",
+    "at": "top.galley",
+    "headTop": 85,
+    "work": {
+      "bone": "rightHand",
+      "want": "worktop",
+      "at": [
+        82.2,
+        91,
+        58.8
+      ],
+      "reached": true,
+      "off": 0,
+      "effort": 0.74,
+      "ok": true
+    },
+    "clash": 0,
+    "collisions": [],
+    "ok": true,
+    "file": "at-the-worktop.png"
+  },
+  {
+    "activity": "ON THE TOILET",
+    "at": "wc",
+    "headTop": 70,
+    "work": {
+      "bone": "hips",
+      "want": "seat",
+      "handZ": 33,
+      "surfaceZ": 33,
+      "off": 0,
+      "ok": true
+    },
+    "clash": 0,
+    "collisions": [],
+    "ok": true,
+    "file": "on-the-toilet.png"
+  },
+  {
+    "activity": "EATING AT THE TABLE",
+    "at": "bench.W",
+    "headTop": 71,
+    "work": {
+      "bone": "hips",
+      "want": "seat",
+      "handZ": 34,
+      "surfaceZ": 34,
+      "off": 0,
+      "ok": true
+    },
+    "clash": 0,
+    "collisions": [],
+    "ok": true,
+    "file": "eating-at-the-table.png"
+  },
+  {
+    "activity": "WORKING AT THE TABLE",
+    "at": "bench.W",
+    "headTop": 69,
+    "work": {
+      "bone": "hips",
+      "want": "seat",
+      "handZ": 34,
+      "surfaceZ": 34,
+      "off": 0,
+      "ok": true
+    },
+    "clash": 0,
+    "collisions": [],
+    "ok": true,
+    "file": "working-at-the-table.png"
+  },
+  {
+    "activity": "IN BED",
+    "at": "mattress",
+    "headTop": 59,
+    "work": {
+      "bone": "hips",
+      "want": "mattress",
+      "handZ": 41,
+      "surfaceZ": 40,
+      "off": 2,
+      "ok": true
+    },
+    "clash": 0,
+    "collisions": [],
+    "ok": true,
+    "file": "in-bed.png"
+  },
+  {
+    "activity": "SHOWERING",
+    "at": "shower.pan",
+    "headTop": 87,
+    "work": {
+      "bone": "leftFoot",
+      "want": "the pan",
+      "handZ": 16,
+      "surfaceZ": 19,
+      "off": -3,
+      "ok": true
+    },
+    "clash": 0,
+    "collisions": [],
+    "ok": true,
+    "file": "showering.png"
+  },
+  {
+    "activity": "CLEANING THE FLOOR",
+    "at": "deck.fore",
+    "headTop": 53,
+    "work": {
+      "bone": "rightHand",
+      "want": "the floor",
+      "at": [
+        60.5,
+        57.5,
+        17.8
+      ],
+      "reached": true,
+      "off": 0,
+      "effort": 0.91,
+      "ok": true
+    },
+    "clash": 0,
+    "collisions": [],
+    "ok": true,
+    "file": "cleaning-the-floor.png"
+  },
+  {
+    "activity": "REACHING THE HIGH SHELF",
+    "at": "cab.galley",
+    "headTop": 86,
+    "work": {
+      "bone": "rightHand",
+      "want": "overhead",
+      "at": [
+        82.2,
+        91,
+        81.3
+      ],
+      "reached": true,
+      "off": 0,
+      "effort": 0.87,
+      "ok": true
+    },
+    "clash": 0,
+    "collisions": [],
+    "ok": true,
+    "file": "reaching-the-high-shelf.png"
+  },
+  {
+    "activity": "STANDING IN THE DOOR",
+    "at": "door.entry",
+    "headTop": 87,
+    "work": null,
+    "clash": 0,
+    "collisions": [],
+    "ok": true,
+    "file": "standing-in-the-door.png"
+  }
+]

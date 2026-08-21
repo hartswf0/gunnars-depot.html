@@ -1,0 +1,549 @@
+{
+ "rows": [
+  {
+   "of": "length",
+   "got": 241,
+   "want": 240,
+   "unit": "in",
+   "note": "framing; the propane bottle hangs on the tongue beyond it",
+   "meets": true,
+   "delta": 1
+  },
+  {
+   "of": "width",
+   "got": 102,
+   "want": 102,
+   "unit": "in",
+   "note": "overall, wheels and skin included — this is what the road measures",
+   "meets": true,
+   "delta": 0
+  },
+  {
+   "of": "height",
+   "got": 122.5,
+   "want": 126,
+   "unit": "in",
+   "note": "under the sheet: width was the binding constraint, not height",
+   "meets": true,
+   "delta": -3.5
+  },
+  {
+   "of": "sleeping",
+   "got": 1,
+   "want": 1,
+   "unit": "person",
+   "note": "75 x 52 in — the axle decided the depth",
+   "meets": true,
+   "delta": 0
+  },
+  {
+   "of": "water",
+   "got": 68.6,
+   "want": 65,
+   "unit": "gal",
+   "note": "fresh; the sheet lists no grey capacity, so grey leaves the building",
+   "meets": true,
+   "delta": 3.6
+  },
+  {
+   "of": "power",
+   "got": "off-grid",
+   "want": "off-grid",
+   "unit": "",
+   "note": "400 W of array, no shore connection",
+   "meets": true
+  }
+ ],
+ "systems": [
+  {
+   "system": "water",
+   "parts": 38,
+   "devices": 6,
+   "connected": 6
+  },
+  {
+   "system": "waste",
+   "parts": 23,
+   "devices": 7,
+   "connected": 7
+  },
+  {
+   "system": "power",
+   "parts": 73,
+   "devices": 21,
+   "connected": 21
+  },
+  {
+   "system": "propane",
+   "parts": 14,
+   "devices": 2,
+   "connected": 2
+  },
+  {
+   "system": "flue",
+   "parts": 3,
+   "devices": 2,
+   "connected": 2
+  }
+ ],
+ "power": {
+  "dailyWh": 843,
+  "bankWh": 2400,
+  "usableWh": 1920,
+  "pvWatts": 400,
+  "pvDailyWh": 1200,
+  "loads": 13
+ },
+ "members": 407,
+ "open": 0,
+ "joints": 558,
+ "loop": {
+  "state": "SETTLED",
+  "steps": 45,
+  "seconds": 27.5,
+  "walkedBack": 0,
+  "moves": [
+   {
+    "step": 1,
+    "answering": "UNJOINED",
+    "brief": false,
+    "move": "nailOff",
+    "note": "nailed off 321 joints; 399 contacts have no schedule entry",
+    "kept": true,
+    "before": 201,
+    "after": 38
+   },
+   {
+    "step": 2,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.1 screwed to rafter.1 (rafter)",
+    "kept": true,
+    "before": 38,
+    "after": 36
+   },
+   {
+    "step": 3,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.17 screwed to rafter.17 (rafter)",
+    "kept": true,
+    "before": 36,
+    "after": 34
+   },
+   {
+    "step": 4,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.33 screwed to rafter.33 (rafter)",
+    "kept": true,
+    "before": 34,
+    "after": 32
+   },
+   {
+    "step": 5,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.49 screwed to rafter.49 (rafter)",
+    "kept": true,
+    "before": 32,
+    "after": 30
+   },
+   {
+    "step": 6,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.65 screwed to rafter.65 (rafter)",
+    "kept": true,
+    "before": 30,
+    "after": 28
+   },
+   {
+    "step": 7,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.81 screwed to rafter.81 (rafter)",
+    "kept": true,
+    "before": 28,
+    "after": 26
+   },
+   {
+    "step": 8,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.97 screwed to rafter.97 (rafter)",
+    "kept": true,
+    "before": 26,
+    "after": 24
+   },
+   {
+    "step": 9,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.113 screwed to rafter.113 (rafter)",
+    "kept": true,
+    "before": 24,
+    "after": 22
+   },
+   {
+    "step": 10,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.129 screwed to rafter.129 (rafter)",
+    "kept": true,
+    "before": 22,
+    "after": 20
+   },
+   {
+    "step": 11,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.145 screwed to rafter.145 (rafter)",
+    "kept": true,
+    "before": 20,
+    "after": 18
+   },
+   {
+    "step": 12,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.161 screwed to rafter.161 (rafter)",
+    "kept": true,
+    "before": 18,
+    "after": 16
+   },
+   {
+    "step": 13,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.177 screwed to rafter.177 (rafter)",
+    "kept": true,
+    "before": 16,
+    "after": 14
+   },
+   {
+    "step": 14,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.193 screwed to rafter.193 (rafter)",
+    "kept": true,
+    "before": 14,
+    "after": 12
+   },
+   {
+    "step": 15,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.209 screwed to rafter.209 (rafter)",
+    "kept": true,
+    "before": 12,
+    "after": 10
+   },
+   {
+    "step": 16,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "bird.E.225 screwed to rafter.225 (rafter)",
+    "kept": true,
+    "before": 10,
+    "after": 8
+   },
+   {
+    "step": 17,
+    "answering": "REQUIREMENT_FAILED",
+    "brief": true,
+    "move": "stage",
+    "note": "stage openings",
+    "kept": true,
+    "before": 8,
+    "after": 12
+   },
+   {
+    "step": 18,
+    "answering": "UNJOINED",
+    "brief": false,
+    "move": "nailOff",
+    "note": "nailed off 158 joints; 575 contacts have no schedule entry",
+    "kept": true,
+    "before": 12,
+    "after": 5
+   },
+   {
+    "step": 19,
+    "answering": "REQUIREMENT_FAILED",
+    "brief": true,
+    "move": "stage",
+    "note": "stage interior",
+    "kept": true,
+    "before": 5,
+    "after": 35
+   },
+   {
+    "step": 20,
+    "answering": "UNJOINED",
+    "brief": false,
+    "move": "nailOff",
+    "note": "nailed off 25 joints; 591 contacts have no schedule entry",
+    "kept": true,
+    "before": 35,
+    "after": 9
+   },
+   {
+    "step": 21,
+    "answering": "REQUIREMENT_FAILED",
+    "brief": true,
+    "move": "stage",
+    "note": "stage services",
+    "kept": true,
+    "before": 9,
+    "after": 43
+   },
+   {
+    "step": 22,
+    "answering": "UNJOINED",
+    "brief": false,
+    "move": "nailOff",
+    "note": "nailed off 7 joints; 595 contacts have no schedule entry",
+    "kept": true,
+    "before": 43,
+    "after": 21
+   },
+   {
+    "step": 23,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "grey.out hung from deck.fore on a 2.5 in hanger — it stays where it is",
+    "kept": true,
+    "before": 21,
+    "after": 18
+   },
+   {
+    "step": 24,
+    "answering": "REQUIREMENT_FAILED",
+    "brief": true,
+    "move": "stage",
+    "note": "stage venting",
+    "kept": true,
+    "before": 18,
+    "after": 21
+   },
+   {
+    "step": 25,
+    "answering": "FLOATING",
+    "brief": false,
+    "move": "mount",
+    "note": "trap.shower.pan hung from deck.fore (deck)",
+    "kept": true,
+    "before": 21,
+    "after": 20
+   },
+   {
+    "step": 26,
+    "answering": "REQUIREMENT_FAILED",
+    "brief": true,
+    "move": "stage",
+    "note": "stage propane",
+    "kept": true,
+    "before": 20,
+    "after": 29
+   },
+   {
+    "step": 27,
+    "answering": "UNJOINED",
+    "brief": false,
+    "move": "nailOff",
+    "note": "nailed off 4 joints; 607 contacts have no schedule entry",
+    "kept": true,
+    "before": 29,
+    "after": 21
+   },
+   {
+    "step": 28,
+    "answering": "REQUIREMENT_FAILED",
+    "brief": true,
+    "move": "stage",
+    "note": "stage electrical",
+    "kept": true,
+    "before": 21,
+    "after": 29
+   },
+   {
+    "step": 29,
+    "answering": "UNJOINED",
+    "brief": false,
+    "move": "nailOff",
+    "note": "nailed off 4 joints; 619 contacts have no schedule entry",
+    "kept": true,
+    "before": 29,
+    "after": 14
+   },
+   {
+    "step": 30,
+    "answering": "UNDERSIZED_CONDUCTOR",
+    "brief": false,
+    "move": "regauge",
+    "note": "bank.inverter: 8 AWG -> 2/0 AWG",
+    "kept": true,
+    "before": 14,
+    "after": 13
+   },
+   {
+    "step": 31,
+    "answering": "EDGE_CLEARANCE",
+    "brief": false,
+    "move": "reroute",
+    "note": "run lpg.heater rerouted: centred in joist.113 on y; centred in fridge on y",
+    "kept": true,
+    "before": 13,
+    "after": 12
+   },
+   {
+    "step": 32,
+    "answering": "UNVENTED_TRAP",
+    "brief": false,
+    "move": "vent",
+    "note": "1.5 in vent at trap.shower.pan, stack up through the roof, hung from shell.E.win_galley.below on a 1.0 in hanger — it stays where it is",
+    "kept": true,
+    "before": 12,
+    "after": 12
+   },
+   {
+    "step": 33,
+    "answering": "UNFLASHED",
+    "brief": false,
+    "move": "flash",
+    "note": "run.stack.vent.stack.3 flashed where it comes through roof.cover — 11 in apron and a storm collar",
+    "kept": true,
+    "before": 12,
+    "after": 11
+   },
+   {
+    "step": 34,
+    "answering": "UNFLASHED",
+    "brief": false,
+    "move": "flash",
+    "note": "run.flue.stack.0 flashed where it comes through roof.cover — 17 in apron and a storm collar",
+    "kept": true,
+    "before": 11,
+    "after": 10
+   },
+   {
+    "step": 35,
+    "answering": "UNFLASHED",
+    "brief": false,
+    "move": "flash",
+    "note": "run.pv.string.3 flashed where it comes through roof.cover — 13 in apron and a storm collar",
+    "kept": true,
+    "before": 10,
+    "after": 9
+   },
+   {
+    "step": 36,
+    "answering": "UNFLASHED",
+    "brief": false,
+    "move": "flash",
+    "note": "run.stack.vent.shower.pan.2 flashed where it comes through roof.cover — 11 in apron and a storm collar",
+    "kept": true,
+    "before": 9,
+    "after": 8
+   },
+   {
+    "step": 37,
+    "answering": "VOLTAGE_DROP",
+    "brief": false,
+    "move": "regauge",
+    "note": "pv.string: 10 AWG -> 8 AWG",
+    "kept": true,
+    "before": 8,
+    "after": 7
+   },
+   {
+    "step": 38,
+    "answering": "VOLTAGE_DROP",
+    "brief": false,
+    "move": "regauge",
+    "note": "mppt.bank: 8 AWG -> 4 AWG",
+    "kept": true,
+    "before": 7,
+    "after": 6
+   },
+   {
+    "step": 39,
+    "answering": "VOLTAGE_DROP",
+    "brief": false,
+    "move": "regauge",
+    "note": "bank.dc: 8 AWG -> 4 AWG",
+    "kept": true,
+    "before": 6,
+    "after": 5
+   },
+   {
+    "step": 40,
+    "answering": "VOLTAGE_DROP",
+    "brief": false,
+    "move": "regauge",
+    "note": "dc.lights: 18 AWG -> 14 AWG",
+    "kept": true,
+    "before": 5,
+    "after": 4
+   },
+   {
+    "step": 41,
+    "answering": "VOLTAGE_DROP",
+    "brief": false,
+    "move": "regauge",
+    "note": "dc.pumpfeed: 14 AWG -> 12 AWG",
+    "kept": true,
+    "before": 4,
+    "after": 3
+   },
+   {
+    "step": 42,
+    "answering": "UNLIT",
+    "brief": false,
+    "move": "relamp",
+    "note": "6 lamps 3 W -> 7 W each; 10.1 fc average against a 10 fc target (24 W more on the bank)",
+    "kept": true,
+    "before": 3,
+    "after": 2
+   },
+   {
+    "step": 43,
+    "answering": "PLATE_TIE_REQUIRED",
+    "brief": false,
+    "move": "strap",
+    "note": "strap.top1.E: 12 in steel tie across the cut plate, screwed off",
+    "kept": true,
+    "before": 2,
+    "after": 1
+   },
+   {
+    "step": 44,
+    "answering": "PLATE_TIE_REQUIRED",
+    "brief": false,
+    "move": "strap",
+    "note": "strap.top2.E: 12 in steel tie across the cut plate, screwed off",
+    "kept": true,
+    "before": 1,
+    "after": 0
+   }
+  ],
+  "open": []
+ }
+}

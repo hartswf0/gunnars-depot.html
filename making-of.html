@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Making Of — Ingold Trailer</title>
+<link rel="icon" href="assets/branding/favicon.svg">
+<style>
+  body { max-width: 46rem; margin: 0 auto; padding: 2rem 1rem 6rem;
+         font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, sans-serif;
+         color: #1a1a1a; background: #fff; }
+  h1 { font-size: 1.1rem; font-weight: 600; margin: 0 0 .25rem; }
+  .sub { color: #666; font-size: .82rem; margin-bottom: 2rem; }
+  .sub a { color: #06c; }
+  nav { margin-bottom: 2rem; font-size: .82rem; }
+  nav button { font: inherit; border: 1px solid #ccc; background: #fff; color: #333;
+               padding: .25rem .6rem; margin-right: .4rem; cursor: pointer; }
+  nav button[aria-pressed="true"] { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .loop { padding: 1.1rem 0; border-top: 1px solid #eee; }
+  .meta { font-size: .72rem; color: #999; letter-spacing: .04em; text-transform: uppercase; margin-bottom: .4rem; }
+  .meta b { color: #333; font-weight: 600; }
+  .said { margin: 0 0 .6rem; }
+  pre { margin: .4rem 0; padding: .6rem .75rem; background: #f7f7f7; border-left: 2px solid #ddd;
+        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; white-space: pre-wrap;
+        word-break: break-word; overflow-x: auto; max-height: 22rem; }
+  pre.cmd { color: #333; border-left-color: #999; }
+  pre.err { border-left-color: #c33; }
+  img { max-width: min(100%, 22rem); border: 1px solid #ddd; display: block; margin: .6rem 0; }
+  .chapter { padding: 1.2rem 0 .4rem; border-top: 2px solid #1a1a1a; margin-top: 2rem; }
+  .chapter .meta { color: #1a1a1a; }
+  .chapter pre { background: #fffbe8; border-left-color: #e0b000; max-height: 12rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .88rem; margin: .8rem 0 2rem; }
+  th, td { text-align: left; padding: .4rem .6rem .4rem 0; border-bottom: 1px solid #eee; vertical-align: top; }
+  th { font-weight: 600; font-size: .72rem; text-transform: uppercase; letter-spacing: .04em; color: #666; }
+  td.n { font-variant-numeric: tabular-nums; }
+  .no { color: #c33; } .yes { color: #171; }
+  td small { color: #888; }
+  h2 { font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; margin: 2.5rem 0 .4rem; }
+  .note { color: #666; font-size: .82rem; margin: .2rem 0 0; }
+  tr.back td { color: #999; }
+</style>
+</head>
+<body>
+<h1>Making of the Ingold trailer</h1>
+<p class="sub" id="sub">loading…</p>
+
+<h2>What was asked for, and what got built</h2>
+<table id="spec"><tbody></tbody></table>
+<table id="sys"><tbody></tbody></table>
+
+<h2>How the builder decided</h2>
+<p class="note" id="loopsub"></p>
+<table id="loop"><tbody></tbody></table>
+
+<h2>The process</h2>
+<nav>
+  <button id="bKey" aria-pressed="true">consequential only</button>
+  <button id="bAll" aria-pressed="false">everything</button>
+  <button id="bShots" aria-pressed="false">screenshots</button>
+</nav>
+<div id="log"></div>
+
+<script type="module">
+const $ = (s) => document.querySelector(s);
+const [rec, spec] = await Promise.all([
+  fetch('data/session-record.json').then(r => r.json()),
+  fetch('data/spec-report.json').then(r => r.json()).catch(() => null)
+]);
+
+const c = rec.counts;
+$('#sub').innerHTML =
+  `${c.loops} loops over ${((new Date(rec.span.to) - new Date(rec.span.from)) / 3.6e6).toFixed(1)} hours — ` +
+  `${c.act} patching, ${c.verify} checking the last patch, ${c.probe} measuring, ${c.orient} reading, ` +
+  `${c.observe} looking, ${c.record} pushed. ` +
+  `<a href="ingold-trailer.html">watch the trailer being built →</a>`;
+
+if (spec) {
+  const t = $('#spec').querySelector('tbody');
+  t.innerHTML = '<tr><th>asked</th><th>specified</th><th>built</th><th></th></tr>';
+  for (const r of spec.rows) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.of}</td><td class="n">${r.want}${r.unit ? ' ' + r.unit : ''}</td>` +
+      `<td class="n ${r.meets ? 'yes' : 'no'}">${r.got}${r.unit ? ' ' + r.unit : ''}` +
+      `${r.delta !== undefined && r.delta !== 0 ? ` (${r.delta > 0 ? '+' : ''}${r.delta})` : ''}</td>` +
+      `<td><small>${r.note}</small></td>`;
+    t.appendChild(tr);
+  }
+  const s2 = $('#sys').querySelector('tbody');
+  s2.innerHTML = '<tr><th>system</th><th>devices</th><th>parts</th></tr>';
+  for (const y of spec.systems) {
+    const tr = document.createElement('tr');
+    const ok = y.connected === y.devices;
+    tr.innerHTML = `<td>${y.system}</td><td class="n ${ok ? 'yes' : 'no'}">${y.connected}/${y.devices} connected</td><td class="n">${y.parts}</td>`;
+    s2.appendChild(tr);
+  }
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>power budget</td><td class="n ${spec.power.usableWh >= spec.power.dailyWh ? 'yes' : 'no'}">` +
+    `${spec.power.dailyWh} Wh/day</td><td class="n"><small>${spec.power.loads} loads · bank ${spec.power.usableWh} Wh usable · array ${spec.power.pvDailyWh} Wh/day</small></td>`;
+  s2.appendChild(tr);
+}
+
+// The builder's own loop, as it ran. Not a summary of the moves — the moves,
+// including the two it tried and walked back, which is the only place you can
+// see it choosing rather than following a script.
+if (spec && spec.loop) {
+  const L = spec.loop;
+  $('#loopsub').textContent =
+    `${L.steps} decisions in ${L.seconds}s — ${L.moves.filter(m => m.brief).length} answering the brief, ` +
+    `${L.moves.filter(m => !m.brief).length} answering what the last move opened` +
+    (L.walkedBack ? `, ${L.walkedBack} walked back` : '') +
+    `. Ended ${L.state.toLowerCase()}${L.open.length ? ` with ${L.open.length} acknowledged` : ' with nothing outstanding'}.`;
+  const lt = $('#loop').querySelector('tbody');
+  lt.innerHTML = '<tr><th>#</th><th>answering</th><th>move</th><th>open before→after</th></tr>';
+  for (const m of L.moves) {
+    const tr = document.createElement('tr');
+    if (!m.kept) tr.className = 'back';
+    tr.innerHTML = `<td class="n">${m.step}</td>` +
+      `<td>${m.brief ? '<small>brief</small> ' : ''}${esc(m.answering || '')}</td>` +
+      `<td>${esc(m.move)}<br><small>${esc(m.note || '')}</small></td>` +
+      `<td class="n">${m.before}→${m.after}${m.kept ? '' : ' <small>walked back</small>'}</td>`;
+    lt.appendChild(tr);
+  }
+}
+
+const chapterAt = new Map(rec.chapters.map(ch => [ch.at, ch]));
+let mode = 'key';
+
+function render() {
+  const log = $('#log');
+  log.innerHTML = '';
+  let shown = 0;
+  rec.loops.forEach((l, i) => {
+    const ch = chapterAt.get(i);
+    if (ch) {
+      const d = document.createElement('div');
+      d.className = 'chapter';
+      d.innerHTML = `<div class="meta"><b>instruction</b></div><pre>${esc(ch.text)}</pre>`;
+      log.appendChild(d);
+    }
+    if (mode === 'key' && !l.key) return;
+    if (mode === 'shots' && !l.shot) return;
+    shown++;
+    const d = document.createElement('div');
+    d.className = 'loop';
+    const when = l.t ? new Date(l.t).toISOString().slice(11, 16) : '';
+    let h = `<div class="meta">${when} · <b>${l.kind}</b> · ${esc(l.did)}</div>`;
+    if (l.say) h += `<p class="said">${esc(l.say)}</p>`;
+    if (l.cmd && l.cmd !== l.did) h += `<pre class="cmd">${esc(l.cmd)}</pre>`;
+    if (l.shot) h += `<img src="${l.shot}" alt="${esc(l.did)}" loading="lazy">`;
+    if (l.saw) h += `<pre class="${l.ok === false ? 'err' : ''}">${esc(l.saw)}</pre>`;
+    d.innerHTML = h;
+    log.appendChild(d);
+  });
+  $('#bKey').setAttribute('aria-pressed', String(mode === 'key'));
+  $('#bAll').setAttribute('aria-pressed', String(mode === 'all'));
+  $('#bShots').setAttribute('aria-pressed', String(mode === 'shots'));
+}
+// hoisted: the loop table above renders at module top level, before this line
+function esc(s) { return String(s).replace(/[&<>]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
+$('#bKey').onclick = () => { mode = 'key'; render(); };
+$('#bAll').onclick = () => { mode = 'all'; render(); };
+$('#bShots').onclick = () => { mode = 'shots'; render(); };
+render();
+window.making = { rec, spec, render };
+</script>
+</body>
+</html>

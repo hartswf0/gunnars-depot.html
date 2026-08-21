@@ -1,0 +1,219 @@
+{
+ "built": {
+  "members": 402,
+  "joints": 533,
+  "state": "SETTLED",
+  "open": []
+ },
+ "origin": "render",
+ "of": "ingold-trailer",
+ "views": [
+  {
+   "id": "front",
+   "label": "FRONT",
+   "kind": "exterior",
+   "file": "front.png",
+   "origin": "render",
+   "eye": [
+    50.5,
+    -88.3,
+    80.9
+   ],
+   "target": [
+    50.5,
+    108,
+    61.3
+   ]
+  },
+  {
+   "id": "rear",
+   "label": "REAR",
+   "kind": "exterior",
+   "file": "rear.png",
+   "origin": "render",
+   "eye": [
+    50.5,
+    304.3,
+    80.9
+   ],
+   "target": [
+    50.5,
+    108,
+    61.3
+   ]
+  },
+  {
+   "id": "left",
+   "label": "LEFT",
+   "kind": "exterior",
+   "file": "left.png",
+   "origin": "render",
+   "eye": [
+    -469.7,
+    108,
+    113.3
+   ],
+   "target": [
+    50.5,
+    108,
+    61.3
+   ]
+  },
+  {
+   "id": "right",
+   "label": "RIGHT",
+   "kind": "exterior",
+   "file": "right.png",
+   "origin": "render",
+   "eye": [
+    570.7,
+    108,
+    113.3
+   ],
+   "target": [
+    50.5,
+    108,
+    61.3
+   ]
+  },
+  {
+   "id": "threeq",
+   "label": "3/4 FRONT",
+   "kind": "exterior",
+   "file": "threeq.png",
+   "origin": "render",
+   "eye": [
+    340.2,
+    -228.4,
+    257.5
+   ],
+   "target": [
+    50.5,
+    108,
+    61.3
+   ]
+  },
+  {
+   "id": "threeq.rear",
+   "label": "3/4 REAR",
+   "kind": "exterior",
+   "file": "threeq-rear.png",
+   "origin": "render",
+   "eye": [
+    -239.2,
+    444.4,
+    257.5
+   ],
+   "target": [
+    50.5,
+    108,
+    61.3
+   ]
+  },
+  {
+   "id": "plan",
+   "label": "PLAN",
+   "kind": "plan",
+   "file": "plan.png",
+   "origin": "render",
+   "eye": [
+    50.9,
+    108.4,
+    453.3
+   ],
+   "target": [
+    50.5,
+    108,
+    61.3
+   ]
+  },
+  {
+   "id": "inside.entry",
+   "label": "INTERIOR ENTRY",
+   "kind": "interior",
+   "file": "inside-entry.png",
+   "origin": "render",
+   "eye": [
+    50.5,
+    24,
+    71.7
+   ],
+   "target": [
+    50.5,
+    216,
+    53.7
+   ]
+  },
+  {
+   "id": "inside.reverse",
+   "label": "INTERIOR REVERSE",
+   "kind": "interior",
+   "file": "inside-reverse.png",
+   "origin": "render",
+   "eye": [
+    50.5,
+    216,
+    71.7
+   ],
+   "target": [
+    50.5,
+    24,
+    53.7
+   ]
+  },
+  {
+   "id": "inside.up",
+   "label": "INTERIOR UP",
+   "kind": "interior",
+   "file": "inside-up.png",
+   "origin": "render",
+   "eye": [
+    50.5,
+    108,
+    47.3
+   ],
+   "target": [
+    50.5,
+    110.4,
+    142.1
+   ]
+  },
+  {
+   "id": "under",
+   "label": "UNDERSIDE",
+   "kind": "service",
+   "file": "under.png",
+   "origin": "render",
+   "eye": [
+    256.4,
+    -97.9,
+    -350.5
+   ],
+   "target": [
+    50.5,
+    108,
+    61.3
+   ]
+  },
+  {
+   "id": "service",
+   "label": "SERVICE / XRAY",
+   "kind": "service",
+   "file": "service.png",
+   "origin": "render",
+   "eye": [
+    352.5,
+    -242.8,
+    207.4
+   ],
+   "target": [
+    50.5,
+    108,
+    61.3
+   ]
+  }
+ ],
+ "errors": [
+  "Failed to load resource: the server responded with a status of 404 (File not found)"
+ ]
+}

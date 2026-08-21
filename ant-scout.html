@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ant scout — a colony that forages for defects</title>
+<link rel="icon" href="assets/branding/favicon.svg">
+<style>
+  :root { --bg:#07090c; --panel:#0d1116; --ink:#e8edf3; --dim:#7c8894; --line:#1a222b;
+          --bad:#ef4444; --mid:#f59e0b; --ok:#22c55e; --cyan:#38bdf8; --amber:#fbbf24; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent }
+  html,body { margin:0; min-height:100%; background:var(--bg); color:var(--ink);
+    font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace }
+  h1 { font-size:12px; letter-spacing:.16em; margin:0; font-weight:600 }
+  h2 { font-size:10px; letter-spacing:.16em; color:var(--dim); margin:18px 0 6px; font-weight:600 }
+  p  { margin:0 0 8px; color:var(--dim) }
+  a  { color:var(--cyan) }
+
+  header { position:sticky; top:0; z-index:5; background:rgba(7,9,12,.94); backdrop-filter:blur(8px);
+           border-bottom:1px solid var(--line); padding:8px 10px; display:flex; gap:6px; align-items:center; flex-wrap:wrap }
+  select,button,input[type=file] { font:inherit; font-size:11px; background:#121922; color:var(--ink);
+    border:1px solid var(--line); padding:5px 8px; cursor:pointer; max-width:100% }
+  button:disabled { opacity:.35; cursor:default }
+  button.go { background:#152633; border-color:#24455c }
+  button.stop { background:#2a1414; border-color:#5c2424 }
+  .grow { flex:1 }
+
+  main { padding:10px; max-width:1180px; margin:0 auto }
+  #stage { position:relative; height:52vh; min-height:280px; border:1px solid var(--line); background:#080b0e }
+  #stage canvas { display:block; width:100%; height:100% }
+  #hud { position:absolute; top:0; left:0; padding:7px 9px; font-size:10px; line-height:1.65;
+         background:linear-gradient(180deg,rgba(7,9,12,.92),rgba(7,9,12,0)); pointer-events:none }
+  #hud b { color:var(--ink); font-weight:600 }
+  #verdict { position:absolute; top:0; right:0; padding:7px 9px; font-size:10px; text-align:right;
+             letter-spacing:.1em; pointer-events:none }
+
+  .knobs { display:grid; grid-template-columns:repeat(auto-fill,minmax(178px,1fr)); gap:6px 12px; margin:10px 0 }
+  .knob { display:flex; gap:6px; align-items:center; font-size:10px; color:var(--dim) }
+  .knob input[type=range] { flex:1; min-width:60px }
+  .knob b { color:var(--ink); font-variant-numeric:tabular-nums; min-width:30px; text-align:right }
+
+  table { border-collapse:collapse; width:100%; font-size:11px }
+  th,td { text-align:left; padding:3px 8px 3px 0; border-bottom:1px solid #12181f; vertical-align:top }
+  th { color:var(--dim); font-size:9px; letter-spacing:.1em; text-transform:uppercase }
+  td.n { font-variant-numeric:tabular-nums; white-space:nowrap }
+  tr.pick { cursor:pointer } tr.pick:hover td { background:#101822 }
+  .bar { display:inline-block; height:6px; background:var(--cyan); vertical-align:middle }
+  .k-HOLE,.k-GAP { color:var(--bad) } .k-CLASH { color:var(--mid) }
+  .k-UNJOINED,.k-CLIFF { color:var(--amber) } .k-UNRULED,.k-VOID { color:var(--dim) }
+  #log { font-size:11px; white-space:pre-wrap; color:var(--dim); border-left:2px solid var(--line);
+         padding:4px 0 4px 8px; max-height:150px; overflow-y:auto }
+  .cols { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px }
+  .box { border:1px solid var(--line); padding:8px 10px; background:var(--panel) }
+  .box h3 { margin:0 0 6px; font-size:10px; letter-spacing:.14em; color:var(--dim); font-weight:600 }
+  .big { font-size:22px; color:var(--ink); font-variant-numeric:tabular-nums }
+  .pill { display:inline-block; padding:1px 6px; border:1px solid var(--line); border-radius:99px;
+          font-size:9px; letter-spacing:.1em; color:var(--dim) }
+  .pill.on { color:var(--ok); border-color:#14532d }
+</style>
+</head>
+<body>
+<header>
+  <h1>ANT&nbsp;SCOUT</h1>
+  <select id="patient" style="min-width:190px"></select>
+  <select id="lesion" style="min-width:170px"><option value="none">intact</option></select>
+  <input id="file" type="file" accept=".stl,.dae,.glb,.gltf">
+  <button id="release" class="go">RELEASE</button>
+  <button id="pause">PAUSE</button>
+  <button id="reset">RESET</button>
+  <span class="grow"></span>
+  <span class="pill" id="mode">idle</span>
+</header>
+
+<main>
+  <div id="stage">
+    <canvas id="c"></canvas>
+    <div id="hud">no colony</div>
+    <div id="verdict"></div>
+  </div>
+
+  <div class="knobs" id="knobs"></div>
+  <div id="log">ready.</div>
+
+  <h2>What the colony believes</h2>
+  <p id="beliefnote">Ranked by corroboration, not by loudness. One ant that saw something once is a
+  rumour. Four ants that arrived separately are a defect.</p>
+  <div id="findings"></div>
+
+  <h2>Three instruments, same building</h2>
+  <div class="cols" id="compare"></div>
+
+  <h2>What this is</h2>
+  <p>The formicary engine's ants, moved off the ground and onto a building. They
+  crawl its surfaces, fire a small lidar fan from wherever they are standing, and
+  forage &mdash; not for food, but for the places the geometry gives out. A ray that
+  leaves the building is daylight. A ray that starts inside another member is a
+  clash. A surface that ends at nothing is a cliff. Two members in contact that the
+  fastening schedule says should be joined, and are not, is an unjoined pair.</p>
+  <p>Nothing here is centrally planned. An ant that finds something carries it back
+  to the nest and lays pheromone on the way, and that trail is <b>evidence, not an
+  order</b>: every ant has its own threshold for believing it and follows it only so
+  far before striking out again. The trail evaporates, so a rumour nobody
+  corroborates costs nothing to forget. That is the whole false-positive filter,
+  and it is free.</p>
+  <p>The colony is not the only instrument, and it is not the best one at anything.
+  The deterministic checks are exact and blind to whatever nobody wrote a rule for.
+  The ray survey is exhaustive and says nothing about which member is at fault. The
+  ants are neither, and they go where nobody sent them. The panel above runs all
+  three so you can see one find what the other two missed.</p>
+  <p><a href="hospital.html">hospital</a> &middot;
+     <a href="whats-fucked.html">what&#39;s fucked</a> &middot;
+     <a href="ingold-trailer.html">the trailer</a> &middot;
+     <a href="OPERATIVE_BUILDER.md">how it works</a></p>
+</main>
+
+<script type="importmap">
+{"imports":{"three":"./vendor/three/three.module.min.js","three/addons/":"./vendor/three/addons/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { View } from './operative/view.js';
+import { build } from './operative/ingold.js';
+import { seedTrailer } from './operative/kit.js';
+import { commit } from './operative/ops.js';
+import { loadMesh, standardise, meshBounds } from './operative/mesh.js';
+import * as R from './operative/radiography.js';
+import * as T from './operative/tomography.js';
+import { Colony, KINDS, withSchedule } from './operative/ants.js';
+import { scheduleForPair } from './operative/joints.js';
+import { checkAll } from './operative/checks.js';
+
+const $ = (s) => document.querySelector(s);
+const el = (t, cls, html) => { const n = document.createElement(t); if (cls) n.className = cls;
+  if (html !== undefined) n.innerHTML = html; return n; };
+const say = (m) => { $('#log').textContent = m + '\n' + $('#log').textContent.split('\n').slice(0, 11).join('\n'); };
+const MOBILE = Math.min(innerWidth, innerHeight) < 620;
+
+// ---------------------------------------------------------------- the ward
+// Same roster as the hospital: two worlds the builder makes itself, and every
+// mesh in the repository. The colony does not care which — it crawls surfaces.
+const WARD = [
+  { id: 'ingold', name: 'Ingold trailer — built', kind: 'world' },
+  { id: 'seed',   name: 'Seed kit — bare frame',  kind: 'world' },
+  ...['contractor-reality', 'wright-usonian', 'shigeru-ban-shelter',
+      'lacaton-vassal-economy', 'alexander-pattern-cabin'].flatMap(n =>
+    ['stl', 'dae', 'glb'].map(f => ({
+      id: `${n}.${f}`, name: `${n.replace(/-/g, ' ')} · ${f.toUpperCase()}`,
+      kind: 'mesh', url: `assets/models/concepts/${n}-trailer.${f}` }))),
+  ...['foundation-base', 'structural-frame', 'walls-exterior-shell',
+      'roof-cover-system', 'interior-finish-layer'].flatMap(n =>
+    ['stl', 'dae', 'glb'].map(f => ({
+      id: `${n}.${f}`, name: `${n.replace(/-/g, ' ')} · ${f.toUpperCase()}`,
+      kind: 'mesh', url: `assets/models/modules/${n}.${f}` })))
+];
+$('#patient').innerHTML = WARD.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+
+// ---------------------------------------------------------------- knobs
+// Defaults are the ones the bench settled on. `cadence` is the live trade: an ant
+// that looks every third step is about a fifth faster and finds a quarter as much.
+const KNOBS = [
+  { id: 'n',       label: 'ants',      min: 10, max: 240, step: 10, val: MOBILE ? 40 : 60 },
+  { id: 'lidar',   label: 'rays/ant',  min: 4,  max: 40,  step: 2,  val: 14 },
+  { id: 'cadence', label: 'look every',min: 1,  max: 6,   step: 1,  val: 1, unit: ' step' },
+  { id: 'sight',   label: 'range',     min: 12, max: 120, step: 4,  val: 40, unit: '"' },
+  { id: 'decay',   label: 'evaporation',min: 0, max: 40,  step: 1,  val: 4, unit: '‰' },
+  { id: 'budget',  label: 'ms/frame',  min: 4,  max: 60,  step: 2,  val: MOBILE ? 10 : 16 }
+];
+const knob = {};
+for (const k of KNOBS) {
+  const row = el('label', 'knob');
+  row.innerHTML = `${k.label} <input type="range" min="${k.min}" max="${k.max}" step="${k.step}" value="${k.val}"><b></b>`;
+  const inp = row.querySelector('input'), out = row.querySelector('b');
+  const show = () => { out.textContent = inp.value + (k.unit || ''); };
+  inp.addEventListener('input', () => { show(); knob[k.id] = +inp.value; onKnob(k.id); });
+  show(); knob[k.id] = k.val;
+  $('#knobs').appendChild(row);
+}
+function onKnob(id) {
+  if (!colony) return;
+  if (id === 'lidar')   colony.lidarRays = knob.lidar;
+  if (id === 'cadence') colony.lidarEvery = knob.cadence;
+  if (id === 'sight')   colony.sight = knob.sight;
+  if (id === 'decay')   colony.decay = knob.decay / 1000;
+  if (id === 'n')       say('colony size takes effect on RESET');
+}
+
+// ---------------------------------------------------------------- the table
+const view = new View($('#c'));
+view.start();
+view.controls.enableDamping = true;
+let meshGroup = null;
+
+function showWorld(world) {
+  if (meshGroup) { view.scene.remove(meshGroup); meshGroup = null; }
+  view.sync(world); view.resize(); view.frame(world);
+}
+function showMesh(tris) {
+  for (const [, m] of view.meshes) m.visible = false;
+  if (meshGroup) view.scene.remove(meshGroup);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(tris, 3));
+  g.computeVertexNormals();
+  meshGroup = new THREE.Mesh(g, new THREE.MeshStandardMaterial({
+    color: 0x8a99ab, roughness: .9, metalness: .05, side: THREE.DoubleSide,
+    flatShading: true, transparent: true, opacity: .5 }));
+  view.scene.add(meshGroup);
+  const b = meshBounds(tris);
+  view.resize();
+  view.camera.fov = 45; view.camera.updateProjectionMatrix();
+  const d = Math.max(...b.size) * 1.6;
+  view.camera.position.set(b.c[0] + d * .6, b.c[1] - d * .7, b.c[2] + d * .5);
+  view.camera.up.set(0, 0, 1);
+  view.controls.target.set(b.c[0], b.c[1], b.c[2]);
+  view.controls.update();
+}
+
+// ---------------------------------------------------------------- the swarm layer
+// Three point clouds over whatever is on the table: the ants, the pheromone they
+// have laid, and the ledger. They are rebuilt from the colony every frame, which
+// at a few hundred points is cheaper than reasoning about what changed.
+const swarm = new THREE.Group(); view.scene.add(swarm);
+function cloud(size, opts = {}) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
+  g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(0), 3));
+  // depthTest off, and drawn last. The colony's whole job is inside a box, and the
+  // box has a skin — with the depth test on, sixty ants and five hundred pheromone
+  // marks were being drawn correctly and thrown away behind a translucent wall.
+  // This is an overlay on the building, not a thing in it, and it says so.
+  const m = new THREE.PointsMaterial({ size, vertexColors: true, sizeAttenuation: true,
+    transparent: true, depthWrite: false, depthTest: false, ...opts });
+  const p = new THREE.Points(g, m);
+  p.frustumCulled = false; p.renderOrder = 10; swarm.add(p); return p;
+}
+// Sized against a twenty-foot trailer seen from thirty feet away, which is where
+// the camera starts. At the two inches an ant actually is, the whole colony was a
+// faint dusting nobody could see moving.
+const antsPts  = cloud(4.8, { opacity: 1 });
+const marksPts = cloud(3.2, { opacity: .5, blending: THREE.AdditiveBlending });
+// Not additive. Eighty findings six inches apart all summed to the same flat
+// white and the kind colour — which is the whole diagnosis — stopped meaning
+// anything. Marks are additive because density is what a trail *is*; findings
+// are discrete claims and each one keeps its own colour.
+const findPts  = cloud(10,  { opacity: .8 });
+
+const KIND_RGB = {
+  HOLE:     [1.00, 0.20, 0.20], GAP:      [1.00, 0.42, 0.10],
+  CLASH:    [0.98, 0.65, 0.05], UNJOINED: [0.98, 0.85, 0.20],
+  CLIFF:    [0.60, 0.85, 0.35], VOID:     [0.35, 0.70, 0.98],
+  UNRULED:  [0.45, 0.52, 0.60]
+};
+// Grow-only buffers, drawn by range. Three new Float32Arrays a frame at four
+// thousand pheromone marks is a megabyte of garbage a second for a picture that
+// looks identical.
+function feed(pts, xyz, rgb) {
+  const n = xyz.length / 3;
+  let pos = pts.geometry.getAttribute('position');
+  if (!pos || pos.array.length < xyz.length) {
+    const cap = Math.max(256, xyz.length * 2);
+    pos = new THREE.BufferAttribute(new Float32Array(cap), 3);
+    pts.geometry.setAttribute('position', pos);
+    pts.geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(cap), 3));
+  }
+  const col = pts.geometry.getAttribute('color');
+  pos.array.set(xyz); col.array.set(rgb);
+  pos.needsUpdate = true; col.needsUpdate = true;
+  pts.geometry.setDrawRange(0, n);   // frustumCulled is off, so no bounding sphere is needed
+}
+function paintSwarm() {
+  if (!colony) return;
+  const ap = [], ac = [];
+  for (const a of colony.ants) {
+    if (!a.p) continue;
+    ap.push(a.p[0], a.p[1], a.p[2]);
+    // carrying a finding home is the only state worth seeing from across the room
+    if (a.carrying) ac.push(1, 0.35, 0.15);
+    else if (a.indoors) ac.push(0.98, 0.78, 0.35);
+    else ac.push(0.42, 0.55, 0.68);
+  }
+  feed(antsPts, ap, ac);
+
+  const mp = [], mc = [];
+  let peak = 0.0001;
+  for (const m of colony.marks) if (m.s > peak) peak = m.s;
+  for (const m of colony.marks) {
+    mp.push(m.p[0], m.p[1], m.p[2]);
+    // Brightness is strength, so evaporation is visible: a trail nobody returns
+    // to dims out over a few seconds and that is the false-positive filter running.
+    const v = Math.min(1, m.s / peak);
+    mc.push(0.06 + v * 0.30, 0.22 + v * 0.62, 0.34 + v * 0.62);
+  }
+  feed(marksPts, mp, mc);
+
+  const fp = [], fc = [];
+  for (const f of shown) {
+    const c = KIND_RGB[f.kind] || [1, 1, 1];
+    const v = 0.35 + 0.65 * f.confidence;
+    fp.push(f.at[0], f.at[1], f.at[2]);
+    fc.push(c[0] * v, c[1] * v, c[2] * v);
+  }
+  feed(findPts, fp, fc);
+}
+
+// ---------------------------------------------------------------- lesions
+// A colony that only ever walks a good building tells you nothing about whether
+// it can see. Take something out and watch it converge on the hole.
+const LESIONS = [
+  { id: 'none', name: 'intact', cut: null },
+  { id: 'gable', name: 'gable end removed', cut: w => w.remove('gable.E') && ['gable.E'] },
+  { id: 'blocks', name: 'two eave blocks removed',
+    cut: w => ['bird.E.113', 'bird.E.129'].filter(id => w.remove(id)) },
+  { id: 'panel', name: 'largest wall panel removed', cut: w => {
+      const face = (e) => Math.max((e.hi[0] - e.lo[0]) * (e.hi[2] - e.lo[2]),
+                                   (e.hi[1] - e.lo[1]) * (e.hi[2] - e.lo[2]));
+      const p = w.all({ kind: 'sheathing' }).sort((a, b) => face(b) - face(a))[0];
+      return p && w.remove(p.id) ? [p.id] : []; } },
+  { id: 'strip', name: 'the strip over the bed window', cut: w =>
+      w.remove('shell.N.win_bed.above') ? ['shell.N.win_bed.above'] : [] },
+  { id: 'leaf', name: 'door leaf removed', cut: w => w.remove('leaf.door.entry') && ['leaf.door.entry'] },
+  { id: 'studs', name: 'three studs pulled', cut: w => {
+      const s = w.all({ kind: 'stud' }).slice(4, 7).map(e => e.id);
+      s.forEach(id => w.remove(id)); return s; } },
+  { id: 'joints', name: 'every roof joint undone', cut: w => {
+      const gone = [];
+      for (const [k, j] of [...w.joints]) {
+        const a = w.elements.get(j.a), b = w.elements.get(j.b);
+        if ((a && a.layer === 'roof') || (b && b.layer === 'roof')) { w.joints.delete(k); gone.push(k); }
+      }
+      return gone; } }
+];
+function fillLesions(kind) {
+  const list = kind === 'world' ? LESIONS : [LESIONS[0]];
+  $('#lesion').innerHTML = list.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+  $('#lesion').disabled = kind !== 'world';
+}
+
+// ---------------------------------------------------------------- admission
+let patient = null;      // { name, kind, world?, tris?, occ, air, enclosure }
+let colony = null;
+let running = false;
+let shown = [];
+let lesionBoxes = [];    // where the lesion was, so a finding can be placed against it
+
+async function admit() {
+  const spec = WARD.find(p => p.id === $('#patient').value);
+  running = false; setMode('admitting');
+  say(`admitting ${spec.name}…`);
+  await frameBreak();
+  if (spec.kind === 'world') {
+    const w = spec.id === 'ingold' ? build({ budget: 200 }).world
+                                   : (() => { const s = seedTrailer(); commit(s, 'nailOff', {}); return s; })();
+    patient = { name: spec.name, kind: 'world', world: w, spec };
+    fillLesions('world');
+  } else {
+    const res = await fetch(spec.url);
+    if (!res.ok) { say(`cannot fetch ${spec.url}`); setMode('idle'); return; }
+    admitMesh(spec.name, spec.url, await res.arrayBuffer());
+    fillLesions('mesh');
+  }
+  await reset();
+}
+function admitMesh(name, filename, buf) {
+  const m = loadMesh(filename, buf);
+  const st = standardise(m.tris, { upAxis: m.upAxis, format: m.format });
+  patient = { name, kind: 'mesh', tris: st.tris, mesh: m, format: m.format };
+  fillLesions('mesh');
+}
+
+/** Rebuild the world, apply the lesion, re-derive the occluders, hatch a colony. */
+async function reset() {
+  if (!patient) return;
+  running = false; shown = []; lesionBoxes = [];
+  $('#findings').innerHTML = ''; $('#compare').innerHTML = '';
+  setMode('preparing');
+  await frameBreak();
+
+  let occ, air, world = null, removed = [];
+  if (patient.kind === 'world') {
+    // Rebuild from scratch: a lesion is destructive and the last one must not linger.
+    world = patient.spec.id === 'ingold' ? build({ budget: 200 }).world
+                                         : (() => { const s = seedTrailer(); commit(s, 'nailOff', {}); return s; })();
+    const les = LESIONS.find(l => l.id === $('#lesion').value) || LESIONS[0];
+    if (les.cut) {
+      // Where it was, not just what it was called. A finding cannot be "next to"
+      // a member that no longer exists — the ants never meet it and never name
+      // it — so the lesion has to be remembered as a box on the way out.
+      const before = new Map([...world.elements].map(([id, e]) => [id, e]));
+      removed = les.cut(world) || [];
+      lesionBoxes = removed.map(id => before.get(id)).filter(Boolean)
+        .map(e => ({ id: e.id, lo: e.lo.slice(), hi: e.hi.slice() }));
+      say(`lesion: ${les.name} (${removed.length} removed)`);
+    }
+    patient.world = world;
+    occ = R.occludersOf(world);
+    air = R.occludersOf(world, { medium: 'air' });
+    showWorld(world);
+  } else {
+    occ = R.fromTriangles(patient.tris);
+    air = occ;
+    showMesh(patient.tris);
+  }
+
+  say('flooding the volume so an ant knows inside from out…');
+  await frameBreak();
+  const enclosure = T.flood(T.voxelise(air, { step: MOBILE ? 3 : 2 }));
+
+  colony = new Colony(air, {
+    world, enclosure, n: knob.n, seed: 11, lidar: knob.lidar,
+    sight: knob.sight, decay: knob.decay / 1000, lidarEvery: knob.cadence
+  });
+  if (world) withSchedule(colony, scheduleForPair);
+  patient.occ = occ; patient.air = air; patient.enclosure = enclosure; patient.removed = removed;
+
+  say(`${colony.ants.length} ants at the nest ${colony.nest.map(v => Math.round(v)).join(', ')}. Press RELEASE.`);
+  paintSwarm(); hud(); setMode('held');
+}
+
+const frameBreak = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+function setMode(m) {
+  $('#mode').textContent = m;
+  $('#mode').className = 'pill' + (m === 'foraging' ? ' on' : '');
+  $('#pause').textContent = running ? 'PAUSE' : 'RESUME';
+}
+
+// ---------------------------------------------------------------- the loop
+// Time-budgeted rather than fixed: on a phone one tick a frame is already the
+// whole budget, on a laptop it is twenty. The colony runs at whatever the device
+// can carry and the tick counter tells you honestly how far it has got.
+let acc = 0;
+function pump() {
+  requestAnimationFrame(pump);
+  if (!colony) return;
+  if (running) {
+    const t0 = performance.now();
+    let n = 0;
+    while (performance.now() - t0 < knob.budget && n < 200) { colony.step(1); n++; }
+    acc += n;
+    if (acc >= 12) { acc = 0; refresh(); }
+  }
+  paintSwarm();
+}
+requestAnimationFrame(pump);
+
+function refresh() {
+  shown = colony.findings();
+  hud(); table();
+}
+function hud() {
+  const s = colony.stats();
+  const holes = shown.filter(f => f.kind === 'HOLE' || f.kind === 'GAP').length;
+  $('#hud').innerHTML = [
+    `<b>${patient.name}</b>${patient.removed && patient.removed.length ? ` <span style="color:#ef4444">− ${patient.removed.length} removed</span>` : ''}`,
+    `tick <b>${s.tick}</b> · ${s.ants} ants · ${s.marks} marks`,
+    `<b>${s.confirmed}</b> corroborated · ${colony.ledger.size} rumours`,
+    `${s.carrying} carrying home · ${s.lost} lost`
+  ].join('<br>');
+  $('#verdict').innerHTML = holes
+    ? `<span style="color:var(--bad)">DAYLIGHT IN ${holes} PLACES</span>`
+    : (s.tick > 200 ? `<span style="color:var(--ok)">NO DAYLIGHT FOUND YET</span>` : '');
+}
+function table() {
+  const rows = shown.slice(0, 40);
+  if (!rows.length) { $('#findings').innerHTML = '<p>nothing corroborated yet.</p>'; return; }
+  const top = rows[0].weight || 1;
+  const t = el('table');
+  t.innerHTML = '<thead><tr><th>what</th><th>ants</th><th>hits</th><th>where</th><th>on</th><th>weight</th></tr></thead>';
+  const body = el('tbody');
+  for (const f of rows) {
+    const tr = el('tr', 'pick');
+    tr.innerHTML =
+      `<td class="k-${f.kind}">${f.kind}<div style="color:var(--dim);font-size:9px">${KINDS[f.kind] ? KINDS[f.kind].label : ''}</div></td>` +
+      `<td class="n">${f.ants}</td><td class="n">${f.hits}</td>` +
+      `<td class="n">${f.at.join(', ')}</td>` +
+      `<td style="color:var(--dim)">${f.near.join(', ') || '—'}</td>` +
+      `<td class="n"><span class="bar" style="width:${Math.round(46 * f.weight / top)}px"></span> ${f.weight}</td>`;
+    tr.addEventListener('click', () => goTo(f));
+    body.appendChild(tr);
+  }
+  t.appendChild(body);
+  $('#findings').innerHTML = ''; $('#findings').appendChild(t);
+}
+function goTo(f) {
+  // Far enough back to frame the neighbourhood. Points are sized in world units —
+  // an ant is a few inches — so at four feet the swarm fills the screen with
+  // squares and you cannot tell which member you are looking at.
+  const d = 110;
+  view.controls.target.set(f.at[0], f.at[1], f.at[2]);
+  view.camera.position.set(f.at[0] + d * .7, f.at[1] - d * .8, f.at[2] + d * .5);
+  view.controls.update();
+  if (patient.kind === 'world' && f.near.length) view.flash(f.near, 0xef4444, 2400);
+}
+
+// ---------------------------------------------------------------- the other two
+// Run once, on demand, so the comparison is a claim the page can be held to
+// rather than a slogan in the prose.
+function compare() {
+  const c = $('#compare');
+  c.innerHTML = '';
+  const cal = R.calibrate({ rays: 192 });
+  const antHoles = shown.filter(f => f.kind === 'HOLE' || f.kind === 'GAP');
+
+  const box = (title, big, note) => {
+    const b = el('div', 'box');
+    b.innerHTML = `<h3>${title}</h3><div class="big">${big}</div><p style="margin:4px 0 0">${note}</p>`;
+    c.appendChild(b); return b;
+  };
+
+  box('THE COLONY', antHoles.length,
+    `places at least two ants independently walked out of, or saw daylight from, after ` +
+    `${colony.stats().tick} ticks. It cannot tell you which member is missing — only where it got out.`);
+
+  if (patient.kind === 'world') {
+    const conds = checkAll(patient.world);
+    const sev3 = conds.filter(x => x.severity === 3).length;
+    box('THE CHECKS', conds.length,
+      `open conditions, ${sev3} at severity 3. Exact, cited to a code, names the member — and ` +
+      `completely blind to anything nobody wrote a rule for.`);
+  } else {
+    box('THE CHECKS', '—', 'a bare mesh has no chart: no members, no joints, no schedule to check against.');
+  }
+
+  const em = (patient.kind === 'world'
+    ? R.emittersFor(patient.world, { step: 24 })
+    : R.interiorOf(patient.occ, { step: Math.max(10, Math.hypot(...R.bounds(patient.occ.solids).size) / 16) })
+  ).slice(0, 32);
+  if (!em.length) {
+    box('THE RAY SURVEY', '—', 'no interior to stand a lamp in — this patient has no inside.');
+  } else {
+    const sc = R.scan(patient.occ, em, { rays: 128 });
+    box('THE RAY SURVEY', sc.escapes.length,
+      `of ${sc.cast} rays from ${em.length} lamps escaped the envelope (${sc.viaOpening.length} legitimately, ` +
+      `through an opening). Exhaustive and unbiased, and it says nothing about which part failed. ` +
+      `Instrument noise floor: <b>${cal.noiseFloor}</b> — ${cal.verdict}.`);
+  }
+
+  if (lesionBoxes.length) {
+    // Not proximity — line of sight. A GAP is recorded where the *ant* was
+    // standing, not where the hole is, and an ant on the bed platform can see
+    // daylight through a strip three feet above it and four feet away. Measured
+    // by distance the two never met and the panel read 0 of 18 while the colony
+    // was in fact staring straight through it. Every GAP records the direction
+    // the ray left in, so the honest question is whether that ray passes through
+    // the space the removed member used to fill.
+    const through = (f) => {
+      const d = f.detail && f.detail.toward;
+      if (!d) return lesionBoxes.some(b => gap(b, f.at) < 24);   // a HOLE has no direction
+      return lesionBoxes.some(b => hits(f.at, d, b));
+    };
+    const agree = antHoles.filter(through).length;
+    box('AGAINST THE LESION', `${agree}/${antHoles.length}`,
+      `ant findings whose escaping ray goes through the space we emptied — ` +
+      `${lesionBoxes.map(b => b.id).join(', ')}. The rest are either defects the build shipped ` +
+      `with, or the colony's own floor, and the only way to tell those apart is to run it again intact.`);
+  }
+}
+/** Distance from a point to a box, zero inside it. */
+function gap(b, p) {
+  return Math.hypot(...[0, 1, 2].map(i => Math.max(b.lo[i] - p[i], 0, p[i] - b.hi[i])));
+}
+/** Does the ray from `o` along `d` cross the box? Slabs, with a little slack for
+ *  the eighth-inch offsets an ant stands at. */
+function hits(o, d, b, slack = 2) {
+  let t0 = 0, t1 = 1e9;
+  for (let i = 0; i < 3; i++) {
+    const lo = b.lo[i] - slack, hi = b.hi[i] + slack;
+    if (Math.abs(d[i]) < 1e-9) { if (o[i] < lo || o[i] > hi) return false; continue; }
+    let a = (lo - o[i]) / d[i], z = (hi - o[i]) / d[i];
+    if (a > z) { const t = a; a = z; z = t; }
+    if (a > t0) t0 = a;
+    if (z < t1) t1 = z;
+    if (t0 > t1) return false;
+  }
+  return true;
+}
+
+// ---------------------------------------------------------------- wiring
+$('#patient').addEventListener('change', admit);
+$('#lesion').addEventListener('change', reset);
+$('#reset').addEventListener('click', reset);
+$('#release').addEventListener('click', () => {
+  if (!colony) return;
+  running = true; setMode('foraging'); say('released.');
+});
+$('#pause').addEventListener('click', () => {
+  if (!colony) return;
+  running = !running;
+  setMode(running ? 'foraging' : 'held');
+  if (!running) { refresh(); compare(); }
+});
+$('#file').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  say(`reading ${f.name}…`);
+  try { admitMesh(f.name, f.name, await f.arrayBuffer()); await reset(); }
+  catch (err) { say(`cannot read ${f.name}: ${err.message}`); }
+});
+
+admit();
+</script>
+</body>
+</html>
