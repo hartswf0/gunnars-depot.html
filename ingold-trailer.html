@@ -60,7 +60,7 @@
 
 <script type="module">
 import { World, Element } from './operative/world.js';
-import { build } from './operative/ingold.js';
+import { load as loadBaked, finished as bakedWorld, replay } from './operative/baked.js';
 import { View } from './operative/view.js';
 
 const $ = (s) => document.querySelector(s);
@@ -138,43 +138,40 @@ $('#viewport').addEventListener('pointerup', (e) => {
       [], last ? [{ message: last.note }] : []);
 });
 
-// --- build it, then play the making back
-setTimeout(() => {
-  const t0 = performance.now();
-  const { world, loop } = build();
-  finished = world;
-  const secs = ((performance.now() - t0) / 1000).toFixed(1);
+// --- load the making, and play it back
+//
+// This called `build()` here, on the page. `build()` is the loop — a seed, a brief,
+// and two hundred and thirty-five decisions — and it takes two hundred seconds and
+// blocks while it does. In a terminal that is a coffee. In a tab it is "Reading the
+// sheet…" until Chrome offers to kill the page, which is what this said to
+// everyone who ever opened it. The building was finished and nobody could look at
+// it. The loop runs once now, in tools/bake-world.mjs; this reads what it wrote.
+(async () => {
+  try {
+    const t0 = performance.now();
+    const doc = await loadBaked();
+    const world = bakedWorld(doc);
+    finished = world;
+    frames = replay(doc);
+    const secs = ((performance.now() - t0) / 1000).toFixed(1);
 
-  const recs = world.history;
-  frames = [];
-  for (let i = 0; i < recs.length; i++) {
-    const after = recs[i + 1] && recs[i + 1].snapshot;
-    const snap = after || { elements: world.all().map(e => JSON.parse(JSON.stringify({
-      id: e.id, kind: e.kind, layer: e.layer, box: e.box, shear: e.shear, material: e.material,
-      system: e.system, section: e.section, meta: e.meta, ports: e.ports, trace: e.trace })) ) };
-    frames.push({
-      world: worldFromSnapshot(snap, world.walls, world.datum),
-      title: recs[i].note || recs[i].kind,
-      sub: `t${recs[i].t} · ${recs[i].op || recs[i].kind}` + (recs[i].cause ? ` · answering ${recs[i].cause}` : ''),
-      opened: recs[i].opened || [], closed: recs[i].closed || [], changed: recs[i].elements || []
-    });
+    view.frame(world);          // frame once, on the finished trailer, so the film holds still
+    $('#scrub').max = String(frames.length - 1);
+    const settled = doc.loop.state === 'SETTLED' && doc.loop.open === 0;
+    $('#state').className = settled ? 'settled' : 'building';
+    $('#state').textContent = `${doc.loop.state.toLowerCase()} · ${world.elements.size} members`;
+    say(`${world.elements.size} members, ${world.joints.size} joints, ` +
+        (doc.loop.open ? `${doc.loop.open} still open` : 'nothing outstanding'),
+        `${doc.loop.steps} decisions, made in ${doc.seconds}s and read back in ${secs}s` +
+        (doc.loop.walked ? `, ${doc.loop.walked} walked back` : '') +
+        ` — press play to watch it happen`);
+    show(0);
+    window.trailer = { world, frames, show, doc };
+    setTimeout(play, 700);
+  } catch (e) {
+    say('could not read the build', String((e && e.message) || e));
   }
-  view.frame(world);            // frame once, on the finished trailer, so the film holds still
-  $('#scrub').max = String(frames.length - 1);
-  const settled = loop.state === 'SETTLED' && loop.open.length === 0;
-  $('#state').className = settled ? 'settled' : 'building';
-  $('#state').textContent = `${loop.state.toLowerCase()} · ${world.elements.size} members`;
-  // The loop's own count, not the journal's: moves it tried and walked back leave
-  // no trace in the building, and the honest number says how many it took.
-  const walked = loop.trace.filter(t => t.kept === false).length;
-  say(`${world.elements.size} members, ${world.joints.size} joints, ` +
-      (loop.open.length ? `${loop.open.length} still open` : 'nothing outstanding'),
-      `${loop.steps} decisions in ${secs}s` + (walked ? `, ${walked} walked back` : '') +
-      ` — press play to watch it happen`);
-  show(0);
-  window.trailer = { world, frames, show };
-  setTimeout(play, 700);
-}, 60);
+})();
 </script>
 </body>
 </html>

@@ -97,7 +97,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { View } from './operative/view.js';
-import { build } from './operative/ingold.js';
+import { load as loadBaked, finished as bakedWorld } from './operative/baked.js';
 import { seedTrailer } from './operative/kit.js';
 import { commit } from './operative/ops.js';
 import { loadMesh, standardise, meshBounds } from './operative/mesh.js';
@@ -168,13 +168,29 @@ function showMesh(tris) {
   view.controls.update();
 }
 
+// ---------------------------------------------------------------- the patient
+//
+// The trailer is built once, by tools/bake-world.mjs, and read back here. This
+// page used to call `build()` — the whole loop, two hundred and thirty-five
+// decisions, two hundred seconds, synchronous — the moment you pressed ADMIT, and
+// a tab that blocks for two hundred seconds is a tab Chrome offers to kill. A
+// fresh World on every call, because a lesion is destructive and the last one must
+// not linger.
+let BAKED = null, BAKED_ERR = null;
+const bakedReady = loadBaked().then(d => { BAKED = d; }).catch(e => { BAKED_ERR = e; });
+const bakedTrailer = () => {
+  if (!BAKED) throw new Error(`the built trailer did not load: ${BAKED_ERR ? BAKED_ERR.message : 'still reading'}`);
+  return bakedWorld(BAKED);
+};
+
 // ---------------------------------------------------------------- admission
 async function admit() {
   const spec = WARD.find(p => p.id === $('#patient').value);
   say(`admitting ${spec.name}…`);
   $('#out').innerHTML = '';
+  await bakedReady;
   if (spec.kind === 'world') {
-    const w = spec.id === 'ingold' ? build({ budget: 200 }).world
+    const w = spec.id === 'ingold' ? bakedTrailer()
                                    : (() => { const s = seedTrailer(); commit(s, 'nailOff', {}); return s; })();
     patient = { name: spec.name, kind: 'world', world: w,
                 occ: R.occludersOf(w), air: R.occludersOf(w, { medium: 'air' }),

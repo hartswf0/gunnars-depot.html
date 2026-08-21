@@ -125,7 +125,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { View } from './operative/view.js';
-import { build } from './operative/ingold.js';
+import { load as loadBaked, finished as bakedWorld } from './operative/baked.js';
 import { VIEWS, place, byId, chooseView } from './operative/views.js';
 import { CRITIC_PROMPT, builderPrompt, parseVerdict, worldScore, settlement,
          THRESHOLD, meaning, accusation } from './operative/critic.js';
@@ -142,7 +142,12 @@ const cfg = Object.assign({ key: '', model: 'claude-opus-5', ref: '' },
 
 // ---------------------------------------------------------------- the world
 const view = new View($('#c'));
-const { world, loop } = build();
+// Built once by tools/bake-world.mjs and read back, not built here. On the page
+// this was two hundred seconds of blocked main thread before anything drew, which
+// is a page nobody has ever seen finish.
+const doc = await loadBaked();
+const world = bakedWorld(doc);
+const loop = doc.loop;
 view.sync(world); view.resize(); view.frame(world); view.render();
 
 let observations = [];
