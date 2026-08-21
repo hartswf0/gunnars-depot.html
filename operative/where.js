@@ -36,7 +36,7 @@ export function rooms(world) {
   const named = [
     ['bath',    ['wc', 'lav', 'lav.cab', 'shower.pan']],
     ['galley',  ['sink', 'fridge', 'cab.galley', 'top.galley']],
-    ['dinette', ['table', 'bench.W', 'table.fin.S', 'table.fin.N']],
+    ['dinette', ['table', 'bench.W', 'table.leg.wN', 'table.leg.eN', 'table.leg.eS']],
     ['sleep',   ['bed.base', 'mattress']]
   ];
   const out = [];

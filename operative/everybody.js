@@ -411,6 +411,34 @@ export function armsOn(world, body, { stature = 72, work = null, side = 'right',
  * fit (collisions), does the hand or the hips arrive where the fixture is (the
  * work), and is there room over your head.
  */
+/**
+ * The thing you walk up to, which is not always the thing you are using.
+ *
+ * A hob is sixteen inches by fourteen, so its "narrow side" is a coin toss, and the
+ * toss put the cook at the north end of the galley reaching down the length of it.
+ * And once the galley top was cut into a run and three rails around the sink, the
+ * run's own shortest side became its *south* face — the side the sink is on — so
+ * the clearance in front of the worktop came back as one inch.
+ *
+ * What you actually walk up to is the carcass the thing is set into, whose open
+ * face is not in doubt. Height matters as much as plan: a ceiling contains every
+ * fixture in the building in plan, and the moment one existed the cook was held to
+ * be standing at it, which put him at the front door.
+ */
+export function carrierOf(world, target, skip = false) {
+  if (skip) return null;
+  let best = null;
+  for (const e of world.all()) {
+    if (e.id === target.id || e.layer !== 'interior') continue;
+    if (!(e.lo[0] <= target.lo[0] + 0.5 && e.hi[0] >= target.hi[0] - 0.5 &&
+          e.lo[1] <= target.lo[1] + 0.5 && e.hi[1] >= target.hi[1] - 0.5)) continue;
+    if (e.hi[2] < target.lo[2] - 2 || e.lo[2] > target.hi[2] + 2) continue;
+    const area = (e.hi[0] - e.lo[0]) * (e.hi[1] - e.lo[1]);
+    if (!best || area > best.area) best = { el: e, area };
+  }
+  return best ? best.el : null;
+}
+
 export function attempt(world, name, { stature = 72 } = {}) {
   const A = ACTIVITIES[name];
   if (!A) return null;
@@ -427,18 +455,7 @@ export function attempt(world, name, { stature = 72 } = {}) {
   // of it — arm through the flue chase, hip against the water heater, nine
   // collisions, none of them about the kitchen. What you actually walk up to is the
   // carcass the hob is set in, whose open face is not in doubt.
-  const carrier = (() => {
-    if (A.seated || A.lying) return null;
-    let best = null;
-    for (const e of world.all()) {
-      if (e.id === target.id || e.layer !== 'interior') continue;
-      if (!(e.lo[0] <= target.lo[0] + 0.5 && e.hi[0] >= target.hi[0] - 0.5 &&
-            e.lo[1] <= target.lo[1] + 0.5 && e.hi[1] >= target.hi[1] - 0.5)) continue;
-      const area = (e.hi[0] - e.lo[0]) * (e.hi[1] - e.lo[1]);
-      if (!best || area > best.area) best = { el: e, area };
-    }
-    return best ? best.el : null;
-  })();
+  const carrier = carrierOf(world, target, A.seated || A.lying);
   const stood = carrier || target;
   // where to stand: in front of the fixture's nearest long face, or on it
   const c = [0, 1].map(i => (target.lo[i] + target.hi[i]) / 2);
@@ -518,10 +535,21 @@ export function attempt(world, name, { stature = 72 } = {}) {
     // Reaching into a bowl means going past its rim, and the rim of an undermounted
     // sink is the worktop it is hung from. Counted flat it is the counter stopping
     // you from using the sink in it.
-    for (const e of world.all())
-      if (e.hi[0] > target.lo[0] && e.lo[0] < target.hi[0] &&
-          e.hi[1] > target.lo[1] && e.lo[1] < target.hi[1] &&
-          e.lo[2] >= target.hi[2] - 0.5 && e.layer === 'interior') ignore.add(e.id);
+    // The rim of a hole is not an obstruction, and a rim is wider than the hole.
+    // Cutting the galley top into a run and three rails around the sink put a 3.5 in
+    // strip of stone at the front of the bowl, and the arm that has to go over it —
+    // which is what the front of a counter is for — came back as a collision with
+    // the counter.
+    for (const e of world.all()) {
+      if (e.layer !== 'interior') continue;
+      const overIt = e.hi[0] > target.lo[0] && e.lo[0] < target.hi[0] &&
+                     e.hi[1] > target.lo[1] && e.lo[1] < target.hi[1] &&
+                     e.lo[2] >= target.hi[2] - 0.5;
+      const surround = Math.abs(e.hi[2] - target.hi[2]) < 2 &&
+                       e.hi[0] > target.lo[0] - 6 && e.lo[0] < target.hi[0] + 6 &&
+                       e.hi[1] > target.lo[1] - 6 && e.lo[1] < target.hi[1] + 6;
+      if (overIt || surround) ignore.add(e.id);
+    }
     body = armsOn(world, body, { stature, work: workPoint, floor: floorZ,
       side: A.work.bone === 'leftHand' ? 'left' : 'right', ignore });
   }

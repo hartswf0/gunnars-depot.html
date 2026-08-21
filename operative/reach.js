@@ -291,7 +291,10 @@ export const STATIONS = [
   { id: 'hob.pan', what: 'a pan handle on the near burner', room: 'galley', daily: true,
     on: 'cooktop', at: (w, e) => [e.lo[0] + 4, mid(e, 1), e.hi[2] + 4] },
   { id: 'worktop.back', what: 'the back of the worktop', room: 'galley', daily: true,
-    on: 'top.galley', at: (w, e) => [e.hi[0] - 2, mid(e, 1), e.hi[2] + 1] },
+    // The clear end of the run, not its middle: the middle of this one has the hob
+    // in it, and reaching across a hob to the wall behind it is a different question
+    // — one worth asking, but not this one.
+    on: 'top.galley', at: (w, e) => [e.hi[0] - 2, e.hi[1] - 1, e.hi[2] + 1] },
   { id: 'fridge.door', what: 'the fridge door', room: 'galley', daily: true,
     on: 'fridge', at: (w, e) => [e.lo[0], mid(e, 1), mid(e, 2)] },
   { id: 'fridge.back', what: 'the back of the fridge', room: 'galley', daily: true,

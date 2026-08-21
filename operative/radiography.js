@@ -64,9 +64,15 @@ export const TRANSPARENT = new Set(['run', 'opening', 'port', 'glazing']);
  * flood asked for the light list by default and walked out through the windows.
  */
 export function occludersOf(world, { include = null, openings = 'transparent', medium = 'light' } = {}) {
+  // Insulation stops neither. A batt is not an air barrier — that is the whole
+  // reason a building needs a separate one — and this instrument looks for escape
+  // paths, so counting mineral wool as solid closes off every route through a wall
+  // cavity. The moment the cavities were filled, taking a panel off the wall stopped
+  // registering as a hole at all: nought findings intact, nought with the hole cut,
+  // and the instrument reported a leaky building as sealed.
   const clear = medium === 'air'
-    ? new Set(['run', 'opening', 'port'])
-    : TRANSPARENT;
+    ? new Set(['run', 'opening', 'port', 'insulation'])
+    : new Set([...TRANSPARENT, 'insulation']);
   const out = [];
   for (const e of world.all()) {
     if (clear.has(e.kind)) continue;

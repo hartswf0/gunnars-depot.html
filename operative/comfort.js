@@ -17,6 +17,7 @@
 //   hundred and thirteen wires and pipes in this trailer. Every clearance in this
 //   file is measured against the building with its plumbing in it.
 
+import { carrierOf } from './everybody.js';
 import { figure } from './figure.js';
 import { obstacles } from './everybody.js';
 
@@ -70,20 +71,42 @@ export function sitAtTable(world, { seat = 'bench.W', top = 'table', stature = 7
   const kneeBand = [fz + 6, s.hi[2] + f.thighClearance];
   // What stops your shins, and what to blame for it. A table leg in the knee zone
   // is the commonest reason a table you fit at is a table you cannot sit at.
-  let knee = f.buttockKnee + 6, blame = null;
-  for (const e of obstacles(world)) {
-    if (e === s || e === t) continue;
-    if (e.hi[2] <= kneeBand[0] + 0.2 || e.lo[2] >= kneeBand[1] - 0.2) continue;
-    const o = a.axis === 0 ? 1 : 0;
-    if (e.hi[o] <= s.lo[o] + 0.2 || e.lo[o] >= s.hi[o] - 0.2) continue;
-    const d = a.sign > 0 ? e.lo[a.axis] - front : front - e.hi[a.axis];
-    if (d >= -0.2 && d < knee) { knee = +d.toFixed(1); blame = e.id; }
+  const o = a.axis === 0 ? 1 : 0;
+  const seatLen = +(s.hi[o] - s.lo[o]).toFixed(0);
+  // Knee room where a person actually sits, not anywhere along the bench.
+  //
+  // Scanned across the whole sixty inches, a table leg at the far end took the knee
+  // room of somebody sitting at the near one: the answer came back "0 in, the leg is
+  // in the way" for a seat with thirty inches of clear space in front of it. A bench
+  // has places on it. Each place gets its own answer, the report takes the best, and
+  // says how many of them are compromised — which is the fact you want, because a
+  // two-place bench with one bad place is a real thing and not the same as a bench
+  // you cannot sit at.
+  const places = Math.max(1, Math.floor(seatLen / 24));
+  const kneeAt = (lo, hi) => {
+    let knee = f.buttockKnee + 6, blame = null;
+    for (const e of obstacles(world)) {
+      if (e === s || e === t) continue;
+      if (e.hi[2] <= kneeBand[0] + 0.2 || e.lo[2] >= kneeBand[1] - 0.2) continue;
+      if (e.hi[o] <= lo + 0.2 || e.lo[o] >= hi - 0.2) continue;
+      const d = a.sign > 0 ? e.lo[a.axis] - front : front - e.hi[a.axis];
+      if (d >= -0.2 && d < knee) { knee = +d.toFixed(1); blame = e.id; }
+    }
+    return { knee, blame };
+  };
+  const seats = [];
+  for (let i = 0; i < places; i++) {
+    const c = s.lo[o] + (i + 0.5) * (s.hi[o] - s.lo[o]) / places;
+    const half = f.shoulderBreadth / 2 + 2;
+    seats.push(kneeAt(c - half, c + half));
   }
-  const seatLen = +Math.max(s.hi[0] - s.lo[0], s.hi[1] - s.lo[1]).toFixed(0);
+  seats.sort((x, y) => y.knee - x.knee);
+  const knee = seats[0].knee;
+  const pinched = seats.filter(x => x.knee < f.buttockKnee);
+  const blame = pinched.length ? pinched[0].blame : null;
   // How many people you would actually put on it. Rounding 60/24 to three gave each
   // of them twenty inches and failed a bench that seats two at thirty each — the
   // metric was over-seating the bench and then blaming it.
-  const places = Math.max(1, Math.floor(seatLen / 24));
   const elbow = +(seatLen / places).toFixed(0);
   return { task: 'sit at the table', at: [seat, top], tests: [
     test('seat height', ok(seatH, 16, 19), seatH, '16–19 in', 'popliteal height ' + f.popliteal + ' in'),
@@ -93,7 +116,8 @@ export function sitAtTable(world, { seat = 'bench.W', top = 'table', stature = 7
     test('thigh clearance under the top', ok(thigh, f.thighClearance + 1), thigh, `≥ ${(f.thighClearance + 1).toFixed(1)} in`,
       'thigh clearance ' + f.thighClearance + ' in plus an inch'),
     test('knee room forward', ok(knee, f.buttockKnee), knee, `≥ ${f.buttockKnee} in`,
-      'buttock-knee length', blame && knee < f.buttockKnee ? `${blame} is in the way` : null),
+      `buttock-knee length, at the best of ${places} place${places === 1 ? '' : 's'}`,
+      pinched.length ? `${pinched.length} of ${places} place${places === 1 ? '' : 's'} pinched — ${blame} is in the way of ${pinched.length === 1 ? 'one' : 'them'}` : null),
     test('elbow room each', ok(elbow, 24), elbow, '≥ 24 in',
       `${seatLen} in of bench, ${places} place${places === 1 ? '' : 's'}`)
   ] };
@@ -167,8 +191,13 @@ export function standingWork(world, { id, name, stature = 72, kind = 'counter' }
   const deck = world.all().filter(x => x.meta.role === 'floor sheathing');
   const fz = Math.max(...deck.map(x => x.hi[2]));
   const h = +(el.hi[2] - fz).toFixed(1);
-  const a = approach(world, el);
-  const front = clearFrom(world, el, a.axis, a.sign, { band: [fz + 12, fz + f.shoulder] });
+  // You stand at the carcass, not at the piece of worktop. Measured off the sink's
+  // own face, "room to stand in front of it" was the 3.5 in stone rail beside the
+  // bowl; measured off the cut top's own shortest side, the front of the galley
+  // became its south end and the answer was one inch.
+  const run = carrierOf(world, el) || el;
+  const a = approach(world, run);
+  const front = clearFrom(world, run, a.axis, a.sign, { band: [fz + 12, fz + f.shoulder], ignore: new Set([id]) });
   const overhead = clearFrom(world, el, 2, 1, { band: [el.hi[2], el.hi[2] + 0.1] }) ;
   // anything above the worktop within head height
   let head = 999;
@@ -186,7 +215,10 @@ export function standingWork(world, { id, name, stature = 72, kind = 'counter' }
   // the sink, this found no plinth under the sink — which is true, and the third
   // time in this project a measurement has been taken of a fixture instead of the
   // thing you actually walk up to.
-  const kick = toeKick(world, el.meta.hostedBy && world.get(el.meta.hostedBy) ? el.meta.hostedBy : id);
+  // ...and the fourth time. A worktop is not hosted by anything — it sits on the
+  // carcass — so `hostedBy` was empty and the kick was looked for under a slab of
+  // stone. The carcass is what has a plinth, and `run` is already the carcass.
+  const kick = toeKick(world, run.id);
   const want = kind === 'sink' ? [39, 45] : [f.elbow - 6, f.elbow - 2];
   return { task: name, at: [id], tests: [
     test('working height', ok(h, want[0], want[1]), h, `${want[0].toFixed(0)}–${want[1].toFixed(0)} in`,

@@ -9,6 +9,7 @@ import { referenceConditions } from './reference.js';
 import { scheduleFor, required, joinKey, scheduleForPair, sortOf } from './joints.js';
 import { habitat, CODE as HABIT } from './habitat.js';
 import { fitMap, errands as bodyErrands } from './inhabit.js';
+import { ACTIVITIES, attempt, obstacles as obstaclesOf, solve as solvePose, place as placeBody } from './everybody.js';
 import { floorUnder, mountsFor, workspaceOf, intrusion, blockage, daylightOf, CLEARANCE } from './gravity.js';
 import { shake } from './loads.js';
 import { rain, MIN_SLOPE, MIN_OVERHANG } from './weather.js';
@@ -655,7 +656,62 @@ export function checkAll(world) {
     }
   }
 
-  // 8. the drawing gets a say
+  // 8. the fabric, and whether a person can get at any of it
+  //
+  // These four are the plain questions that a decade of clever instruments never
+  // asked, because each of them measures a *body meeting a thing* and all four
+  // faults are about the thing on its own.
+  // These four are about a *finished* building, and firing them on anything else is
+  // over-claiming. A bare frame with ten joists and no heater in it is not a heated
+  // envelope with nothing in its cavities — it is a frame, and saying "nothing in
+  // the floor" of a thing that has no floor yet is the check being wrong rather
+  // than the building. The gate is the same one the habitability block already
+  // uses: is there a room in here at all.
+  const finished = world.all({ kind: 'opening' }).length > 0 &&
+    world.all().some(e => e.layer === 'interior');
+  const heated = finished && world.all().some(e =>
+    ['heater', 'stove', 'furnace'].includes(e.meta.role) || e.meta.system === 'propane');
+
+  const bare = finished ? bareRuns(world) : { bare: 0, length: 0, worst: [] };
+  if (bare.bare > 12) out.push(cond('BARE_RUN', SEVERITY.serious,
+    `${bare.bare} in of the ${bare.length} in of pipe and cable in this trailer runs through open room air` +
+    (bare.worst.length ? ` — worst ${bare.worst[0].id}, ${bare.worst[0].exposed} in of it` : ''),
+    bare.worst.slice(0, 6).map(w => w.id),
+    { bare: bare.bare, of: bare.length, worst: bare.worst.slice(0, 8),
+      basis: 'a run belongs in a joist bay, a stud bay, over the ceiling, or in a carcass',
+      resolution: 'sampled every 2 in along each segment' }, null));
+
+  const ins = heated ? insulation(world) : { parts: [] };
+  for (const p of ins.parts) {
+    if (!p.members || p.filled) continue;
+    out.push(cond('UNINSULATED', SEVERITY.serious,
+      `nothing in the ${p.id}: ${p.members} members and no insulation between any of them — ${p.why}`,
+      [], { part: p.id, members: p.members, basis: 'a heated envelope has something in its cavities' }, null));
+  }
+
+  for (const a of (finished ? apertures(world) : [])) {
+    if (a.open) continue;
+    out.push(cond('NO_APERTURE', SEVERITY.blocking,
+      `${a.id} is a ${a.kind} you use from above and ${a.lidded} covers ${a.covered}% of it — there is no hole cut`,
+      [a.id, a.lidded], { covered: a.covered, over: a.lidded,
+        basis: 'a bowl under an uncut worktop is a void, not a sink' }, null));
+  }
+
+  const seenSeat = new Set();
+  for (const [id, A] of Object.entries(ACTIVITIES)) {
+    if (!finished || !A.seated || !world.get(A.at)) continue;
+    // Two activities sit on the same bench; the seat is one seat and gets one
+    // verdict, not one per thing you might do in it.
+    if (seenSeat.has(A.at)) continue;
+    seenSeat.add(A.at);
+    const g = getIn(world, A.at);
+    if (g && !g.ok) out.push(cond('CANNOT_GET_IN', SEVERITY.blocking,
+      `${A.at}: ${g.why}`, [A.at, ...g.blocked],
+      { seat: A.at, blocked: g.blocked,
+        basis: 'sitting down is sliding in along the seat and being able to stand up again' }, null));
+  }
+
+  // 9. the drawing gets a say
   if (world.reference) out.push(...referenceConditions(world));
 
   out.sort((a, b2) => b2.severity - a.severity);
@@ -750,4 +806,222 @@ export function systemReach(world, system) {
     return best === Infinity ? -1 : best;
   };
   return { connected, gapFor, nodes };
+}
+
+// ---------------------------------------------------------------- the fabric
+/**
+ * A run in open room air.
+ *
+ * Every collision instrument in this project asks whether a *body* meets a wire,
+ * and a body is one posture in one place. Nobody asked the plainer question: is
+ * this cable in the room? Forty-eight feet of it were — a conductor at chest
+ * height across the bedroom, a riser standing free above the worktop from the
+ * counter to the ceiling, four pipes three inches off the wall face down the whole
+ * galley — and every one of them passed, because no body happened to be standing
+ * where it was.
+ *
+ * The rule is the trade's own: a run belongs in a joist bay, a stud bay, above the
+ * ceiling plane, or inside a carcass or chase. Anything else is exposed, and the
+ * measure is how many inches of it.
+ *
+ * Sampled every two inches rather than by the box, because the interesting runs are
+ * the ones that start in a cavity and come out of it — a riser wholly inside a
+ * cabinet and a riser that leaves the cabinet at the counter have the same bounding
+ * box and are not the same thing at all.
+ */
+export const BARE = { step: 2, pad: 0.4, allow: 4 };
+
+export function bareRuns(world, { step = BARE.step, pad = BARE.pad } = {}) {
+  const runs = world.all({ kind: 'run' });
+  if (!runs.length) return { runs: 0, length: 0, bare: 0, worst: [] };
+  const cover = world.all().filter(e => !['run', 'opening', 'port'].includes(e.kind))
+    .map(e => ({ id: e.id, lo: e.lo, hi: e.hi }));
+  const D = world.datum || {};
+  const deck = D.deckTop != null ? D.deckTop : 0;
+  // The ceiling is the underside of the rafters, not the top of the wall plus a
+  // guess. Guessed, the lighting circuit in the rafter bay came back as 192 in of
+  // cable slung through the room, which is a fact about the guess.
+  const raf = world.all({ kind: 'rafter' });
+  const ceil = raf.length ? Math.min(...raf.map(e => e.lo[2]))
+    : (D.wallTop != null ? D.wallTop : 1e9);
+  const W = world.walls || {};
+  const inx = [W.W ? W.W.at + 1.75 : -1e9, W.E ? W.E.at - 1.75 : 1e9];
+  const iny = [W.S ? W.S.at + 1.75 : -1e9, W.N ? W.N.at - 1.75 : 1e9];
+  const covered = (p) => cover.some(e =>
+    p[0] >= e.lo[0] - pad && p[0] <= e.hi[0] + pad &&
+    p[1] >= e.lo[1] - pad && p[1] <= e.hi[1] + pad &&
+    p[2] >= e.lo[2] - pad && p[2] <= e.hi[2] + pad);
+  let total = 0, bare = 0;
+  const worst = [];
+  for (const r of runs) {
+    const s = [0, 1, 2].map(i => r.hi[i] - r.lo[i]);
+    const k = s.indexOf(Math.max(...s));
+    const L = s[k];
+    const n = Math.max(2, Math.ceil(L / step));
+    let out = 0;
+    for (let t = 0; t < n; t++) {
+      const p = [0, 1, 2].map(i => i === k ? r.lo[i] + (t + 0.5) / n * L : (r.lo[i] + r.hi[i]) / 2);
+      const inRoom = p[0] > inx[0] && p[0] < inx[1] && p[1] > iny[0] && p[1] < iny[1] &&
+                     p[2] > deck + 0.1 && p[2] < ceil;
+      if (inRoom && !covered(p)) out++;
+    }
+    total += L;
+    const ex = L * out / n;
+    bare += ex;
+    if (ex > BARE.allow) worst.push({ id: r.id, run: r.meta.run || null, exposed: +ex.toFixed(1),
+      at: [r.lo, r.hi].map(v => v.map(x => +x.toFixed(1))) });
+  }
+  worst.sort((a, b) => b.exposed - a.exposed);
+  return { runs: runs.length, length: +total.toFixed(0), bare: +bare.toFixed(0), worst };
+}
+
+/**
+ * A heated building with nothing in its cavities.
+ *
+ * This trailer has a water heater, a 65 gallon tank and a pipe run in the floor
+ * bay, and not one inch of insulation anywhere in it: no batts between the studs,
+ * nothing over the ceiling, nothing under the deck. The joist bay the cold trunk
+ * runs through is open to the road. In an unheated week the first thing that
+ * happens is the trunk splits, and the second is the deck.
+ *
+ * The measure is cavity volume with something in it. A cavity is the clear space
+ * between two members of the same wall or floor; something in it is any element
+ * whose material insulates.
+ */
+export const INSULATING = new Set(['foam', 'mineral_wool', 'fibreglass', 'wool', 'cellulose', 'polyiso', 'xps', 'eps']);
+
+export function insulation(world) {
+  const parts = [];
+  const has = (kind, where) => {
+    const ins = world.all().filter(e => INSULATING.has(e.material));
+    return ins.filter(e => where(e)).length;
+  };
+  const D = world.datum || {};
+  const joists = world.all({ kind: 'joist' });
+  const studs = world.all({ kind: 'stud' });
+  const rafters = world.all({ kind: 'rafter' });
+  const ins = world.all().filter(e => INSULATING.has(e.material));
+  const near = (e, set, axis) => set.some(m =>
+    [0, 1, 2].every(i => e.hi[i] > m.lo[i] - 24 && e.lo[i] < m.hi[i] + 24));
+  parts.push({ id: 'floor', members: joists.length, filled: ins.filter(e => near(e, joists)).length,
+    why: 'the joist bay carries the cold trunk and is open to the road' });
+  parts.push({ id: 'walls', members: studs.length, filled: ins.filter(e => near(e, studs)).length,
+    why: 'a heated box with nothing between the studs' });
+  parts.push({ id: 'roof', members: rafters.length, filled: ins.filter(e => near(e, rafters)).length,
+    why: 'where the heat goes' });
+  return { parts, any: ins.length, ok: parts.every(p => !p.members || p.filled > 0) };
+}
+
+/**
+ * A fixture you use from above, with something solid over it.
+ *
+ * The galley sink is a bowl hung under a continuous worktop with no hole cut in
+ * it. Sealed. The reach test called it fine, because I had told the reach test to
+ * ignore anything above a working surface within its own footprint — the rule that
+ * lets a hand into an undermount bowl also lets it through the slab that should
+ * have had a hole in it. An exemption that hides the thing it was written to
+ * measure is worse than no test.
+ *
+ * So this one asks the plain question separately: standing over this fixture and
+ * dropping straight down, do you meet it, or do you meet a worktop?
+ */
+export const OPEN_FROM_ABOVE = new Set(['sink', 'toilet', 'shower', 'range', 'hob', 'basin']);
+
+export function apertures(world) {
+  const out = [];
+  for (const f of world.all()) {
+    // Every one of these is `kind: 'fixture'`; what it *is* lives in meta.role.
+    // Matched on kind, the test found no sinks in a building with two and passed.
+    const role = (f.meta && f.meta.role) || f.kind;
+    if (!OPEN_FROM_ABOVE.has(role)) continue;
+    const over = world.all().filter(e => e.id !== f.id && e.kind !== 'run' && e.kind !== 'opening' &&
+      e.lo[2] >= f.hi[2] - 0.2 && e.lo[2] < f.hi[2] + 36 &&
+      e.hi[0] > f.lo[0] + 0.5 && e.lo[0] < f.hi[0] - 0.5 &&
+      e.hi[1] > f.lo[1] + 0.5 && e.lo[1] < f.hi[1] - 0.5);
+    // How much of the fixture's mouth is left open by whatever sits over it.
+    const area = (f.hi[0] - f.lo[0]) * (f.hi[1] - f.lo[1]);
+    let worst = null;
+    for (const e of over) {
+      const ov = Math.max(0, Math.min(e.hi[0], f.hi[0]) - Math.max(e.lo[0], f.lo[0])) *
+                 Math.max(0, Math.min(e.hi[1], f.hi[1]) - Math.max(e.lo[1], f.lo[1]));
+      if (ov / area > 0.5 && (!worst || ov > worst.ov)) worst = { id: e.id, ov };
+    }
+    out.push({ id: f.id, kind: role, open: !worst,
+      lidded: worst ? worst.id : null,
+      covered: worst ? +(100 * worst.ov / area).toFixed(0) : 0 });
+  }
+  return out;
+}
+
+/**
+ * A seat you cannot get into.
+ *
+ * Fitting in a seat and getting into it are different questions, and only the first
+ * one was being asked. The dinette's table support was split into two end fins to
+ * get it out of a sitter's hips — which worked, and walled the seat in: nine inches
+ * of upstand at each end of a bench whose front is entirely under a thirty inch
+ * table. The body fitted perfectly, in a box it could only have been lowered into.
+ *
+ * So: take the seated body, slide it along the seat and out, and see whether it
+ * ever gets somewhere it can stand up. That is what sitting down is.
+ */
+export function getIn(world, seatId, { stature = 72 } = {}) {
+  const seat = world.get(seatId);
+  if (!seat) return null;
+  const act = Object.entries(ACTIVITIES).find(([, A]) => A.at === seatId && A.seated);
+  if (!act) return null;
+  const [name, A] = act;
+  const posed = attempt(world, name, { stature });
+  if (!posed || !posed.body) return null;
+  // Two different obstacle sets, because they are two different questions. Seated,
+  // your thighs are under the table and the table is not in your way. Standing up,
+  // it is the first thing you meet. Sharing one exemption between them, the bench
+  // reported "slide four inches and stand up" into the underside of the tabletop.
+  const all = obstaclesOf(world).map(e => ({ id: e.id, kind: e.kind, lo: e.lo, hi: e.hi }));
+  const obs = all.filter(e => e.id !== seatId && e.id !== A.partner);
+  const upObs = all.filter(e => e.id !== seatId);
+  const FEET = new Set(['leftFoot', 'rightFoot', 'leftLowerLeg', 'rightLowerLeg']);
+  const GROUND = new Set(['deck', 'joist', 'plate', 'chassis', 'wellcap']);
+  const clear = (segs, dx, dy, against = obs) => {
+    for (const g of segs) {
+      const lo = [Math.min(g.a[0], g.b[0]) - g.r + dx, Math.min(g.a[1], g.b[1]) - g.r + dy, Math.min(g.a[2], g.b[2]) - g.r];
+      const hi = [Math.max(g.a[0], g.b[0]) + g.r + dx, Math.max(g.a[1], g.b[1]) + g.r + dy, Math.max(g.a[2], g.b[2]) + g.r];
+      for (const e of against) {
+        if (FEET.has(g.bone) && GROUND.has(e.kind)) continue;
+        const ov = [0, 1, 2].map(i => Math.min(hi[i], e.hi[i]) - Math.max(lo[i], e.lo[i]));
+        if (ov.every(o => o > 0.5)) return e.id;
+      }
+    }
+    return null;
+  };
+  // Standing up is not "the seated body, six inches higher". It is a standing body,
+  // on the floor, at that spot. Tested as a lift, every seat in the trailer passed
+  // on the first two inches, including one walled in at both ends.
+  const deck = world.all().filter(e => e.meta.role === 'floor sheathing' || e.kind === 'deck');
+  const floorZ = deck.length ? Math.max(...deck.map(e => e.hi[2])) : 0;
+  const upPose = solvePose(ACTIVITIES['STANDING IN THE DOOR'].pose);
+  const along = (seat.hi[0] - seat.lo[0]) > (seat.hi[1] - seat.lo[1]) ? 0 : 1;
+  const hips = posed.body.bone.hips;
+  const canStandAt = (x, y) => {
+    const b = placeBody(upPose, { stature, at: [x, y], floor: floorZ, facing: 0 });
+    return !clear(b.segments, 0, 0, upObs);
+  };
+  const segs = posed.body.segments;
+  const reach = (seat.hi[along] - seat.lo[along]) + 36;
+  const tried = [];
+  for (const sign of [1, -1]) {
+    for (let d = 0; d <= reach; d += 2) {
+      const dx = along === 0 ? sign * d : 0, dy = along === 1 ? sign * d : 0;
+      const hit = clear(segs, dx, dy);
+      if (hit) { tried.push({ dir: sign, at: d, by: hit }); break; }
+      if (d >= 4 && canStandAt(hips[0] + dx, hips[1] + dy))
+        return { ok: true, seat: seatId, slide: d, dir: sign,
+                 why: d ? `slide ${d} in along the seat and stand up` : 'stand straight up out of it' };
+    }
+  }
+  const by = [...new Set(tried.map(t => t.by))];
+  return { ok: false, seat: seatId, blocked: by, tried,
+    why: by.length
+      ? `you cannot get into it: sliding either way along the seat runs into ${by.join(' and ')}`
+      : 'you cannot get into it: nowhere along the seat can a body stand up' };
 }
