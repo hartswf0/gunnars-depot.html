@@ -683,6 +683,7 @@ window.__wg = worldGroup; window.__rings = rings; window.camera = camera; window
 // to check a claim rather than take it, and that includes this page.
 window.trace = {
   get msgs() { return msgs; }, get doc() { return doc; }, get at() { return at; },
+  get file() { return docFile; },
   // Enough of a handle to drive the page from a test: jump to a turn, then ask
   // what actually ended up on the stage.
   goto(i) { stop(); show(i); },
@@ -734,6 +735,7 @@ const viewAngles = (name) => VIEWS[String(name || '').toLowerCase().trim()] || V
 // own spherical convention, so the numbers above mean here what they mean there.
 const orbit = { theta: 0.78, phi: 1.07, dist: 46, target: new THREE.Vector3(0, 3, 0) };
 let framed = null, camTween = 0;
+let docFile = null;   // which trace is open, so a test can tell it got the one it asked for
 
 function meshFor(o) {
   const [sx, sy, sz] = o.size || [1, 1, 1];
@@ -966,8 +968,17 @@ function fitDistance() {
   return Math.max(distanceToFrame(b, orbit.target), b.getSize(new THREE.Vector3()).length() * .6);
 }
 
+/**
+ * Centre on what is standing and open out far enough to hold all of it.
+ *
+ * The clinic's own framing used to stand untouched for a correspondence run, on the
+ * grounds that the render should be the shot the critic was handed. But its target is
+ * a fixed point at (0, 1.15, 0), and a build that does not happen to straddle that
+ * point sits off to one side of the frame or half out of it — which is the thing you
+ * cannot read. So the angle stays the clinic's, exactly the camera the picture was
+ * taken from, and only the aim and the distance move: same view, centred, whole.
+ */
 function frameOn(parts) {
-  if (doc && doc.builder === 'correspondence') return;   // the clinic's own framing stands
   const b = new THREE.Box3().setFromObject(worldGroup);
   if (b.isEmpty()) {
     // Nothing is standing yet, so measure the parts that are about to be.
@@ -976,13 +987,10 @@ function frameOn(parts) {
     b.expandByScalar(2);
   }
   orbit.target.copy(b.getCenter(new THREE.Vector3()));
-  const s = b.getSize(new THREE.Vector3());
-  // A phone is portrait and a building is wide, so the horizontal fit decides. Held
-  // steady across a run and only ever opened out, so the eye watches the thing
+  // Held steady across a run and only ever opened out, so the eye watches the thing
   // change rather than the camera move.
-  const aspect = Math.max(0.35, camera.aspect || 1);
-  const span = Math.max(s.x, s.z), half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const want = Math.max((span / 2) / (half * aspect), (Math.max(s.y, span * .55) / 2) / half) * 1.3 + span * .12;
+  const want = Math.max(distanceToFrame(b, orbit.target),
+                        b.getSize(new THREE.Vector3()).length() * .6);
   orbit.dist = framed ? Math.max(framed, want) : want; framed = orbit.dist;
 }
 
@@ -1585,7 +1593,7 @@ function open(raw, { autoplay = false } = {}) {
 $('#pick').onchange = async e => {
   stop(); const f = e.target.value; if (!f) return;
   curtain('reading the trace…');
-  try { const t = await (await fetch('assets/traces/' + f)).json(); curtain(null); open(t, { autoplay: true }); }
+  try { const t = await (await fetch('assets/traces/' + f)).json(); curtain(null); docFile = f; open(t, { autoplay: true }); }
   catch (err) { curtain('could not read that trace: ' + ((err && err.message) || err)); }
 };
 $('#file').onchange = async e => {
@@ -1762,6 +1770,7 @@ function renderDocs() {
     $('#pick').value = pick.file;
     const t = await (await fetch('assets/traces/' + pick.file)).json();
     curtain(null);
+    docFile = pick.file;
     open(t, { autoplay: true });
   } catch (e) { curtain('could not read the traces: ' + ((e && e.message) || e)); }
 })();

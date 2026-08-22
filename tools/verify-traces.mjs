@@ -70,9 +70,9 @@ for (const [width, height, label] of [[1280, 820, 'desktop'], [390, 780, 'phone'
     // The page used to ignore ?trace= and always open the first one, so this harness
     // cheerfully checked the same trace eight times and reported eight passes. Assert
     // the run on screen is the run that was asked for.
-    const got = await page.evaluate(() => ({ intent: window.trace.doc?.intent, builder: window.trace.doc?.builder }));
-    if (got.intent !== t.intent || got.builder !== t.builder) {
-      console.log(` ! ${slug.padEnd(24)} loaded "${got.intent}" (${got.builder}), expected "${t.intent}" (${t.builder})`);
+    const opened = await page.evaluate(() => window.trace.file);
+    if (opened !== t.file) {
+      console.log(` ! ${slug.padEnd(24)} opened ${opened}, asked for ${t.file}`);
       bad++; await page.close(); continue;
     }
 
@@ -86,16 +86,21 @@ for (const [width, height, label] of [[1280, 820, 'desktop'], [390, 780, 'phone'
       return [...at].sort((a, b) => a - b).map(i => [i, null]);
     });
 
-    let fails = 0;
+    let fails = 0, started = false;
     const lines = [];
     for (const [i, model] of turns) {
       const got = await readStage(page, i, model);
-      const ok = got && got.total > 0 && got.onscreen;
+      // A run opens on a prompt and a reference before anything is built, so an empty
+      // stage early is the trace being accurate. Once parts have appeared, an empty
+      // stage is a fault.
+      if (got) started = true;
+      const ok = got ? got.total > 0 && got.onscreen : !started;
       if (!ok) { fails++; bad++; }
       if (!ok || model) lines.push(`   ${ok ? ' ' : '!'} ${String(i).padStart(3)} ${(model || 'turn').padEnd(46)} ` +
         (got ? `${got.shown} of ${got.total} parts${got.onscreen ? '' : ' · OFF SCREEN'}${got.note ? ' · stopped: ' + got.note : ''}`
-             : '*** NOTHING ON THE STAGE ***'));
+             : 'nothing built yet'));
     }
+    if (!started) { console.log(` ! ${slug.padEnd(24)} never put anything on the stage`); bad++; }
     console.log(` ${fails ? '!' : '·'} ${slug.padEnd(24)} ${turns.length} checked, ${fails} failed`);
     lines.forEach(l => console.log(l));
     await page.close();
