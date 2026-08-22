@@ -1,6 +1,11 @@
 {
-  "format": "OPERATIVE_BUILDER_TRACE_V1",
-  "generator": "operative-builder-scan.html",
+  "generators": {
+    "operative": "operative-builder-scan.html"
+  },
+  "formats": {
+    "operative": "OPERATIVE_BUILDER_TRACE_V1",
+    "correspondence": "CORRESPONDENCE v1 (version:1 + scene + transcript)"
+  },
   "prompts": {
     "builder": "You are BUILDER in a brutish visual correspondence loop. Return ONLY JSON. Never write code or prose outside JSON. Operate on CURRENT WORLD using operations. Preserve good work and preserve explicit USER BLUEPRINT moves unless the criticism targets them. If an OFFLINE MEDICAL SCAN is supplied, treat it as evidence about what is visually observable versus what exact geometry contains; do not confuse low visual coverage with a proven building defect. Allowed operations: ADD, MOVE, SCALE, ROTATE_Y, COLOR, REMOVE, CLEAR. Allowed primitives: box, cylinder, cone, sphere, gable. Every object has id, primitive, role, position [x,y,z], size [x,y,z], rotation_y radians, color hex, material matte|metal, scale [x,y,z]. JSON shape: {\"summary\":\"...\",\"operations\":[{...}]}. IF WORLD IS EMPTY: make a BLUEPRINT/MASSING PASS first, not a decorated final object. Establish footprint, major volumes, entrance axis, path/stair/door, dominant roof envelopes and spatial hierarchy with at most 24 operations. Do not spend the first pass on windows, trim or ornament. IF WORLD IS NOT EMPTY: change ONE consequential region only and use AT MOST 12 operations. Do not churn dozens of unrelated parts. The next observation must be able to tell what this move did. Role labels such as door, window, stair, path, landing, wall, roof, support matter to deterministic checks.",
     "critic": "You are CRITIC. FUCKED UNTIL PROVEN OTHERWISE. Your governing distinction is: IS THE BUILDING FUCKED, OR ARE OUR EYES FUCKED? You may receive explicitly labeled images: REFERENCE; CURRENT WORLD; BEFORE/AFTER/GEOMETRY DIFF; and optionally one OFFLINE MEDICAL SCAN sheet containing multi-view cameras, CT occupancy, laser/light-leak maps, and a virtual photogrammetry surface cloud. In GEOMETRY DIFF, cyan means added geometry, yellow means current changed geometry, and red means old/removed geometry. Use BEFORE/AFTER/DIFF to understand WHAT THE BUILDER ACTUALLY CHANGED and whether that repair introduced regressions. Search hard for a supported consequential discrepancy against REFERENCE. Do not praise. Do not propose fixes. Do not invent unseen reference facts. Return ONLY JSON: {\"suck_score\":0-100,\"what_sucks\":\"one concise concrete criticism grounded in visible evidence\"}. A score of 0 means only this view failed to find a meaningful discrepancy; it never means finished."
@@ -9,12 +14,13 @@
     {
       "file": "castle-6-cycles.json",
       "note": "the run that went furthest",
+      "builder": "operative",
       "intent": "Castle",
       "model": "gpt-5.6-sol",
       "reference_name": "1000061402.png",
       "exported_at": "2026-08-19T02:43:16.321Z",
       "cycles": 6,
-      "objects": 105,
+      "parts": 105,
       "scores": [
         100,
         78,
@@ -28,17 +34,122 @@
     {
       "file": "castle-2-cycles.json",
       "note": "the same castle, abandoned at two cycles",
+      "builder": "operative",
       "intent": "Castle",
       "model": "gpt-5.6-sol",
       "reference_name": "1000061402.png",
       "exported_at": "2026-08-19T02:38:07.422Z",
       "cycles": 2,
-      "objects": 40,
+      "parts": 40,
       "scores": [
         100,
         78
       ],
       "bytes": 344340
+    },
+    {
+      "file": "lunar-lander.json",
+      "note": "sixteen cycles, one target at a time",
+      "builder": "correspondence",
+      "intent": "Lunar lander",
+      "model": "gpt-5.6",
+      "reference_name": "1000061400.png",
+      "exported_at": "2026-08-19T02:31:18.641Z",
+      "cycles": 16,
+      "parts": 81,
+      "snapshots": 15,
+      "scores": [
+        10,
+        9,
+        9,
+        94,
+        88,
+        92,
+        96,
+        95,
+        91,
+        89,
+        91,
+        94,
+        97,
+        98,
+        99
+      ],
+      "bytes": 1408146
+    },
+    {
+      "file": "howls-moving-castle.json",
+      "note": "the critic never got below 98",
+      "builder": "correspondence",
+      "intent": "Howl's moving castle",
+      "model": "gpt-5.6",
+      "reference_name": "1000061413.png",
+      "exported_at": "2026-08-19T02:57:18.509Z",
+      "cycles": 6,
+      "parts": 46,
+      "snapshots": 14,
+      "scores": [
+        10,
+        98,
+        100,
+        100,
+        100
+      ],
+      "bytes": 1920526
+    },
+    {
+      "file": "tiny-house-frame.json",
+      "note": "a wall frame, built wall by wall",
+      "builder": "correspondence",
+      "intent": "Tiny house wall frame",
+      "model": "gpt-5.6",
+      "reference_name": "1000061583.png",
+      "exported_at": "2026-08-19T03:04:13.422Z",
+      "cycles": 7,
+      "parts": 44,
+      "snapshots": 15,
+      "scores": [
+        10,
+        10,
+        98,
+        99,
+        94,
+        98
+      ],
+      "bytes": 3139135
+    },
+    {
+      "file": "foam-trailer.json",
+      "note": "four pictures, four targets",
+      "builder": "correspondence",
+      "intent": "Tom sachs inspired foam trailer",
+      "model": "gpt-5.6",
+      "reference_name": "1000061609.png",
+      "exported_at": "2026-08-19T01:59:23.480Z",
+      "cycles": 7,
+      "parts": 92,
+      "snapshots": 4,
+      "scores": [
+        96,
+        88,
+        93,
+        96
+      ],
+      "bytes": 501645
+    },
+    {
+      "file": "pagoda-stub.json",
+      "note": "two cycles, no picture ever taken",
+      "builder": "correspondence",
+      "intent": "Tom sachs inspired foam trailer",
+      "model": "gpt-5.6",
+      "reference_name": "1000061609.png",
+      "exported_at": null,
+      "cycles": 2,
+      "parts": 9,
+      "snapshots": 0,
+      "scores": [],
+      "bytes": 219897
     }
   ]
 }
