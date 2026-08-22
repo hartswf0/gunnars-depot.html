@@ -1,16 +1,31 @@
 {
   "generators": {
-    "operative": "operative-builder-scan.html"
+    "operative": "operative-builder-scan.html",
+    "correspondence": "the correspondence depot clinic"
   },
   "formats": {
     "operative": "OPERATIVE_BUILDER_TRACE_V1",
-    "correspondence": "CORRESPONDENCE v1 (version:1 + scene + transcript)"
+    "correspondence": "CORRESPONDENCE v1 (version:1 + scene + transcript)",
+    "human": "HUMAN_CORRESPONDENCE_V1"
   },
   "prompts": {
     "builder": "You are BUILDER in a brutish visual correspondence loop. Return ONLY JSON. Never write code or prose outside JSON. Operate on CURRENT WORLD using operations. Preserve good work and preserve explicit USER BLUEPRINT moves unless the criticism targets them. If an OFFLINE MEDICAL SCAN is supplied, treat it as evidence about what is visually observable versus what exact geometry contains; do not confuse low visual coverage with a proven building defect. Allowed operations: ADD, MOVE, SCALE, ROTATE_Y, COLOR, REMOVE, CLEAR. Allowed primitives: box, cylinder, cone, sphere, gable. Every object has id, primitive, role, position [x,y,z], size [x,y,z], rotation_y radians, color hex, material matte|metal, scale [x,y,z]. JSON shape: {\"summary\":\"...\",\"operations\":[{...}]}. IF WORLD IS EMPTY: make a BLUEPRINT/MASSING PASS first, not a decorated final object. Establish footprint, major volumes, entrance axis, path/stair/door, dominant roof envelopes and spatial hierarchy with at most 24 operations. Do not spend the first pass on windows, trim or ornament. IF WORLD IS NOT EMPTY: change ONE consequential region only and use AT MOST 12 operations. Do not churn dozens of unrelated parts. The next observation must be able to tell what this move did. Role labels such as door, window, stair, path, landing, wall, roof, support matter to deterministic checks.",
     "critic": "You are CRITIC. FUCKED UNTIL PROVEN OTHERWISE. Your governing distinction is: IS THE BUILDING FUCKED, OR ARE OUR EYES FUCKED? You may receive explicitly labeled images: REFERENCE; CURRENT WORLD; BEFORE/AFTER/GEOMETRY DIFF; and optionally one OFFLINE MEDICAL SCAN sheet containing multi-view cameras, CT occupancy, laser/light-leak maps, and a virtual photogrammetry surface cloud. In GEOMETRY DIFF, cyan means added geometry, yellow means current changed geometry, and red means old/removed geometry. Use BEFORE/AFTER/DIFF to understand WHAT THE BUILDER ACTUALLY CHANGED and whether that repair introduced regressions. Search hard for a supported consequential discrepancy against REFERENCE. Do not praise. Do not propose fixes. Do not invent unseen reference facts. Return ONLY JSON: {\"suck_score\":0-100,\"what_sucks\":\"one concise concrete criticism grounded in visible evidence\"}. A score of 0 means only this view failed to find a meaningful discrepancy; it never means finished."
   },
   "traces": [
+    {
+      "file": "human-origin.json",
+      "note": "thirty-six turns, two days, by hand",
+      "builder": "human",
+      "intent": "Houses, by conversation",
+      "model": "ChatGPT, by hand",
+      "reference_name": "Watson Hartsoe",
+      "exported_at": "2026-08-19T00:45:48Z",
+      "cycles": 36,
+      "parts": 0,
+      "scores": [],
+      "bytes": 1104892
+    },
     {
       "file": "castle-6-cycles.json",
       "note": "the run that went furthest",

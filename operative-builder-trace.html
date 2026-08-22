@@ -19,6 +19,10 @@
      not get the same colour. Operative is clay; correspondence is ink-blue. */
   --accent:#a85a34; --accent-soft:#f3ece6; --added:#2f8f84; --changed:#b08a2e;
 }
+[data-builder="human"]{
+  --accent:#6b6250; --accent-soft:#efece4; --added:#6b6250; --changed:#8a7f66;
+  --sky-top:#e6e3dc; --sky-bot:#efece6;
+}
 [data-builder="correspondence"]{
   --accent:#3d6591; --accent-soft:#e9eef4; --added:#3d6591; --changed:#8a7bb0;
   --sky-top:#d3d8dd; --sky-bot:#e9e7e2;
@@ -107,12 +111,23 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
   background:var(--accent);margin-top:-4.5px}
 #fadeWrap input::-moz-range-track{height:2px;background:var(--rule)}
 #fadeWrap input::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;background:var(--accent)}
+#prov{position:absolute;z-index:5;left:16px;top:118px;max-width:min(320px,52%);
+  display:flex;flex-direction:column;gap:5px}
+#prov div{display:flex;gap:7px;align-items:flex-start;font-size:10.5px;line-height:1.4;color:var(--soft);
+  letter-spacing:0}
+#prov .k{flex:none;width:58px;font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+  padding-top:1px}
 #viewTag{position:absolute;z-index:5;left:16px;bottom:64px;font-size:10px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--faint)}
 #viewTag b{color:var(--soft);font-weight:400}
 #boxes{font-size:11px;color:var(--soft);border:1px solid var(--rule);background:#fff;
   border-radius:99px;padding:4px 9px;flex:none}
 #boxes.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+#noModel{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:24px;
+  color:var(--faint);z-index:3}
+#noModel.on{display:grid}
+#noModel b{display:block;font-size:13px;font-weight:500;color:var(--soft);letter-spacing:.04em}
+#noModel span{display:block;max-width:300px;margin:7px auto 0;font-size:12px;line-height:1.55}
 #emptyPlate{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:24px;
   color:var(--faint);z-index:2}
 #emptyPlate.on{display:grid}
@@ -146,7 +161,12 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
   box-shadow:0 1px 2px #00000010;border:1px solid var(--rule)}
 .turn.right .bub{background:var(--mine);border-color:#00000000;box-shadow:none}
 .who{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);
-  margin-bottom:6px;display:flex;gap:8px;align-items:baseline}
+  margin-bottom:6px;display:flex;gap:7px;align-items:center}
+.ico{width:13px;height:13px;flex:none;fill:none;stroke:currentColor;stroke-width:1.3;
+  stroke-linecap:round;stroke-linejoin:round}
+.note .ico{width:12px;height:12px;vertical-align:-2px;margin-right:3px;display:inline-block}
+.turn.you .bub{background:var(--accent-soft);border-color:#00000000}
+.turn.you .who{color:var(--accent)}
 .turn.right .who{justify-content:flex-end}
 .txt{white-space:pre-wrap;word-break:break-word}
 .big{font-size:16px}
@@ -166,6 +186,8 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
 .shots.one img{aspect-ratio:auto;max-height:280px;object-fit:contain;background:#fff}
 .focus{font-size:11.5px;color:var(--soft);margin:6px 0 0;letter-spacing:0}
 .verdict + .focus{margin-top:10px}
+.caveat{font-size:11.5px;color:var(--soft);margin:7px 0 0;padding-left:9px;
+  border-left:2px solid var(--rule);letter-spacing:0}
 .waiting{font-size:11px;color:var(--soft);margin-top:7px;letter-spacing:0}
 .waiting b{color:var(--ink);font-variant-numeric:tabular-nums}
 .focus b{color:var(--accent);font-weight:500}
@@ -219,7 +241,7 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
 #docs a{color:var(--ink)}
 #docs code{font:400 12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#fff;
   border:1px solid var(--rule);border-radius:5px;padding:1px 5px}
-#docs b.op{color:#a85a34}#docs b.co{color:#3d6591}
+#docs b.op{color:#a85a34}#docs b.co{color:#3d6591}#docs b.hu{color:#6b6250}
 #docsClose{position:fixed;top:16px;right:18px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;
   color:var(--soft);background:#fff;border-radius:99px;padding:8px 14px;box-shadow:0 1px 3px #00000014}
 
@@ -242,6 +264,7 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
   .wide{display:none}.narrow{display:inline}
   #fadeWrap span{display:none}
   #fadeWrap input{width:52px}
+  #prov{display:none}
   #viewTag{bottom:60px;left:12px;font-size:9px}
   #boxes{padding:4px 7px}
   #ref{width:76px;top:12px;left:12px}
@@ -279,6 +302,9 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
     </div>
 
     <div id="viewTag">camera · <b id="viewName">front 3/4</b></div>
+    <!-- Who made this, on what, judged how, photographed how. Four facts, always on
+         screen, because "which builder am I watching" should never need a click. -->
+    <div id="prov"></div>
 
     <div id="meter">
       <div class="cap">suck score</div>
@@ -292,6 +318,10 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
     <img id="ghost" alt="">
     <div id="flash"></div>
     <div id="shutter"><span id="shutterView">front</span></div>
+
+    <div id="noModel"><div><b>No model to show.</b>
+      <span>This one was built by hand, in a browser, two days at a time. The geometry was a
+      web page; the record is the pictures.</span></div></div>
 
     <div id="emptyPlate"><div><b>Nothing was built.</b>
       <span>Every operation was rejected, so the captures below are blank. That is the trace being honest, not a fault in this page.</span></div></div>
@@ -337,6 +367,11 @@ import * as THREE from 'three';
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 let idx = null, doc = null, msgs = [], at = 0, playing = false, timer = null, rate = 4;
+const BUILDERS = {
+  operative: 'operative builder · a loop with a schema between it and the world',
+  correspondence: 'correspondence builder · a loop that hunts one target at a time',
+  human: 'a person, typing · the trace the automatic ones were built from'
+};
 
 // ------------------------------------------------------------------ adapters
 //
@@ -382,8 +417,34 @@ const CORRESPONDENCE_PART = (p) => ({
 
 function adapt(doc) {
   if (doc && doc.format === 'OPERATIVE_BUILDER_TRACE_V1') return adaptOperative(doc);
+  if (doc && doc.format === 'HUMAN_CORRESPONDENCE_V1') return adaptHuman(doc);
   if (doc && doc.scene && doc.transcript) return adaptCorrespondence(doc);
   throw new Error('not a builder trace this page knows how to read');
+}
+
+/**
+ * Before any of it was automatic, it was a person typing.
+ *
+ * Thirty-six turns over two days: a prompt, a thing that got built, a screenshot
+ * pasted back in, and a blunt human verdict — "the wings do not look good", "now the
+ * roof is fucked up", "we have no windows". The same loop the two machine builders
+ * run, with a person as both the instruction and the critic, and it is the trace the
+ * automatic ones were built out of. There is no geometry in it, because the geometry
+ * was a web page at the time. The pictures are the record.
+ */
+function adaptHuman(t) {
+  const msgs = [{ kind: 'opener', ref: (t.turns.find(x => x.image) || {}).image || null,
+                  intent: t.intent, name: t.who, note: t.note }];
+  for (const turn of t.turns) {
+    msgs.push({ kind: 'you', text: turn.prompt, cycle: turn.i + 1, ts: turn.ts });
+    msgs.push({ kind: 'builder', cycle: turn.i + 1, text: turn.result,
+      artifact: turn.artifact || null,
+      shots: turn.image ? [{ src: turn.image, cap: 'what came back', blank: false }] : [] });
+  }
+  return { builder: 'human', intent: t.intent, reference: null, name: t.who,
+           model: t.engine, msgs, perCycleWorlds: false, note: t.note,
+           provenance: { engine: t.engine, critic: t.critic, capture: t.capture,
+                         turns: t.turns.length } };
 }
 
 function adaptOperative(t) {
@@ -437,7 +498,10 @@ function adaptOperative(t) {
                             : errs[0].text });
   }
   return { builder: 'operative', intent: t.intent, reference: t.reference,
-           name: t.reference_name, model: t.model, msgs, perCycleWorlds: true };
+           name: t.reference_name, model: t.model, msgs, perCycleWorlds: true,
+           provenance: { engine: t.model, critic: 'FUCKED UNTIL PROVEN OTHERWISE · one score for the view',
+             capture: 'three renders a cycle — before, after, geometry diff',
+             tool: 'operative-builder-scan.html', cycles: t.history.length } };
 }
 
 function adaptCorrespondence(t) {
@@ -452,7 +516,7 @@ function adaptCorrespondence(t) {
   // format. `world` and `api` lines are the machinery — kept, but as quiet notes,
   // and the transport chatter is dropped: forty "→ OPENAI · attempt 1/4" lines say
   // nothing a reader of the argument needs.
-  let cycle = 0, saidTarget = null, pending = null;
+  let cycle = 0, saidTarget = null, pending = null, told = [];
   const counts = [];
   for (const e of t.transcript || []) {
     const text = String(e.text || '');
@@ -490,14 +554,22 @@ function adaptCorrespondence(t) {
       continue;
     }
     if (e.role === 'builder') {
-      if (/^→ OPENAI/.test(text)) continue;                     // the outgoing prompt
+      // The outgoing prompt is not conversation, but it names the exact parts the
+      // builder was told to work on — which is the only record of what a cycle
+      // touched when it moved things instead of adding them.
+      if (/^→ OPENAI/.test(text)) {
+        const ids = /IDS:\s*([^\n]+)/.exec(text);
+        told = ids ? ids[1].split(',').map(x => x.trim()).filter(Boolean) : [];
+        continue;
+      }
       const body = text.replace(/^← TARGETED BUILD · /, '');
       const n = /(\d+) changed parts/.exec(text);
       msgs.push({ kind: 'builder', cycle, text: body.replace(/^\d+ changed parts\n?/, ''),
                   changedCount: n ? +n[1] : null, raw: null,
                   think: pending && pending.who === 'builder' ? pending.ms : null,
-                  cost: pending && pending.who === 'builder' ? pending : null });
-      pending = null;
+                  cost: pending && pending.who === 'builder' ? pending : null,
+                  told: told.slice() });
+      pending = null; told = [];
       continue;
     }
     if (e.role === 'critic') {
@@ -528,15 +600,27 @@ function adaptCorrespondence(t) {
     const c = counts[k++];
     if (!c) break;
     const upto = parts.slice(0, c.total);
+    // A cycle that relocates nine parts and adds none leaves the count where it was,
+    // so a prefix reconstruction shows nothing happening and the move reads as a
+    // skipped step. The parts it was told to move are recorded, so they are marked as
+    // changed and the message says the model cannot show them moving — only where
+    // they ended up.
+    const inPlace = c.total === prev;
     m.scene = { parts: upto, added: new Set(upto.slice(prev).map(p => p.id)),
-                changed: new Set(), was: prev, rebuilt: true };
+                changed: new Set(inPlace ? (m.told || []) : []), was: prev, rebuilt: true };
+    m.inPlace = inPlace && (m.told || []).length ? m.told.length : 0;
     prev = c.total;
   }
   if (!counts.length && builders.length)
     builders[0][0].scene = { parts, added: new Set(parts.map(p => p.id)),
                              changed: new Set(), was: 0, final: true };
+  const set = t.settings || {};
   return { builder: 'correspondence', intent, reference: t.reference, name: t.referenceName,
-           model: (t.settings || {}).model || 'unknown', msgs,
+           model: set.model || 'unknown', msgs,
+           provenance: { engine: `${set.model || 'unknown'}${set.effort ? ' · ' + set.effort + ' effort' : ''}`,
+             critic: `hunts one worst target at a time${set.threshold != null ? ' · stops under ' + set.threshold : ''}`,
+             capture: 'one render a cycle, from one of eight fixed cameras',
+             tool: 'correspondence depot clinic', cycles: t.cycle },
            perCycleWorlds: counts.length > 0, reconstructed: counts.length > 0,
            background: t.scene.background, ground: t.scene.groundColor };
 }
@@ -804,6 +888,18 @@ function frameOn(parts) {
 }
 
 // ------------------------------------------------------------------ rendering
+// A mark per voice, so you can tell at a glance who is speaking without reading a
+// label. Small, line-only, and drawn from what each one actually does: a person, a
+// square being set out, an eye, a shutter, a machine.
+const ICONS = {
+  human:   '<path d="M8 8.2a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2Zm-5 5.3c0-2.6 2.2-4 5-4s5 1.4 5 4"/>',
+  builder: '<path d="M2.2 13.8V5.2L8 2.2l5.8 3v8.6M2.2 13.8h11.6M6 13.8V8.6h4v5.2"/>',
+  critic:  '<path d="M1.6 8S4 3.6 8 3.6 14.4 8 14.4 8 12 12.4 8 12.4 1.6 8 1.6 8Z"/><circle cx="8" cy="8" r="1.9"/>',
+  camera:  '<path d="M1.8 5.4h2.6l1-1.6h5.2l1 1.6h2.6v7.2H1.8z"/><circle cx="8" cy="9" r="2.4"/>',
+  world:   '<circle cx="8" cy="8" r="6.2"/><path d="M1.8 8h12.4M8 1.8c1.8 2 1.8 10.4 0 12.4M8 1.8c-1.8 2-1.8 10.4 0 12.4"/>'
+};
+const icon = (k) => `<svg class="ico" viewBox="0 0 16 16" aria-hidden="true">${ICONS[k] || ICONS.world}</svg>`;
+
 const scoreInk = (n) => n == null ? 'var(--faint)'
   : n >= 85 ? 'var(--alarm)' : n >= 70 ? '#b4622f' : n >= 50 ? '#8a7a33' : 'var(--calm)';
 
@@ -816,17 +912,20 @@ function bubble(m, i) {
     </div></div>`;
 
   if (m.kind === 'note') return `<div class="note ${m.warn ? 'warn' : ''}" data-i="${i}"><b>${esc(m.text)}</b></div>`;
-  if (m.kind === 'shoot') return `<div class="note shootnote" data-i="${i}">📷 <b>picture taken</b> · ${esc(m.view)}</div>`;
+  if (m.kind === 'shoot') return `<div class="note shootnote" data-i="${i}">${icon('camera')}
+    <b>picture taken</b> · ${esc(m.view)}</div>`;
 
   if (m.kind === 'you') return `
-    <div class="turn right you" data-i="${i}"><div class="bub">
-      <div class="who"><span>you</span></div><div class="txt">${esc(m.text)}</div></div></div>`;
+    <div class="turn you" data-i="${i}"><div class="bub">
+      <div class="who">${icon('human')}<span>${esc((doc && doc.name) || 'you')}</span>
+        ${m.ts ? `<span>${m.ts.slice(5, 16).replace('T', ' ')}</span>` : ''}</div>
+      <div class="txt">${esc(m.text)}</div></div></div>`;
 
   if (m.kind === 'critic') {
     const caps = m.shots || [];
     return `
     <div class="turn" data-i="${i}"><div class="bub">
-      <div class="who"><span>critic</span>${m.cycle ? `<span>cycle ${m.cycle}</span>` : ''}</div>
+      <div class="who">${icon('critic')}<span>critic</span>${m.cycle ? `<span>cycle ${m.cycle}</span>` : ''}</div>
       ${caps.length ? `<div class="shots ${caps.length === 1 ? 'one' : ''}">${caps.map(c =>
         `<figure><img src="${c.src}" data-cap="${esc(c.cap)}${m.cycle ? ' · cycle ' + m.cycle : ''}" alt="${esc(c.cap)}">
            <figcaption>${esc(c.cap)}${c.blank ? ' · blank' : ''}</figcaption></figure>`).join('')}</div>` : ''}
@@ -841,8 +940,15 @@ function bubble(m, i) {
 
   return `
     <div class="turn right" data-i="${i}"><div class="bub">
-      <div class="who">${m.cycle ? `<span>cycle ${m.cycle}</span>` : ''}<span>builder</span></div>
+      <div class="who">${m.cycle ? `<span>${doc && doc.builder === 'human' ? 'turn' : 'cycle'} ${m.cycle}</span>` : ''}
+        ${icon('builder')}<span>${doc && doc.builder === 'human' ? 'what came back' : 'builder'}</span></div>
       <div class="txt">${esc(m.text)}</div>
+      ${(m.shots || []).length ? `<div class="shots one">${m.shots.map(c =>
+        `<figure><img src="${c.src}" data-cap="${esc(c.cap)}" alt="${esc(c.cap)}">
+           <figcaption>${esc(c.cap)}</figcaption></figure>`).join('')}</div>` : ''}
+      ${m.artifact ? `<div class="caveat">${esc(m.artifact)}</div>` : ''}
+      ${m.inPlace ? `<div class="caveat">${m.inPlace} parts moved rather than added — the file keeps
+        only their final positions, so the model can show where they ended up but not the move</div>` : ''}
       ${effort(m)}
       ${m.raw ? `<div class="raw"><button data-raw="${i}">what it was asked</button>
         <pre>${esc(m.raw)}</pre></div>` : ''}
@@ -884,7 +990,12 @@ const focusFor = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].kind === 'cri
 const viewFor = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].kind === 'shoot' || msgs[k].view) return msgs[k].view; return null; };
 const lastScore = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].kind === 'critic' && msgs[k].score != null) return msgs[k].score; return null; };
 
-const atBottom = () => { const t = $('#thread'); return t.scrollHeight - t.scrollTop - t.clientHeight < 90; };
+// While it is playing, the thread follows. Sticking only when you happen to be at the
+// bottom already is right for a chat you are reading and wrong for one you are
+// watching arrive — scroll up to look at something and playback silently leaves you
+// behind. Playing means following; touching the scrollbar stops playback anyway.
+const atBottom = () => playing || (() => { const t = $('#thread');
+  return t.scrollHeight - t.scrollTop - t.clientHeight < 90; })();
 const toBottom = () => { const t = $('#thread'); t.scrollTop = t.scrollHeight; };
 
 function shutter(view) {
@@ -1095,9 +1206,17 @@ function open(raw, { autoplay = false } = {}) {
   focusIds = new Set(); flashIds = new Set();
   worldGroup.clear(); rings.clear(); live.clear();
   document.documentElement.dataset.builder = doc.builder;
-  $('#badge').textContent = doc.builder === 'operative' ? 'operative builder' : 'correspondence builder';
+  $('#badge').textContent = doc.builder === 'human' ? 'the human original'
+    : doc.builder === 'operative' ? 'operative builder' : 'correspondence builder';
   $('#refimg').src = doc.reference || '';
   $('#ghost').src = doc.reference || '';
+  $('#ref').style.display = doc.reference ? '' : 'none';
+  $('#noModel').classList.toggle('on', doc.builder === 'human');
+  for (const el of ['#viewTag', '#boxes', '#fadeWrap']) $(el).style.display = doc.builder === 'human' ? 'none' : '';
+  const pv = doc.provenance || {};
+  $('#prov').innerHTML = [['builder', BUILDERS[doc.builder]], ['engine', pv.engine],
+    ['critic', pv.critic], ['picture', pv.capture]]
+    .filter(([, v]) => v).map(([k, v]) => `<div><span class="k">${k}</span><span>${esc(v)}</span></div>`).join('');
   $('#refname').textContent = doc.name || 'reference';
   $('#seek').max = String(msgs.length - 1);
   resize(); paint(); $('#thread').scrollTop = 0;
@@ -1128,6 +1247,17 @@ function renderDocs() {
   builder's next instruction. That is the whole loop.</p>
   <p>It is a <em>suck</em> score, so lower is better, and zero would mean only that
   this view failed to find a discrepancy — never that the thing is done.</p>
+
+  <h3>Three ways of building, one loop</h3>
+  <p><b class="hu">A person, typing.</b> Thirty-six turns over two days in August 2026:
+  Watson Hartsoe asking for a windmill, a typewriter house, an octopus house; a thing
+  coming back; a screenshot pasted in; and a verdict — <em>the wings do not look
+  good</em>, <em>now the roof is fucked up</em>, <em>we have no windows</em>. That is
+  the whole loop already, with a person as both the instruction and the critic. It is
+  the trace the two automatic builders were built out of, and it is here first because
+  it came first. It has no geometry: the geometry was a web page at the time, and the
+  pictures are the record. The archive it came from says it is a reconstruction from
+  the live conversation rather than a raw export, and so does this.</p>
 
   <h3>Two builders wrote these files</h3>
   <p><b class="op">Operative</b> keeps four separate logs and a full snapshot of the
@@ -1188,6 +1318,25 @@ function renderDocs() {
   only ever sees that photograph, which is why the loop can be wrong about a building
   that is fine, and why the flash is worth marking.</p>
 
+  <h3>Running it, rather than reading it</h3>
+  <p>This page is a reader. It holds a normalised shape — an opener, a list of
+  messages, and a scene for any message that has one — and every builder is adapted
+  into that shape and nothing else. Which means the seam for driving a live loop is
+  already the right shape: hand it an endpoint and a key, and a running builder would
+  append to the same message list, take a picture at the same shutter, and light the
+  same target. That is deliberately <em>not</em> built here. The job right now is to
+  record what has already been made, and a reader that cannot spend your money is a
+  reader you can leave open.</p>
+
+  <h3>The other instruments</h3>
+  <p>These three loops build by argument. The rest of the depot argues with a building
+  that already exists, and on the Ingold trailer specifically: <a href="hospital.html">the
+  hospital</a> fills it with light and slices it, <a href="ant-scout.html">a colony of
+  ants</a> crawls its surfaces with lidar and forages for the places the geometry gives
+  out, and <a href="whats-fucked.html">what's fucked</a> puts the deterministic checks
+  and the critic side by side. Same question in every case — is the building fucked, or
+  are our eyes fucked — asked with a different instrument.</p>
+
   <h3>What a correspondence file would need for the full treatment</h3>
   <p>Only one thing: <b>the scene at each cycle</b>, or the per-cycle diff. Everything
   else is already there and better than the operative format — one transcript, the
@@ -1198,6 +1347,10 @@ function renderDocs() {
   and <code>transcript</code>, and a before/after pair of pictures rather than one.</p>
 
   <h3>Where the loops show their seams</h3>
+  <p>The tiny-house frame has a cycle that relocated nine parts and added none. A
+  reconstruction from part counts cannot show that, so the message says so rather than
+  letting the step look skipped — the ids it was told to move are marked, but only
+  where they finished.</p>
   <p>In both castle runs, cycle 1 proposed forty objects and the world rejected every
   one — <b>ADD missing id</b> — so nothing was built. The critic, looking at an empty
   stage, scored it 100 and said so, and the builder rebuilt from that. The six-cycle
@@ -1231,7 +1384,8 @@ function renderDocs() {
       return rows.length ? `<optgroup label="${label}">` + rows.map(t =>
         `<option value="${t.file}">${t.intent} · ${t.cycles} cycles</option>`).join('') + '</optgroup>' : '';
     };
-    $('#pick').innerHTML = group('operative', 'Operative builder') +
+    $('#pick').innerHTML = group('human', 'Where it came from') +
+                           group('operative', 'Operative builder') +
                            group('correspondence', 'Correspondence builder');
     renderDocs();
     const t = await (await fetch('assets/traces/' + idx.traces[0].file)).json();
