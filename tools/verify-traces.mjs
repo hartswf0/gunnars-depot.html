@@ -67,6 +67,15 @@ for (const [width, height, label] of [[1280, 820, 'desktop'], [390, 780, 'phone'
     await page.goto(`http://127.0.0.1:${PORT}/operative-builder-trace.html?trace=${slug}`, { waitUntil: 'load' });
     await page.waitForFunction(() => window.trace?.msgs?.length > 0, { timeout: 25000 });
 
+    // The page used to ignore ?trace= and always open the first one, so this harness
+    // cheerfully checked the same trace eight times and reported eight passes. Assert
+    // the run on screen is the run that was asked for.
+    const got = await page.evaluate(() => ({ intent: window.trace.doc?.intent, builder: window.trace.doc?.builder }));
+    if (got.intent !== t.intent || got.builder !== t.builder) {
+      console.log(` ! ${slug.padEnd(24)} loaded "${got.intent}" (${got.builder}), expected "${t.intent}" (${t.builder})`);
+      bad++; await page.close(); continue;
+    }
+
     const turns = await page.evaluate(() => {
       const m = window.trace.msgs;
       const withModel = m.map((x, i) => [i, x.model]).filter(x => x[1]);

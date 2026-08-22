@@ -1753,7 +1753,14 @@ function renderDocs() {
                            group('operative', 'Operative builder') +
                            group('correspondence', 'Correspondence builder');
     renderDocs();
-    const t = await (await fetch('assets/traces/' + idx.traces[0].file)).json();
+    // ?trace=castle-6-cycles opens straight into that one. A particular run is the
+    // thing worth sending someone, and without this every link lands on the same
+    // first trace and leaves them hunting through the picker for it.
+    const want = new URLSearchParams(location.search).get('trace');
+    const pick = (want && idx.traces.find(t => t.file === want || t.file.replace(/\.json$/, '') === want))
+              || idx.traces[0];
+    $('#pick').value = pick.file;
+    const t = await (await fetch('assets/traces/' + pick.file)).json();
     curtain(null);
     open(t, { autoplay: true });
   } catch (e) { curtain('could not read the traces: ' + ((e && e.message) || e)); }
