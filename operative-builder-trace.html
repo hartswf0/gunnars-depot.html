@@ -130,6 +130,14 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
   border-radius:99px;padding:4px 10px}
 #artTag:empty,#artTag b:empty{display:none}
 #artTag b{color:var(--ink);font-weight:400}
+#passRow{display:none;flex:none;border:1px solid var(--rule);border-radius:99px;
+  overflow:hidden;background:#fff}
+#passRow button{font-size:11px;color:var(--soft);padding:4px 10px;border-right:1px solid var(--rule)}
+#passRow button:last-child{border-right:0}
+#passRow button.on{background:var(--ink);color:var(--paper)}
+#passName{position:absolute;z-index:6;left:16px;bottom:88px;display:none;font-size:10px;
+  letter-spacing:.13em;text-transform:uppercase;color:var(--soft);background:#fffffff2;
+  border-radius:99px;padding:4px 10px}
 #boxes{font-size:11px;color:var(--soft);border:1px solid var(--rule);background:#fff;
   border-radius:99px;padding:4px 9px;flex:none}
 #boxes.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
@@ -322,6 +330,7 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
 
     <div id="viewTag">camera · <b id="viewName">front 3/4</b></div>
     <div id="artTag"><b id="artName"></b></div>
+    <div id="passName"></div>
     <!-- Who made this, on what, judged how, photographed how. Four facts, always on
          screen, because "which builder am I watching" should never need a click. -->
     <div id="prov"></div>
@@ -355,6 +364,8 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
       <button class="round" id="play">▶</button>
       <input id="seek" type="range" min="0" max="0" value="0">
       <button id="speed" title="how fast to replay it">4×</button>
+      <span id="passRow"><button data-pass="mass">mass</button><button data-pass="resolved"
+        class="on">resolved</button><button data-pass="both">both</button></span>
       <button id="boxes" title="show every part's bounding box">boxes</button>
       <label id="fadeWrap" title="fade the reference over the build">
         <span>fade</span><input id="fade" type="range" min="0" max="100" value="0"></label>
@@ -1000,8 +1011,10 @@ function paint({ animate = false } = {}) {
     if (m !== paint._m) {
       paint._m = m;
       $('#artifact').classList.toggle('on', !!m);
-      if (m && $('#artifact').getAttribute('src') !== 'assets/artifacts/' + m.model)
+      if (m && $('#artifact').getAttribute('src') !== 'assets/artifacts/' + m.model) {
         $('#artifact').setAttribute('src', 'assets/artifacts/' + m.model);
+        $('#artifact').onload = () => dressArtifact({ stage: animate });
+      } else if (m) dressArtifact({ stage: animate });
       $('#noModel').classList.toggle('on', !m);
       $('#brokenTag').classList.toggle('on', !!(m && m.broken));
       if (m && m.broken) $('#brokenTag').innerHTML =
@@ -1009,6 +1022,8 @@ function paint({ animate = false } = {}) {
          failed, because a repaired archive would be a worse one.`;
       $('#artName').textContent = m ? m.artifact : '';
       $('#artTag').style.display = m ? '' : 'none';
+      $('#passRow').style.display = m ? '' : 'none';
+      $('#passName').style.display = m ? '' : 'none';
     }
   }
   const sc = sceneFor(at);
@@ -1031,6 +1046,45 @@ function paint({ animate = false } = {}) {
 }
 const sceneFor = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].scene) return msgs[k].scene; return null; };
 const focusFor = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].kind === 'critic') return msgs[k].focusIds || []; return []; };
+/**
+ * Take the artifact's own chrome off, and show its two passes in order.
+ *
+ * Every one of these pages renders both passes at once, twenty-five units either side
+ * of the origin — the mass on the left, the resolved building on the right — under a
+ * title bar, two metric cards and a button row. Side by side and covered in menus you
+ * cannot really see either of them.
+ *
+ * All thirty expose the same controls, so: hide the chrome and drive their own Mass
+ * and HDL buttons from here. The massing comes up first and the resolved building
+ * replaces it a beat later, which is the order it was made in and the whole argument
+ * the pages were making.
+ */
+const PASS_CSS = `#title,#controls,.card,#hint,#legend,#help{display:none!important}`;
+let passTimer = 0;
+const artDoc = () => { try { return $('#artifact').contentDocument || null; } catch { return null; } };
+function setPass(which) {
+  const d = artDoc(); if (!d) return;
+  const btn = d.getElementById(which === 'mass' ? 'raw' : which === 'both' ? 'both' : 'hdl');
+  if (btn) btn.click();
+  $('#passName').textContent = which === 'mass' ? 'pass 1 · mass only'
+    : which === 'both' ? 'both passes, as the page had them' : 'pass 3 · resolved';
+  for (const b of document.querySelectorAll('#passRow button'))
+    b.classList.toggle('on', b.dataset.pass === which);
+}
+function dressArtifact({ stage = false } = {}) {
+  const d = artDoc(); if (!d) return;
+  if (!d.getElementById('__dress')) {
+    const st = d.createElement('style'); st.id = '__dress'; st.textContent = PASS_CSS;
+    (d.head || d.documentElement).appendChild(st);
+  }
+  clearTimeout(passTimer);
+  setPass('mass');
+  // The second beat, only while it is playing. Scrubbing to a turn should land on the
+  // finished building rather than start a little show you did not ask for.
+  if (stage) passTimer = setTimeout(() => setPass('resolved'), 2600 / rate);
+  else setPass('resolved');
+}
+
 // The last turn that produced a page. A turn with no artifact leaves the last one up,
 // which is what was on the screen at the time.
 const modelFor = (i) => { for (let k = i; k >= 0; k--) { const m = msgs[k];
@@ -1088,6 +1142,23 @@ async function advance() {
   if (stick) toBottom();
   // Wait for the building to finish going up before anybody speaks over it.
   if (next.scene) await hold(Math.min(2600, 300 + next.scene.parts.length * 12));
+  if (next.model) await hold(2900);          // the mass, then the resolved building
+  await hold(dwell(next));
+}
+
+/**
+ * How long to sit on a message before the next one arrives.
+ *
+ * A flat beat is wrong in both directions: it hurries a four-line criticism and it
+ * dawdles on "Cook." Reading is roughly fifteen characters a second and a picture is
+ * worth a breath of its own, so the pause is measured from what there is to take in.
+ * The human trace suffered worst — its turns carry the longest prompts and a
+ * screenshot each, and at a flat beat the whole two days went past unread.
+ */
+function dwell(m) {
+  const words = String(m.text || '').length;
+  const pics = (m.shots || []).length;
+  return Math.min(9000, 900 + words * 26 + pics * 1100);
 }
 const hold = (ms) => new Promise(r => setTimeout(r, ms / rate));
 const fmt = (ms) => ms >= 60000 ? Math.round(ms / 6000) / 10 + 'min'
@@ -1120,7 +1191,7 @@ function show(i) {
 async function play() {
   if (playing) return;
   playing = true; $('#play').textContent = '❚❚';
-  while (playing && at < msgs.length - 1) { await advance(); if (playing) await hold(1100); }
+  while (playing && at < msgs.length - 1) { await advance(); if (playing) await hold(420); }
   if (at >= msgs.length - 1) stop();
 }
 function stop() {
@@ -1130,14 +1201,16 @@ function stop() {
 // One control, four stops, and the first one is the truth: the loop's own pace, read
 // off the timestamps. The castle took seven and a half minutes and the lander nearly
 // nine, most of it the models thinking — which is worth sitting through once.
-const PACE = [{ r: 1, label: 'as it happened' }, { r: 4, label: '4×' },
-              { r: 12, label: '12×' }, { r: 40, label: 'skim' }];
+const PACE = [{ r: 1, label: 'read it' }, { r: 2.5, label: 'brisk' },
+              { r: 6, label: '6×' }, { r: 18, label: 'skim' }];
 let pace = 1;
 $('#speed').onclick = () => { pace = (pace + 1) % PACE.length; rate = PACE[pace].r;
   $('#speed').textContent = PACE[pace].label; };
 $('#play').onclick = () => playing ? stop() : play();
 $('#seek').oninput = e => { stop(); show(+e.target.value); };
 $('#fade').oninput = e => { $('#ghost').style.opacity = (+e.target.value / 100) * 0.85; };
+for (const b of document.querySelectorAll('#passRow button'))
+  b.onclick = () => { clearTimeout(passTimer); setPass(b.dataset.pass); };
 $('#boxes').onclick = () => { boxesOn = !boxesOn; $('#boxes').classList.toggle('on', boxesOn); drawBoxes(); };
 addEventListener('keydown', e => {
   if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
@@ -1263,6 +1336,7 @@ function open(raw, { autoplay = false } = {}) {
   $('#artifact').classList.remove('on'); $('#brokenTag').classList.remove('on');
   // No score to show on a trace nobody scored.
   $('#meter').style.display = doc.builder === 'human' ? 'none' : '';
+  for (const el of ['#passRow', '#passName']) $(el).style.display = 'none';
   if (doc.builder !== 'human') { $('#artifact').removeAttribute('src'); $('#noModel').classList.remove('on'); }
   for (const el of ['#viewTag', '#boxes', '#fadeWrap']) $(el).style.display = doc.builder === 'human' ? 'none' : '';
   const pv = doc.provenance || {};
@@ -1272,6 +1346,10 @@ function open(raw, { autoplay = false } = {}) {
   $('#refname').textContent = doc.name || 'reference';
   $('#seek').max = String(msgs.length - 1);
   resize(); paint(); $('#thread').scrollTop = 0;
+  // A trace of a person typing wants a person's pace. The machine loops carry their
+  // own thinking times and are already slow where it matters.
+  pace = doc.builder === 'human' ? 0 : 1;
+  rate = PACE[pace].r; $('#speed').textContent = PACE[pace].label;
   if (autoplay) setTimeout(play, 700);
 }
 
