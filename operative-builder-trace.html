@@ -114,35 +114,18 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
 /* A card, not floating text. These overlays sit on top of whatever the stage is
    showing, and for the human traces the stage is somebody else's web page with its
    own title bar and metric panels — unbacked, the two read as one garbled thing. */
-#prov{position:absolute;z-index:5;left:16px;top:118px;max-width:min(320px,52%);
-  display:flex;flex-direction:column;gap:5px;background:#fffffff2;border:1px solid var(--rule);
-  border-radius:10px;padding:10px 12px;box-shadow:0 1px 3px #00000012}
-[data-builder="human"] #prov{top:auto;bottom:88px;max-width:min(300px,60%)}
-#prov div{display:flex;gap:7px;align-items:flex-start;font-size:10.5px;line-height:1.4;color:var(--soft);
-  letter-spacing:0}
-#prov .k{flex:none;width:58px;font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
-  padding-top:1px}
-#viewTag{position:absolute;z-index:5;left:16px;bottom:64px;font-size:10px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--faint)}
-#viewTag b{color:var(--soft);font-weight:400}
-#artTag{position:absolute;z-index:6;left:16px;bottom:64px;font-size:10px;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--soft);pointer-events:none;background:#fffffff2;
-  border-radius:99px;padding:4px 10px}
-#artTag:empty,#artTag b:empty{display:none}
-#artTag b{color:var(--ink);font-weight:400}
+[data-builder="human"] /* Everything that used to float over the model now lives on the bar. The stage is
+   for the building; a caption that covers what it captions is worse than no caption. */
+#stageTag{font-size:10.5px;color:var(--soft);letter-spacing:0;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis;max-width:34%;flex:0 1 auto}
 #passRow{display:none;flex:none;border:1px solid var(--rule);border-radius:99px;
   overflow:hidden;background:#fff}
 #passRow button{font-size:11px;color:var(--soft);padding:4px 10px;border-right:1px solid var(--rule)}
 #passRow button:last-child{border-right:0}
 #passRow button.on{background:var(--ink);color:var(--paper)}
-#passName{position:absolute;z-index:6;right:16px;bottom:64px;left:auto;display:none;font-size:10px;
-  letter-spacing:.13em;text-transform:uppercase;color:var(--soft);background:#fffffff2;
-  border-radius:99px;padding:4px 10px}
 #boxes{font-size:11px;color:var(--soft);border:1px solid var(--rule);background:#fff;
   border-radius:99px;padding:4px 9px;flex:none}
 #boxes.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
-#artifact{position:absolute;inset:0;width:100%;height:100%;border:0;display:none;background:#fff}
-#artifact.on{display:block}
 #brokenTag{position:absolute;z-index:7;left:16px;top:16px;max-width:min(360px,68%);
   background:#fff;border:1px solid var(--rule);border-left:3px solid var(--alarm);border-radius:9px;
   padding:9px 11px;font-size:11.5px;line-height:1.45;color:var(--soft);letter-spacing:0;display:none}
@@ -266,6 +249,11 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
   font:400 11.5px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--soft);
   white-space:pre-wrap;letter-spacing:0}
 #docs a{color:var(--ink)}
+.prov{border:1px solid var(--rule);border-radius:12px;padding:12px 15px;margin:0 0 18px;background:#fff}
+.prov p{margin:0 0 5px;font-size:12px;color:var(--soft)}
+.prov p:last-child{margin:0}
+.prov b{display:inline-block;min-width:64px;font-size:10px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--faint);font-weight:400}
 #docs code{font:400 12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#fff;
   border:1px solid var(--rule);border-radius:5px;padding:1px 5px}
 #docs b.op{color:#a85a34}#docs b.co{color:#3d6591}#docs b.hu{color:#6b6250}
@@ -291,9 +279,7 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
   .wide{display:none}.narrow{display:inline}
   #fadeWrap span{display:none}
   #fadeWrap input{width:52px}
-  #prov{display:none}
-  #viewTag{bottom:60px;left:12px;font-size:9px}
-  #boxes{padding:4px 7px}
+      #boxes{padding:4px 7px}
   #ref{width:76px;top:12px;left:12px}
   #meter{top:12px;right:12px}
   #score{font-size:32px}
@@ -328,12 +314,9 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
       <div class="cap" id="refname">reference</div>
     </div>
 
-    <div id="viewTag">camera · <b id="viewName">front 3/4</b></div>
-    <div id="artTag"><b id="artName"></b></div>
-    <div id="passName"></div>
+
     <!-- Who made this, on what, judged how, photographed how. Four facts, always on
          screen, because "which builder am I watching" should never need a click. -->
-    <div id="prov"></div>
     <div id="brokenTag"></div>
 
     <div id="meter">
@@ -352,7 +335,6 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
     <!-- The human trace's models are not geometry in a file, they are thirty
          standalone Three.js pages — which is a format, not an absence. They run here,
          live, on the build this repo vendors. -->
-    <iframe id="artifact" title="the model, running" loading="lazy"></iframe>
     <div id="noModel"><div><b>Nothing was built on this turn.</b>
       <span>Not every message produced a page. The model above stays on the last one
       that did.</span></div></div>
@@ -364,6 +346,7 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
       <button class="round" id="play">▶</button>
       <input id="seek" type="range" min="0" max="0" value="0">
       <button id="speed" title="how fast to replay it">4×</button>
+      <span id="stageTag"></span>
       <span id="passRow"><button data-pass="mass">mass</button><button data-pass="resolved"
         class="on">resolved</button><button data-pass="both">both</button></span>
       <button id="boxes" title="show every part's bounding box">boxes</button>
@@ -1005,28 +988,27 @@ function effort(m) {
 
 function paint({ animate = false } = {}) {
   $('#log').innerHTML = msgs.slice(0, at + 1).map((m, i) => bubble(m, i)).join('');
-  // A human turn's model is a page, not a part list. Swap the whole stage for it.
+  const cur = $('#log').querySelector(`.turn[data-i="${at}"], .note[data-i="${at}"]`);
+  if (cur) cur.classList.add('now');
+  // A human turn's model is a whole page. Its geometry is read out of it and drawn
+  // here, so it is centred, fitted, and has nothing on top of it.
   if (doc && doc.builder === 'human') {
     const m = modelFor(at);
     if (m !== paint._m) {
       paint._m = m;
-      $('#artifact').classList.toggle('on', !!m);
-      if (m && $('#artifact').getAttribute('src') !== 'assets/artifacts/' + m.model) {
-        $('#artifact').setAttribute('src', 'assets/artifacts/' + m.model);
-        $('#artifact').onload = () => dressArtifact({ stage: animate });
-      } else if (m) dressArtifact({ stage: animate });
-      $('#noModel').classList.toggle('on', !m);
+      $('#passRow').style.display = m ? 'flex' : 'none';
+      $('#stageTag').textContent = m ? m.artifact : '';
       $('#brokenTag').classList.toggle('on', !!(m && m.broken));
       if (m && m.broken) $('#brokenTag').innerHTML =
         `<b>this one is broken, and was</b>${esc(m.broken)} — the next turn is the fix. Kept as it
          failed, because a repaired archive would be a worse one.`;
-      $('#artName').textContent = m ? m.artifact : '';
-      $('#artTag').style.display = m ? '' : 'none';
-      // `''` falls back to the stylesheet, and the stylesheet says none — so the
-      // control that switches the passes was never once visible.
-      $('#passRow').style.display = m ? 'flex' : 'none';
-      $('#passName').style.display = m ? 'block' : 'none';
+      if (m) showArtifact(m.model, { animate });
+      else { artToken++; worldGroup.clear(); artPasses = null; $('#noModel').classList.add('on'); }
     }
+    $('#seek').value = String(at);
+    $('#tick').textContent = `${at + 1} / ${msgs.length}`;
+    for (const el of document.querySelectorAll('.msg.now')) el.classList.remove('now');
+    return;
   }
   const sc = sceneFor(at);
   if (sc !== paint._s) {
@@ -1049,45 +1031,171 @@ function paint({ animate = false } = {}) {
 const sceneFor = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].scene) return msgs[k].scene; return null; };
 const focusFor = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].kind === 'critic') return msgs[k].focusIds || []; return []; };
 /**
- * Take the artifact's own chrome off, and show its two passes in order.
+ * Read the building out of the artifact, and draw it here.
  *
- * Every one of these pages renders both passes at once, twenty-five units either side
- * of the origin — the mass on the left, the resolved building on the right — under a
- * title bar, two metric cards and a button row. Side by side and covered in menus you
- * cannot really see either of them.
+ * Showing the page itself was the wrong idea twice over. Each one lays its two
+ * passes side by side under a title bar, a topology card, two metric cards and a
+ * button row — so the model is never centred, never fitted, and always half covered.
+ * And its camera is its own: a scene composed for a landscape window comes up cropped
+ * in a column, and nothing here could reach in to fix it.
  *
- * All thirty expose the same controls, so: hide the chrome and drive their own Mass
- * and HDL buttons from here. The massing comes up first and the resolved building
- * replaces it a beat later, which is the order it was made in and the whole argument
- * the pages were making.
+ * So the page is loaded out of sight, its geometry is read straight off the two
+ * groups it already exposes on `window.__HDL_PROOF`, and the meshes are rebuilt in
+ * this renderer — centred, fitted, lit the same way as every other trace, and with
+ * nothing on top of them. The massing goes up piece by piece, then dissolves into the
+ * resolved building, which is the argument those pages were making and could not show
+ * because both halves were on screen at once.
  */
-const PASS_CSS = `#title,#controls,.card,#hint,#legend,#help{display:none!important}`;
-let passTimer = 0;
-const artDoc = () => { try { return $('#artifact').contentDocument || null; } catch { return null; } };
-function setPass(which) {
-  const d = artDoc(); if (!d) return;
-  const btn = d.getElementById(which === 'mass' ? 'raw' : which === 'both' ? 'both' : 'hdl');
-  if (btn) btn.click();
-  $('#passName').textContent = which === 'mass' ? 'pass 1 · mass only'
-    : which === 'both' ? 'both passes, as the page had them' : 'pass 3 · resolved';
-  for (const b of document.querySelectorAll('#passRow button'))
-    b.classList.toggle('on', b.dataset.pass === which);
-}
-function dressArtifact({ stage = false } = {}) {
-  const d = artDoc(); if (!d) return;
-  if (!d.getElementById('__dress')) {
-    const st = d.createElement('style'); st.id = '__dress'; st.textContent = PASS_CSS;
-    (d.head || d.documentElement).appendChild(st);
-  }
-  clearTimeout(passTimer);
-  setPass('mass');
-  // The second beat, only while it is playing. Scrubbing to a turn should land on the
-  // finished building rather than start a little show you did not ask for.
-  if (stage) passTimer = setTimeout(() => setPass('resolved'), 2600 / rate);
-  else setPass('resolved');
+const oven = document.createElement('iframe');
+oven.style.cssText = 'position:absolute;width:900px;height:640px;left:-9999px;top:0;border:0';
+oven.setAttribute('aria-hidden', 'true');
+document.body.appendChild(oven);
+const baked = new Map();
+
+/** Geometry as plain arrays, copied into this realm so three will take them. */
+function readGroup(g) {
+  const out = [];
+  g.updateWorldMatrix(true, true);
+  g.traverse(o => {
+    if (!o.isMesh || !o.geometry || !o.geometry.attributes || !o.geometry.attributes.position) return;
+    if (o.visible === false) return;
+    const at = o.geometry.attributes;
+    out.push({
+      p: new Float32Array(at.position.array),
+      n: at.normal ? new Float32Array(at.normal.array) : null,
+      i: o.geometry.index ? new Uint32Array(o.geometry.index.array) : null,
+      m: Array.from(o.matrixWorld.elements),
+      c: (o.material && o.material.color) ? '#' + o.material.color.getHexString() : '#9aa3ad',
+      r: (o.material && o.material.roughness != null) ? o.material.roughness : .9,
+      me: (o.material && o.material.metalness != null) ? o.material.metalness : .03
+    });
+  });
+  return out;
 }
 
-// The last turn that produced a page. A turn with no artifact leaves the last one up,
+function bake(file) {
+  if (baked.has(file)) return Promise.resolve(baked.get(file));
+  return new Promise(resolve => {
+    let done = false;
+    const finish = (v) => { if (done) return; done = true; baked.set(file, v); resolve(v); };
+    oven.onload = () => {
+      const w = oven.contentWindow;
+      let tries = 0;
+      (function wait() {
+        const P = w && w.__HDL_PROOF;
+        if (P && P.raw && P.hdl) {
+          try { finish({ mass: readGroup(P.raw), built: readGroup(P.hdl) }); }
+          catch (e) { finish(null); }
+          return;
+        }
+        // Two of these pages throw before they finish, which is the point of them.
+        if (++tries > 40) return finish(null);
+        setTimeout(wait, 120);
+      })();
+    };
+    oven.src = 'assets/artifacts/' + file;
+  });
+}
+
+/** Meshes in this renderer, centred on their own footprint so the two passes overlay. */
+function layGroup(items, tint) {
+  const g = new THREE.Group();
+  for (const it of items) {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(it.p, 3));
+    if (it.n) geo.setAttribute('normal', new THREE.BufferAttribute(it.n, 3));
+    if (it.i) geo.setIndex(new THREE.BufferAttribute(it.i, 1));
+    if (!it.n) geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+      color: new THREE.Color(tint || it.c), roughness: it.r, metalness: it.me,
+      transparent: true, opacity: 1 }));
+    m.applyMatrix4(new THREE.Matrix4().fromArray(it.m));
+    g.add(m);
+  }
+  const b = new THREE.Box3().setFromObject(g);
+  if (!b.isEmpty()) {
+    const c = b.getCenter(new THREE.Vector3());
+    // Centred on x and z, sitting on the ground: the two passes then stand in the
+    // same place rather than twenty-five units apart, which is what lets one become
+    // the other.
+    for (const m of g.children) { m.position.x -= c.x; m.position.z -= c.z; m.position.y -= b.min.y; }
+  }
+  return g;
+}
+
+let artToken = 0;
+async function showArtifact(file, { animate = true } = {}) {
+  const token = ++artToken;
+  const data = await bake(file);
+  if (token !== artToken) return;
+  worldGroup.clear(); rings.clear(); live.clear(); boxGroup.clear();
+  $('#noModel').classList.toggle('on', !data);
+  if (!data) return;
+
+  const mass = layGroup(data.mass), built = layGroup(data.built);
+  worldGroup.add(mass, built);
+  artPasses = { mass, built };
+  fitTo(built.children.length ? built : mass);
+  if (!animate) { setArtPass('resolved'); return; }
+  setArtPass('mass', { grow: true });
+  clearTimeout(passTimer);
+  passTimer = setTimeout(() => { if (token === artToken) setArtPass('resolved', { grow: true }); }, 2600 / rate);
+}
+
+let artPasses = null, passTimer = 0;
+/**
+ * One pass, laid in piece by piece; the other faded away under it.
+ *
+ * The dissolve is the interesting half: the massing does not blink out, it thins
+ * while the resolved building assembles through it, so for a second you can see the
+ * blocks the rooms came from.
+ */
+function setArtPass(which, { grow = false } = {}) {
+  if (!artPasses) return;
+  const show = which === 'mass' ? artPasses.mass : artPasses.built;
+  const hide = which === 'mass' ? artPasses.built : artPasses.mass;
+  const both = which === 'both';
+  for (const b of document.querySelectorAll('#passRow button')) b.classList.toggle('on', b.dataset.pass === which);
+  if (both) {
+    for (const g of [artPasses.mass, artPasses.built]) { g.visible = true; for (const m of g.children) m.material.opacity = 1; }
+    fitTo(artPasses.built); return;
+  }
+  hide.visible = true;
+  for (const m of hide.children) fade(m, 0, 620, () => { hide.visible = false; });
+  show.visible = true;
+  if (!grow) { for (const m of show.children) { m.material.opacity = 1; m.scale.setScalar(1); } fitTo(show); return; }
+  const n = show.children.length;
+  const step = Math.max(6, Math.min(60, 1500 / Math.max(1, n))) / rate;
+  show.children.forEach((m, k) => {
+    m.material.opacity = 0; m.scale.setScalar(1);
+    setTimeout(() => { if (artPasses && show.visible) fade(m, 1, 260); }, k * step);
+  });
+  fitTo(show);
+}
+function fade(m, to, ms, done) {
+  const from = m.material.opacity, t0 = performance.now();
+  m.userData.f = (m.userData.f || 0) + 1; const mine = m.userData.f;
+  (function step(now) {
+    if (m.userData.f !== mine) return;
+    const f = Math.min(1, ((now || performance.now()) - t0) / ms);
+    m.material.opacity = from + (to - from) * f;
+    if (f < 1) requestAnimationFrame(step); else if (done) done();
+  })();
+}
+
+/** Centre it and back off until all of it is inside this panel, whatever shape it is. */
+function fitTo(g) {
+  const b = new THREE.Box3().setFromObject(g);
+  if (b.isEmpty()) return;
+  const c = b.getCenter(new THREE.Vector3()), s = b.getSize(new THREE.Vector3());
+  orbit.target.copy(c);
+  const aspect = Math.max(0.3, camera.aspect || 1);
+  const half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const span = Math.max(s.x, s.z);
+  orbit.dist = framed = Math.max((span / 2) / (half * aspect), (s.y / 2) / half) * 1.55 + span * .1;
+}
+
+// The last turn that produced a page.// The last turn that produced a page. A turn with no artifact leaves the last one up,
 // which is what was on the screen at the time.
 const modelFor = (i) => { for (let k = i; k >= 0; k--) { const m = msgs[k];
   if (m.kind === 'builder' && m.model) return m; } return null; };
@@ -1212,7 +1320,7 @@ $('#play').onclick = () => playing ? stop() : play();
 $('#seek').oninput = e => { stop(); show(+e.target.value); };
 $('#fade').oninput = e => { $('#ghost').style.opacity = (+e.target.value / 100) * 0.85; };
 for (const b of document.querySelectorAll('#passRow button'))
-  b.onclick = () => { clearTimeout(passTimer); setPass(b.dataset.pass); };
+  b.onclick = () => { clearTimeout(passTimer); setArtPass(b.dataset.pass, { grow: true }); };
 $('#boxes').onclick = () => { boxesOn = !boxesOn; $('#boxes').classList.toggle('on', boxesOn); drawBoxes(); };
 addEventListener('keydown', e => {
   if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
@@ -1280,7 +1388,7 @@ function placeCamera() {
 /** Swing to a named camera. Eased, because a cut tells you nothing about where you went. */
 function goToView(name, { snap = false } = {}) {
   const [th, ph, r] = viewAngles(name);
-  $('#viewName').textContent = String(name || 'front 3/4');
+  const vn = $('#viewName'); if (vn) vn.textContent = String(name || 'front 3/4');
   // Only for the builder whose units these are. An operative castle is twenty units
   // across in nobody's metres, so it keeps the framing derived from its own bounds.
   if (doc && doc.builder === 'correspondence') {
@@ -1338,13 +1446,15 @@ function open(raw, { autoplay = false } = {}) {
   $('#artifact').classList.remove('on'); $('#brokenTag').classList.remove('on');
   // No score to show on a trace nobody scored.
   $('#meter').style.display = doc.builder === 'human' ? 'none' : '';
-  for (const el of ['#passRow', '#passName']) $(el).style.display = 'none';
+  $('#passRow').style.display = 'none'; $('#stageTag').textContent = '';
   if (doc.builder !== 'human') { $('#artifact').removeAttribute('src'); $('#noModel').classList.remove('on'); }
-  for (const el of ['#viewTag', '#boxes', '#fadeWrap']) $(el).style.display = doc.builder === 'human' ? 'none' : '';
+  for (const el of ['#boxes', '#fadeWrap']) $(el).style.display = doc.builder === 'human' ? 'none' : '';
+  // Provenance moved off the model and into the sheet — it was a card sitting on top
+  // of the thing it described.
   const pv = doc.provenance || {};
-  $('#prov').innerHTML = [['builder', BUILDERS[doc.builder]], ['engine', pv.engine],
+  $('#provSheet').innerHTML = [['builder', BUILDERS[doc.builder]], ['engine', pv.engine],
     ['critic', pv.critic], ['picture', pv.capture]]
-    .filter(([, v]) => v).map(([k, v]) => `<div><span class="k">${k}</span><span>${esc(v)}</span></div>`).join('');
+    .filter(([, v]) => v).map(([k, v]) => `<p><b>${k}</b> ${esc(v)}</p>`).join('');
   $('#refname').textContent = doc.name || 'reference';
   $('#seek').max = String(msgs.length - 1);
   resize(); paint(); $('#thread').scrollTop = 0;
@@ -1377,6 +1487,7 @@ $('#file').onchange = async e => {
 function renderDocs() {
   $('#docsBody').innerHTML = `
   <h2>How to read a trace</h2>
+  <div id="provSheet" class="prov"></div>
   <p>A trace is the complete record of one argument. A reference photograph is pinned.
   A <b>builder</b> proposes geometry. A <b>critic</b> is told the building is fucked
   until proven otherwise, is shown a picture of the result against that reference, and
