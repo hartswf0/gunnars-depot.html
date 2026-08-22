@@ -209,6 +209,7 @@ document.getElementById('roof').onclick=()=>{roofs=!roofs;for(const root of [raw
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(((matchMedia('(pointer: coarse)').matches||innerWidth<800)?1.2:2),devicePixelRatio));requestRender();});
 const canonicalViews={hero:{target:[27,6.1,0],az:3.72,pol:.86,rad:68,roof:true},'arrival-eye':{target:[27,3.3,-5.2],az:3.16,pol:1.1,rad:28,roof:true},'colonnade-eye':{target:[27,4.5,-2.5],az:3.45,pol:1.05,rad:26,roof:true},'roof-off-plan':{target:[27,5.8,0],az:.12,pol:.22,rad:40,roof:false}};
 function setCanonicalView(id){const v=canonicalViews[id];if(!v)throw new Error('unknown canonical view '+id);mode('hdl');target.fromArray(v.target);az=v.az;pol=v.pol;rad=v.rad;hdl.traverse(o=>{if(o.userData.tag==='roof')o.visible=v.roof;});roofs=v.roof;requestRender();return id;}
+window.__HDL_PROOF={MASS,raw,hdl,scene};
 window.__GAUNTLET_CAPTURE={views:Object.keys(canonicalViews),setView:setCanonicalView};
 window.addEventListener('error',e=>{const f=document.getElementById('fail');f.style.display='grid';f.textContent='RUNTIME ERROR\n'+(e.message||String(e.error||e));});window.addEventListener('unhandledrejection',e=>{const f=document.getElementById('fail');f.style.display='grid';f.textContent='PROMISE ERROR\n'+(e.reason&&e.reason.message?e.reason.message:String(e.reason));});
 mode(IS_MOBILE?'hdl':'both');requestRender();

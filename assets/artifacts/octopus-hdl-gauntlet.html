@@ -160,6 +160,7 @@ function hdlPass(ir){
 }
 
 const raw=rawPass(MASS),hdl=hdlPass(MASS);raw.position.x=-26;hdl.position.x=26;scene.add(raw,hdl);
+window.__HDL_PROOF={MASS:MASS,raw,hdl,scene};
 
 function runLinters(ir,house){const m=house.userData.metrics;return [
   ['L01 FINITE',(()=>{let ok=true;house.traverse(o=>{if(o.isMesh&&![...o.position.toArray(),o.rotation.x,o.rotation.y,o.rotation.z,...o.scale.toArray()].every(Number.isFinite))ok=false;});return ok;})(),'all transforms finite'],

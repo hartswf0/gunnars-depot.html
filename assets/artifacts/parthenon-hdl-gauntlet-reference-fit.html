@@ -255,6 +255,7 @@ document.getElementById('roof').onclick=()=>{roofs=!roofs;for(const root of [raw
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(((matchMedia('(pointer: coarse)').matches||innerWidth<800)?1.2:2),devicePixelRatio));requestRender();});
 const canonicalViews={hero:{target:[27,6.6,.2],az:3.82,pol:.86,rad:72,roof:true},'arrival-eye':{target:[27,3.7,-5.8],az:3.15,pol:1.06,rad:30,roof:true},'entry-eye':{target:[27,4.2,-3.1],az:3.3,pol:1.02,rad:23,roof:true},'colonnade-eye':{target:[27,4.9,-1.8],az:3.52,pol:1.0,rad:26,roof:true},'roof-off-plan':{target:[27,6.2,.2],az:.12,pol:.22,rad:42,roof:false}};
 function setCanonicalView(id){const v=canonicalViews[id];if(!v)throw new Error('unknown canonical view '+id);mode('hdl');target.fromArray(v.target);az=v.az;pol=v.pol;rad=v.rad;hdl.traverse(o=>{if(o.userData.tag==='roof')o.visible=v.roof;});roofs=v.roof;requestRender();return id;}
+window.__HDL_PROOF={MASS,raw,hdl,scene};
 window.__GAUNTLET_CAPTURE={views:Object.keys(canonicalViews),setView:setCanonicalView};
 window.addEventListener('error',e=>{const f=document.getElementById('fail');f.style.display='grid';f.textContent='RUNTIME ERROR\n'+(e.message||String(e.error||e));});window.addEventListener('unhandledrejection',e=>{const f=document.getElementById('fail');f.style.display='grid';f.textContent='PROMISE ERROR\n'+(e.reason&&e.reason.message?e.reason.message:String(e.reason));});
 mode(IS_MOBILE?'hdl':'both');requestRender();

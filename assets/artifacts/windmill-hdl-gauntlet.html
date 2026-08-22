@@ -256,7 +256,10 @@ function hdlPass(ir){
   g.userData.metrics=metrics;g.traverse(o=>{if(o.isMesh){metrics.meshCount++;if(o.userData._wgSolid)metrics.collisionBodies++;}});return g;
 }
 
-const raw=rawPass(IR),hdl=hdlPass(IR);raw.position.x=-25;hdl.position.x=25;scene.add(raw,hdl);
+const raw=rawPass(IR);let hdl=null,abort=null;try{hdl=hdlPass(IR);}catch(err){abort=err;}
+raw.position.x=-25;scene.add(raw);if(hdl){hdl.position.x=25;scene.add(hdl);}
+window.__HDL_PROOF={MASS:IR,raw,hdl,scene};window.__HDL_ABORT=abort&&(abort.message||String(abort));
+if(abort)throw abort;
 
 function runLinters(ir,house){
   const m=house.userData.metrics;let finite=true;house.traverse(o=>{if(o.isMesh&&![...o.position.toArray(),o.rotation.x,o.rotation.y,o.rotation.z,...o.scale.toArray()].every(Number.isFinite))finite=false;});

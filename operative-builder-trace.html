@@ -123,6 +123,7 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
 #passRow button{font-size:11px;color:var(--soft);padding:4px 10px;border-right:1px solid var(--rule)}
 #passRow button:last-child{border-right:0}
 #passRow button.on{background:var(--ink);color:var(--paper)}
+#passRow button:disabled{opacity:.3;cursor:default}
 #boxes{font-size:11px;color:var(--soft);border:1px solid var(--rule);background:#fff;
   border-radius:99px;padding:4px 9px;flex:none}
 #boxes.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
@@ -137,6 +138,12 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
 #noModel.on{display:grid}
 #noModel b{display:block;font-size:13px;font-weight:500;color:var(--soft);letter-spacing:.04em}
 #noModel span{display:block;max-width:300px;margin:7px auto 0;font-size:12px;line-height:1.55}
+#stopNote{position:absolute;left:50%;bottom:64px;transform:translateX(-50%);display:none;
+  max-width:min(88%,420px);padding:6px 12px;border-radius:99px;background:rgba(20,18,16,.86);
+  color:#f0e6df;font-size:11px;line-height:1.45;letter-spacing:.02em;text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;z-index:6}
+#stopNote.on{display:block}
+@media(max-width:600px){#stopNote{bottom:58px;font-size:10px;padding:5px 10px}}
 #emptyPlate{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:24px;
   color:var(--faint);z-index:2}
 #emptyPlate.on{display:grid}
@@ -345,6 +352,10 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
     <div id="noModel"><div><b>Nothing was built on this turn.</b>
       <span>Not every message produced a page. The model above stays on the last one
       that did.</span></div></div>
+
+    <!-- A build that stopped mid-way says so here, in the words its own proof gate
+         used, rather than being reported as an absence. -->
+    <div id="stopNote"></div>
 
     <div id="emptyPlate"><div><b>Nothing was built.</b>
       <span>Every operation was rejected, so the captures below are blank. That is the trace being honest, not a fault in this page.</span></div></div>
@@ -670,7 +681,31 @@ const worldGroup = new THREE.Group(), rings = new THREE.Group(); scene.add(world
 window.__wg = worldGroup; window.__rings = rings; window.camera = camera; window.scene = scene;
 // Open for inspection. The argument of this whole project is that you should be able
 // to check a claim rather than take it, and that includes this page.
-window.trace = { get msgs() { return msgs; }, get doc() { return doc; }, get at() { return at; } };
+window.trace = {
+  get msgs() { return msgs; }, get doc() { return doc; }, get at() { return at; },
+  // Enough of a handle to drive the page from a test: jump to a turn, then ask
+  // what actually ended up on the stage.
+  goto(i) { stop(); show(i); },
+  stage() {
+    if (!artPasses) return null;
+    const vis = g => g.children.filter(m => g.visible && m.material.opacity > .05).length;
+    const b = new THREE.Box3();
+    for (const g of [artPasses.mass, artPasses.built])
+      if (g.visible) for (const m of g.children)
+        if (m.material.opacity > .05) b.expandByObject(m);
+    let onscreen = true;
+    if (!b.isEmpty()) {
+      const pts = [];
+      for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z])
+        pts.push(new THREE.Vector3(x, y, z).project(camera));
+      onscreen = pts.every(p => Math.abs(p.x) <= 1.02 && Math.abs(p.y) <= 1.02);
+    }
+    return { file: artPasses.file, mass: artPasses.mass.children.length, built: artPasses.built.children.length,
+             shown: vis(artPasses.mass) + vis(artPasses.built), onscreen,
+             total: artPasses.mass.children.length + artPasses.built.children.length,
+             note: $('#stopNote').classList.contains('on') ? $('#stopNote').textContent : null };
+  }
+};
 
 // The eight cameras the loop actually uses, lifted from the clinic that took these
 // pictures. Every snapshot records which one it was shot from, so the model can be
@@ -1013,7 +1048,7 @@ function paint({ animate = false } = {}) {
         `<b>this one is broken, and was</b>${esc(m.broken)} — the next turn is the fix. Kept as it
          failed, because a repaired archive would be a worse one.`;
       if (m) showArtifact(m.model, { animate });
-      else { artToken++; worldGroup.clear(); artPasses = null; $('#noModel').classList.add('on'); }
+      else { artToken++; worldGroup.clear(); artPasses = null; $('#noModel').classList.add('on'); $('#stopNote').classList.remove('on'); }
     }
     $('#seek').value = String(at);
     $('#tick').textContent = `${at + 1} / ${msgs.length}`;
@@ -1083,6 +1118,23 @@ function readGroup(g) {
   return out;
 }
 
+/**
+ * Why a build stopped, in its own words.
+ *
+ * Two of these pages fail their own proof gate and one hits a plain ReferenceError.
+ * That is not noise to hide — it is the reason the next message in the thread exists,
+ * so the turn reads as "here is what it got to, and here is what stopped it".
+ */
+function abortNote(w) {
+  try {
+    if (w.__HDL_ABORT) return String(w.__HDL_ABORT);
+    const el = w.document.getElementById('fail');
+    if (el && el.style.display !== 'none' && el.textContent.trim())
+      return el.textContent.trim().replace(/\s+/g, ' ');
+  } catch (e) {}
+  return null;
+}
+
 function bake(file) {
   if (baked.has(file)) return Promise.resolve(baked.get(file));
   return new Promise(resolve => {
@@ -1093,12 +1145,18 @@ function bake(file) {
       let tries = 0;
       (function wait() {
         const P = w && w.__HDL_PROOF;
-        if (P && P.raw && P.hdl) {
-          try { finish({ mass: readGroup(P.raw), built: readGroup(P.hdl) }); }
-          catch (e) { finish(null); }
+        if (P && P.raw) {
+          // The resolved pass can be missing and the turn still be worth showing:
+          // three of these builds threw, and what they got as far as is the evidence.
+          try {
+            finish({
+              mass: readGroup(P.raw),
+              built: P.hdl ? readGroup(P.hdl) : [],
+              note: abortNote(w)
+            });
+          } catch (e) { finish(null); }
           return;
         }
-        // Two of these pages throw before they finish, which is the point of them.
         if (++tries > 40) return finish(null);
         setTimeout(wait, 120);
       })();
@@ -1140,12 +1198,20 @@ async function showArtifact(file, { animate = true } = {}) {
   if (token !== artToken) return;
   worldGroup.clear(); rings.clear(); live.clear(); boxGroup.clear();
   $('#noModel').classList.toggle('on', !data);
+  $('#stopNote').classList.toggle('on', !!(data && data.note));
+  $('#stopNote').textContent = (data && data.note) || '';
   if (!data) return;
 
   const mass = layGroup(data.mass), built = layGroup(data.built);
   worldGroup.add(mass, built);
-  artPasses = { mass, built };
-  fitTo(built.children.length ? built : mass);
+  artPasses = { mass, built, file };
+  // A build that threw has a massing and no resolved pass. Rather than cutting to an
+  // empty stage, it holds on the massing — which is exactly how far it got.
+  const halted = !built.children.length;
+  for (const b of document.querySelectorAll('#passRow button'))
+    b.disabled = halted && b.dataset.pass !== 'mass';
+  if (halted) { fitTo(mass); setArtPass('mass', { grow: animate }); return; }
+  fitTo(built);
   if (!animate) { setArtPass('resolved'); return; }
   setArtPass('mass', { grow: true });
   clearTimeout(passTimer);
@@ -1162,9 +1228,10 @@ let artPasses = null, passTimer = 0;
  */
 function setArtPass(which, { grow = false } = {}) {
   if (!artPasses) return;
-  const show = which === 'mass' ? artPasses.mass : artPasses.built;
-  const hide = which === 'mass' ? artPasses.built : artPasses.mass;
-  const both = which === 'both';
+  let show = which === 'mass' ? artPasses.mass : artPasses.built;
+  let hide = which === 'mass' ? artPasses.built : artPasses.mass;
+  let both = which === 'both';
+  if (!artPasses.built.children.length) { show = artPasses.mass; hide = artPasses.built; both = false; which = 'mass'; }
   for (const b of document.querySelectorAll('#passRow button')) b.classList.toggle('on', b.dataset.pass === which);
   if (both) {
     for (const g of [artPasses.mass, artPasses.built]) { g.visible = true; for (const m of g.children) m.material.opacity = 1; }
@@ -1461,6 +1528,7 @@ function open(raw, { autoplay = false } = {}) {
   // No score to show on a trace nobody scored.
   $('#meter').style.display = doc.builder === 'human' ? 'none' : '';
   $('#passRow').style.display = 'none'; $('#stageTag').textContent = '';
+  $('#stopNote').classList.remove('on');
   if (doc.builder !== 'human') $('#noModel').classList.remove('on');
   for (const el of ['#boxes', '#fadeWrap']) $(el).style.display = doc.builder === 'human' ? 'none' : '';
   // Provenance moved off the model and into the sheet — it was a card sitting on top
