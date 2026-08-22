@@ -111,8 +111,13 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
   background:var(--accent);margin-top:-4.5px}
 #fadeWrap input::-moz-range-track{height:2px;background:var(--rule)}
 #fadeWrap input::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;background:var(--accent)}
+/* A card, not floating text. These overlays sit on top of whatever the stage is
+   showing, and for the human traces the stage is somebody else's web page with its
+   own title bar and metric panels — unbacked, the two read as one garbled thing. */
 #prov{position:absolute;z-index:5;left:16px;top:118px;max-width:min(320px,52%);
-  display:flex;flex-direction:column;gap:5px}
+  display:flex;flex-direction:column;gap:5px;background:#fffffff2;border:1px solid var(--rule);
+  border-radius:10px;padding:10px 12px;box-shadow:0 1px 3px #00000012}
+[data-builder="human"] #prov{top:auto;bottom:88px;max-width:min(300px,60%)}
 #prov div{display:flex;gap:7px;align-items:flex-start;font-size:10.5px;line-height:1.4;color:var(--soft);
   letter-spacing:0}
 #prov .k{flex:none;width:58px;font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
@@ -120,9 +125,22 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
 #viewTag{position:absolute;z-index:5;left:16px;bottom:64px;font-size:10px;letter-spacing:.14em;
   text-transform:uppercase;color:var(--faint)}
 #viewTag b{color:var(--soft);font-weight:400}
+#artTag{position:absolute;z-index:6;left:16px;bottom:64px;font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--soft);pointer-events:none;background:#fffffff2;
+  border-radius:99px;padding:4px 10px}
+#artTag:empty,#artTag b:empty{display:none}
+#artTag b{color:var(--ink);font-weight:400}
 #boxes{font-size:11px;color:var(--soft);border:1px solid var(--rule);background:#fff;
   border-radius:99px;padding:4px 9px;flex:none}
 #boxes.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+#artifact{position:absolute;inset:0;width:100%;height:100%;border:0;display:none;background:#fff}
+#artifact.on{display:block}
+#brokenTag{position:absolute;z-index:7;left:16px;top:16px;max-width:min(360px,68%);
+  background:#fff;border:1px solid var(--rule);border-left:3px solid var(--alarm);border-radius:9px;
+  padding:9px 11px;font-size:11.5px;line-height:1.45;color:var(--soft);letter-spacing:0;display:none}
+#brokenTag.on{display:block}
+#brokenTag b{display:block;color:var(--alarm);font-size:10px;letter-spacing:.13em;
+  text-transform:uppercase;margin-bottom:3px}
 #noModel{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:24px;
   color:var(--faint);z-index:3}
 #noModel.on{display:grid}
@@ -186,6 +204,7 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
 .shots.one img{aspect-ratio:auto;max-height:280px;object-fit:contain;background:#fff}
 .focus{font-size:11.5px;color:var(--soft);margin:6px 0 0;letter-spacing:0}
 .verdict + .focus{margin-top:10px}
+.caveat a{color:var(--ink)}
 .caveat{font-size:11.5px;color:var(--soft);margin:7px 0 0;padding-left:9px;
   border-left:2px solid var(--rule);letter-spacing:0}
 .waiting{font-size:11px;color:var(--soft);margin-top:7px;letter-spacing:0}
@@ -302,9 +321,11 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
     </div>
 
     <div id="viewTag">camera · <b id="viewName">front 3/4</b></div>
+    <div id="artTag"><b id="artName"></b></div>
     <!-- Who made this, on what, judged how, photographed how. Four facts, always on
          screen, because "which builder am I watching" should never need a click. -->
     <div id="prov"></div>
+    <div id="brokenTag"></div>
 
     <div id="meter">
       <div class="cap">suck score</div>
@@ -319,9 +340,13 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
     <div id="flash"></div>
     <div id="shutter"><span id="shutterView">front</span></div>
 
-    <div id="noModel"><div><b>No model to show.</b>
-      <span>This one was built by hand, in a browser, two days at a time. The geometry was a
-      web page; the record is the pictures.</span></div></div>
+    <!-- The human trace's models are not geometry in a file, they are thirty
+         standalone Three.js pages — which is a format, not an absence. They run here,
+         live, on the build this repo vendors. -->
+    <iframe id="artifact" title="the model, running" loading="lazy"></iframe>
+    <div id="noModel"><div><b>Nothing was built on this turn.</b>
+      <span>Not every message produced a page. The model above stays on the last one
+      that did.</span></div></div>
 
     <div id="emptyPlate"><div><b>Nothing was built.</b>
       <span>Every operation was rejected, so the captures below are blank. That is the trace being honest, not a fault in this page.</span></div></div>
@@ -438,7 +463,7 @@ function adaptHuman(t) {
   for (const turn of t.turns) {
     msgs.push({ kind: 'you', text: turn.prompt, cycle: turn.i + 1, ts: turn.ts });
     msgs.push({ kind: 'builder', cycle: turn.i + 1, text: turn.result,
-      artifact: turn.artifact || null,
+      artifact: turn.artifact || null, model: turn.model || null, broken: turn.broken || null,
       shots: turn.image ? [{ src: turn.image, cap: 'what came back', blank: false }] : [] });
   }
   return { builder: 'human', intent: t.intent, reference: null, name: t.who,
@@ -946,7 +971,9 @@ function bubble(m, i) {
       ${(m.shots || []).length ? `<div class="shots one">${m.shots.map(c =>
         `<figure><img src="${c.src}" data-cap="${esc(c.cap)}" alt="${esc(c.cap)}">
            <figcaption>${esc(c.cap)}</figcaption></figure>`).join('')}</div>` : ''}
-      ${m.artifact ? `<div class="caveat">${esc(m.artifact)}</div>` : ''}
+      ${m.artifact ? `<div class="caveat">${m.model ? `<a href="assets/artifacts/${m.model}" target="_blank"
+        rel="noopener">${esc(m.artifact)}</a> — open it on its own` : esc(m.artifact)}
+        ${m.broken ? `<br><span style="color:var(--alarm)">${esc(m.broken)}</span>` : ''}</div>` : ''}
       ${m.inPlace ? `<div class="caveat">${m.inPlace} parts moved rather than added — the file keeps
         only their final positions, so the model can show where they ended up but not the move</div>` : ''}
       ${effort(m)}
@@ -967,6 +994,23 @@ function effort(m) {
 
 function paint({ animate = false } = {}) {
   $('#log').innerHTML = msgs.slice(0, at + 1).map((m, i) => bubble(m, i)).join('');
+  // A human turn's model is a page, not a part list. Swap the whole stage for it.
+  if (doc && doc.builder === 'human') {
+    const m = modelFor(at);
+    if (m !== paint._m) {
+      paint._m = m;
+      $('#artifact').classList.toggle('on', !!m);
+      if (m && $('#artifact').getAttribute('src') !== 'assets/artifacts/' + m.model)
+        $('#artifact').setAttribute('src', 'assets/artifacts/' + m.model);
+      $('#noModel').classList.toggle('on', !m);
+      $('#brokenTag').classList.toggle('on', !!(m && m.broken));
+      if (m && m.broken) $('#brokenTag').innerHTML =
+        `<b>this one is broken, and was</b>${esc(m.broken)} — the next turn is the fix. Kept as it
+         failed, because a repaired archive would be a worse one.`;
+      $('#artName').textContent = m ? m.artifact : '';
+      $('#artTag').style.display = m ? '' : 'none';
+    }
+  }
   const sc = sceneFor(at);
   if (sc !== paint._s) {
     paint._s = sc;
@@ -987,6 +1031,10 @@ function paint({ animate = false } = {}) {
 }
 const sceneFor = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].scene) return msgs[k].scene; return null; };
 const focusFor = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].kind === 'critic') return msgs[k].focusIds || []; return []; };
+// The last turn that produced a page. A turn with no artifact leaves the last one up,
+// which is what was on the screen at the time.
+const modelFor = (i) => { for (let k = i; k >= 0; k--) { const m = msgs[k];
+  if (m.kind === 'builder' && m.model) return m; } return null; };
 const viewFor = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].kind === 'shoot' || msgs[k].view) return msgs[k].view; return null; };
 const lastScore = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].kind === 'critic' && msgs[k].score != null) return msgs[k].score; return null; };
 
@@ -1211,7 +1259,11 @@ function open(raw, { autoplay = false } = {}) {
   $('#refimg').src = doc.reference || '';
   $('#ghost').src = doc.reference || '';
   $('#ref').style.display = doc.reference ? '' : 'none';
-  $('#noModel').classList.toggle('on', doc.builder === 'human');
+  paint._m = undefined;
+  $('#artifact').classList.remove('on'); $('#brokenTag').classList.remove('on');
+  // No score to show on a trace nobody scored.
+  $('#meter').style.display = doc.builder === 'human' ? 'none' : '';
+  if (doc.builder !== 'human') { $('#artifact').removeAttribute('src'); $('#noModel').classList.remove('on'); }
   for (const el of ['#viewTag', '#boxes', '#fadeWrap']) $(el).style.display = doc.builder === 'human' ? 'none' : '';
   const pv = doc.provenance || {};
   $('#prov').innerHTML = [['builder', BUILDERS[doc.builder]], ['engine', pv.engine],
