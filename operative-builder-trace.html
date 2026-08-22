@@ -735,7 +735,7 @@ const viewAngles = (name) => VIEWS[String(name || '').toLowerCase().trim()] || V
 // theta is the compass bearing, phi the angle down from straight up — the clinic's
 // own spherical convention, so the numbers above mean here what they mean there.
 const orbit = { theta: 0.78, phi: 1.07, dist: 46, target: new THREE.Vector3(0, 3, 0) };
-let framed = null, camTween = 0;
+let framed = null, camTween = 0, autoplayTimer = 0;
 let docFile = null;   // which trace is open, so a test can tell it got the one it asked for
 
 function meshFor(o) {
@@ -833,7 +833,11 @@ async function drawScene(sc, { animate = true } = {}) {
   // as the pile grows, so a hundred and five parts is a couple of seconds, not twelve.
   const step = Math.max(18, Math.min(110, 1300 / Math.max(1, fresh.length))) / rate;
   for (const p of fresh) {
-    if (token !== laying) { for (const q of fresh) if (!live.has(q.id)) { const m = born(q); applyNow(m, q); } return; }
+    // Superseded: a newer turn is drawing now and owns the world. Finishing this one's
+    // parts would drop them back into a scene that has already moved on — which is how
+    // scrubbing to the opening turn could leave a building standing on a turn where
+    // nothing had been built yet.
+    if (token !== laying) return;
     const m = born(p);
     m.scale.set(0.01, 0.01, 0.01);
     ease(m, { scale: p.scale }, 200);
@@ -1107,7 +1111,11 @@ function paint({ animate = false } = {}) {
     return;
   }
   const sc = sceneFor(at);
-  if (sc !== paint._s) {
+  // The second clause is not redundant. A turn before anything was built has no scene,
+  // and neither did the turn painted before it, so the guard let both through unchanged
+  // — while the world could still be holding parts laid by a run that had gone further.
+  // Scrubbing back to the opening turn then showed a building on a turn that had none.
+  if (sc !== paint._s || (!sc && worldGroup.children.length)) {
     paint._s = sc;
     if (sc) flashChanged([...(sc.added || []), ...(sc.changed || [])]);
     drawScene(sc, { animate });
@@ -1438,6 +1446,10 @@ async function play() {
   if (at >= msgs.length - 1) stop();
 }
 function stop() {
+  // Including one that has not begun. A trace opens with playback armed on a timer, and
+  // a stop before that timer fired used to leave it armed — so anything that stopped and
+  // jumped in that first moment got overtaken a beat later by playback starting anyway.
+  clearTimeout(autoplayTimer); autoplayTimer = 0;
   playing = false; $('#play').textContent = '▶';
   const t = document.getElementById('typing'); if (t) t.remove();
 }
@@ -1525,10 +1537,14 @@ function goToView(name, { snap = false } = {}) {
   // Only for the builder whose units these are. An operative castle is twenty units
   // across in nobody's metres, so it keeps the framing derived from its own bounds.
   if (doc && doc.builder === 'correspondence') {
-    orbit.target.set(0, 1.15, 0);
     // The clinic's distance, unless this panel is narrower than the clinic's canvas —
     // in which case the same distance would crop the lander, so it backs off just far
     // enough to hold the whole thing. Never closer than the shot was taken.
+    //
+    // What it no longer does is aim at the clinic's fixed point at (0, 1.15, 0). A
+    // build that does not straddle that point sat off to one side of every frame, and
+    // this was the last of four places quietly putting the aim back there. The angle
+    // is still the recorded one; where it looks is decided by where the build is.
     orbit.dist = framed = Math.max(r, fitDistance());
   }
   if (snap) { orbit.theta = th; orbit.phi = ph; return; }
@@ -1557,7 +1573,34 @@ function resize() {
   }
 }
 addEventListener('resize', resize);
-(function tick() { placeCamera(); pulse(); renderer.render(scene, camera); requestAnimationFrame(tick); })();
+/**
+ * Keep the frame true, whatever order things happened in.
+ *
+ * Framing at the right moment turned out to be a losing game: the parts of a turn are
+ * laid asynchronously, a jump can land while the previous turn is still laying, and
+ * each of those left one turn framed against a build that was somewhere else. So the
+ * camera checks its own work instead. Once a frame, if the standing build no longer
+ * matches what the camera was aimed and fitted for, it is re-aimed and re-fitted.
+ * Cheap, because the check is a bounding box and it only ever runs when the box moved.
+ */
+let fitFor = '';
+function keepFramed() {
+  if (artPasses || !worldGroup.children.length) return;   // artifacts fit themselves
+  const b = new THREE.Box3().setFromObject(worldGroup);
+  if (b.isEmpty()) return;
+  const key = [b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z, camera.aspect]
+    .map(n => n.toFixed(2)).join(',');
+  if (key === fitFor) return;
+  fitFor = key;
+  orbit.target.copy(b.getCenter(new THREE.Vector3()));
+  const want = Math.max(distanceToFrame(b, orbit.target),
+                        b.getSize(new THREE.Vector3()).length() * .6);
+  // Only ever opened out within a run, so the eye watches the thing change rather
+  // than the camera move.
+  orbit.dist = framed = framed ? Math.max(framed, want) : want;
+}
+
+(function tick() { keepFramed(); placeCamera(); pulse(); renderer.render(scene, camera); requestAnimationFrame(tick); })();
 
 // ------------------------------------------------------------------ loading
 function curtain(msg) { const b = $('#boot'); if (!b) return;
@@ -1601,7 +1644,7 @@ function open(raw, { autoplay = false } = {}) {
     try { document.documentElement.style.setProperty('--split', '64%'); } catch {}
   pace = doc.builder === 'human' ? 0 : 1;
   rate = PACE[pace].r; $('#speed').textContent = PACE[pace].label;
-  if (autoplay) setTimeout(play, 700);
+  if (autoplay) autoplayTimer = setTimeout(play, 700);
 }
 
 $('#pick').onchange = async e => {
