@@ -98,6 +98,15 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
 @keyframes shut{0%{opacity:0;transform:translate(-50%,-50%) scale(1.06)}
   14%{opacity:.9;transform:translate(-50%,-50%) scale(1)}
   70%{opacity:.9}100%{opacity:0;transform:translate(-50%,-50%) scale(.99)}}
+#ghost{position:absolute;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);
+  max-width:86%;max-height:86%;opacity:0;pointer-events:none;mix-blend-mode:multiply}
+#fadeWrap{display:flex;gap:7px;align-items:center;flex:none;font-size:11px;color:var(--soft)}
+#fadeWrap input{width:74px;-webkit-appearance:none;appearance:none;height:18px;background:transparent}
+#fadeWrap input::-webkit-slider-runnable-track{height:2px;background:var(--rule);border-radius:2px}
+#fadeWrap input::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;
+  background:var(--accent);margin-top:-4.5px}
+#fadeWrap input::-moz-range-track{height:2px;background:var(--rule)}
+#fadeWrap input::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;background:var(--accent)}
 #emptyPlate{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:24px;
   color:var(--faint);z-index:2}
 #emptyPlate.on{display:grid}
@@ -149,7 +158,10 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
 .shots{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:0 0 10px}
 .shots.one{grid-template-columns:1fr}
 .shots.one img{aspect-ratio:auto;max-height:280px;object-fit:contain;background:#fff}
-.focus{font-size:11.5px;color:var(--soft);margin:0 0 9px;letter-spacing:0}
+.focus{font-size:11.5px;color:var(--soft);margin:6px 0 0;letter-spacing:0}
+.verdict + .focus{margin-top:10px}
+.waiting{font-size:11px;color:var(--soft);margin-top:7px;letter-spacing:0}
+.waiting b{color:var(--ink);font-variant-numeric:tabular-nums}
 .focus b{color:var(--accent);font-weight:500}
 .note.shootnote{color:var(--soft)}
 .note.shootnote b{color:var(--ink)}
@@ -222,6 +234,8 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
   header select,header button,header label{font-size:11px;padding:6px 9px}
   header select{flex:1 1 auto;max-width:none;min-width:0;text-overflow:ellipsis}
   .wide{display:none}.narrow{display:inline}
+  #fadeWrap span{display:none}
+  #fadeWrap input{width:52px}
   #ref{width:76px;top:12px;left:12px}
   #meter{top:12px;right:12px}
   #score{font-size:32px}
@@ -262,6 +276,10 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
       <div id="meterNote">fucked until proven otherwise</div>
     </div>
 
+    <!-- The one view worth having. The argument is always render-against-reference,
+         so being able to slide one over the other is the argument itself, made
+         visible. Everything else a viewer could offer is a preference. -->
+    <img id="ghost" alt="">
     <div id="flash"></div>
     <div id="shutter"><span id="shutterView">front</span></div>
 
@@ -271,7 +289,9 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
     <div id="bar">
       <button class="round" id="play">▶</button>
       <input id="seek" type="range" min="0" max="0" value="0">
-      <button id="speed" title="playback speed">1×</button>
+      <button id="speed" title="how fast to replay it">4×</button>
+      <label id="fadeWrap" title="fade the reference over the build">
+        <span>fade</span><input id="fade" type="range" min="0" max="100" value="0"></label>
       <span id="tick">—</span>
     </div>
   </section>
@@ -305,7 +325,7 @@ import * as THREE from 'three';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-let idx = null, doc = null, msgs = [], at = 0, playing = false, timer = null, rate = 1;
+let idx = null, doc = null, msgs = [], at = 0, playing = false, timer = null, rate = 4;
 
 // ------------------------------------------------------------------ adapters
 //
@@ -361,12 +381,26 @@ function adaptOperative(t) {
   const prompts = (t.builder_log || []).filter(b => b.role === 'user');
   const errs = (t.builder_log || []).filter(b => b.role === 'error');
 
+  // How long each turn actually took. There are no token counts anywhere in either
+  // format, so this is the only honest measure of effort in the file — and it is a
+  // good one: the builder sat for eighty-six seconds on cycle 3.
+  const think = (log, atMost) => {
+    let ask = null;
+    for (const e of log) {
+      if (!e.ts) continue;
+      if (e.role === 'user') ask = T(e.ts);
+      else if (e.role === 'assistant' && ask && Math.abs(T(e.ts) - atMost) < 4000) return T(e.ts) - ask;
+    }
+    return null;
+  };
+
   for (const h of t.history) {
     const ok = (h.receipts || []).filter(r => !/^REJECT/.test(r)).length;
     const no = (h.receipts || []).length - ok;
     const p = prompts.filter(x => T(x.ts) <= T(h.ts)).pop();
     msgs.push({
       kind: 'builder', cycle: h.cycle, text: h.summary || '', raw: p ? p.text : null,
+      think: think(t.builder_log || [], T(h.ts)),
       scene: { parts: (h.afterWorld || []).map(OPERATIVE_PART),
                added: new Set((h.diff || {}).added || []),
                changed: new Set((h.diff || {}).changed || []),
@@ -378,6 +412,7 @@ function adaptOperative(t) {
     if (c) {
       msgs.push({ kind: 'shoot', view: c.view || 'front' });
       msgs.push({ kind: 'critic', cycle: h.cycle, score: c.score, text: c.criticism || '',
+        think: think(t.critic_log || [], T(c.ts || h.ts)),
         shots: [['beforeShot', 'before'], ['afterShot', 'after'], ['diffShot', 'what changed']]
           .filter(([k]) => h[k])
           .map(([k, cap]) => ({ src: h[k], cap,
@@ -406,15 +441,38 @@ function adaptCorrespondence(t) {
   // format. `world` and `api` lines are the machinery — kept, but as quiet notes,
   // and the transport chatter is dropped: forty "→ OPENAI · attempt 1/4" lines say
   // nothing a reader of the argument needs.
-  let cycle = 0, saidTarget = null;
+  let cycle = 0, saidTarget = null, pending = null;
+  const counts = [];
   for (const e of t.transcript || []) {
     const text = String(e.text || '');
-    if (e.role === 'api') continue;
+    // The transport lines are noise as conversation and gold as measurement: each
+    // return carries the wall-clock of the call, the size of the answer, and how
+    // much was posted to get it. Neither format records tokens — this is what there
+    // is, and it is real rather than estimated.
+    if (e.role === 'api') {
+      const out = /(BUILDER|CRITIC) → OPENAI[^]*?~(\d+) KB/.exec(text);
+      if (out) { pending = { who: out[1].toLowerCase(), kb: +out[2] }; continue; }
+      const back = /(BUILDER|CRITIC) ← OPENAI · (\d+) ms · (\d+) chars/.exec(text);
+      if (back && pending && pending.who === back[1].toLowerCase())
+        pending = { ...pending, ms: +back[2], chars: +back[3] };
+      continue;
+    }
     if (e.role === 'you') { msgs.push({ kind: 'you', text }); continue; }
     if (e.role === 'world') {
       const m = /^CYCLE (\d+) START/.exec(text);
       if (m) { cycle = +m[1]; continue; }
-      if (/^WORLD UPDATED/.test(text) || /^PICTURE/.test(text)) continue;
+      // The one thing that makes a correspondence trace buildable step by step.
+      //
+      // The file keeps only the finished scene — but every cycle logs how many parts
+      // stood when it ended, those counts rise monotonically and land exactly on the
+      // final total, and `scene.parts` is in insertion order (the nine locked trailer
+      // parts first, the late cabin braces last). So the world at cycle N is the
+      // first N-many parts. It is a reconstruction and it is labelled as one: a part
+      // added early and moved later is shown here where it finished, because where it
+      // stood at the time is not in the file.
+      const upd = /^WORLD UPDATED · \d+ target changes · (\d+) total parts/.exec(text);
+      if (upd) { counts.push({ cycle, total: +upd[1] }); continue; }
+      if (/^PICTURE/.test(text)) continue;
       if (/^TARGET LOCKED|^TARGET SURVIVED|^TARGET STALLED|^STOP|^ERROR|^camera →/.test(text))
         msgs.push({ kind: 'note', cycle, warn: /ERROR|STALLED/.test(text),
                     text: text.replace(/\s*·\s*/g, ' · ') });
@@ -425,7 +483,10 @@ function adaptCorrespondence(t) {
       const body = text.replace(/^← TARGETED BUILD · /, '');
       const n = /(\d+) changed parts/.exec(text);
       msgs.push({ kind: 'builder', cycle, text: body.replace(/^\d+ changed parts\n?/, ''),
-                  changedCount: n ? +n[1] : null, raw: null });
+                  changedCount: n ? +n[1] : null, raw: null,
+                  think: pending && pending.who === 'builder' ? pending.ms : null,
+                  cost: pending && pending.who === 'builder' ? pending : null });
+      pending = null;
       continue;
     }
     if (e.role === 'critic') {
@@ -438,19 +499,34 @@ function adaptCorrespondence(t) {
       saidTarget = snap;
       msgs.push({ kind: 'shoot', view: (snap && snap.view) || 'front' });
       msgs.push({ kind: 'critic', cycle, score: snap ? snap.score : null, text: body,
+        think: pending && pending.who === 'critic' ? pending.ms : null,
+        cost: pending && pending.who === 'critic' ? pending : null,
         focus: focusLabel || (snap && snap.focus) || null,
         focusIds: (snap && snap.focusIds) || [],
         shots: snap && snap.image ? [{ src: snap.image, cap: snap.view || 'the picture', blank: false }] : [] });
+      pending = null;
       continue;
     }
   }
-  // One scene, the finished one, hung on the first builder message. Every critic
-  // message after it lights the parts it named instead.
-  const first = msgs.findIndex(m => m.kind === 'builder');
-  if (first >= 0) msgs[first].scene = { parts, added: new Set(parts.map(p => p.id)),
-                                        changed: new Set(), was: 0, final: true };
+  // Hang a scene on each builder message: the first N parts, N being what that cycle
+  // logged. Where no counts were logged at all, the finished scene goes on the first
+  // builder message and that is all anyone can be shown.
+  const builders = msgs.map((m, i) => [m, i]).filter(([m]) => m.kind === 'builder');
+  let prev = 0, k = 0;
+  for (const [m] of builders) {
+    const c = counts[k++];
+    if (!c) break;
+    const upto = parts.slice(0, c.total);
+    m.scene = { parts: upto, added: new Set(upto.slice(prev).map(p => p.id)),
+                changed: new Set(), was: prev, rebuilt: true };
+    prev = c.total;
+  }
+  if (!counts.length && builders.length)
+    builders[0][0].scene = { parts, added: new Set(parts.map(p => p.id)),
+                             changed: new Set(), was: 0, final: true };
   return { builder: 'correspondence', intent, reference: t.reference, name: t.referenceName,
-           model: (t.settings || {}).model || 'unknown', msgs, perCycleWorlds: false,
+           model: (t.settings || {}).model || 'unknown', msgs,
+           perCycleWorlds: counts.length > 0, reconstructed: counts.length > 0,
            background: t.scene.background, ground: t.scene.groundColor };
 }
 
@@ -516,38 +592,90 @@ function meshFor(o) {
  * are laid in one by one, and rung as they land.
  */
 let laying = 0;
+const live = new Map();                       // id → mesh, so a part can be moved rather than replaced
+
+/**
+ * Put the scene up, and move what was already standing.
+ *
+ * Clearing the group and rebuilding it every cycle is a slide show: the castle
+ * blinks and you cannot tell whether a tower moved four inches or was demolished and
+ * rebuilt somewhere else. So parts that survive a cycle are kept and *eased* to their
+ * new position, size and angle, which is the difference the diff is actually
+ * describing. New ones grow in, one at a time. Ones that are gone shrink away.
+ */
 async function drawScene(sc, { animate = true } = {}) {
   const token = ++laying;
-  worldGroup.clear(); rings.clear();
+  rings.clear();
   $('#emptyPlate').classList.toggle('on', !!sc && !sc.parts.length);
-  if (!sc || !sc.parts.length) return;
+  if (!sc) { worldGroup.clear(); live.clear(); return; }
 
-  const fresh = sc.parts.filter(p => sc.added.has(p.id) || sc.changed.has(p.id));
-  const standing = sc.parts.filter(p => !sc.added.has(p.id) && !sc.changed.has(p.id));
-  for (const p of standing) worldGroup.add(meshFor(p));
+  const want = new Map(sc.parts.map(p => [p.id, p]));
+  // gone
+  for (const [id, m] of [...live]) {
+    if (want.has(id)) continue;
+    live.delete(id);
+    if (!animate) { worldGroup.remove(m); continue; }
+    ease(m, { scale: [0.01, 0.01, 0.01] }, 260, () => worldGroup.remove(m));
+  }
+  // standing: move them
+  const fresh = [];
+  for (const p of sc.parts) {
+    const m = live.get(p.id);
+    if (!m) { fresh.push(p); continue; }
+    const moved = Math.abs(m.position.x - p.pos[0]) + Math.abs(m.position.y - p.pos[1]) +
+                  Math.abs(m.position.z - p.pos[2]) > 1e-4 ||
+                  Math.abs(m.scale.x - p.scale[0]) > 1e-4;
+    if (!animate) { applyNow(m, p); }
+    else if (moved) ease(m, { pos: p.pos, rot: p.rot, scale: p.scale }, 420);
+    else applyNow(m, p);
+    if (m.material && m.material.color) m.material.color.set(p.color);
+    ring(m, sc, p);
+  }
   frameOn(sc.parts);
 
-  if (!animate || !fresh.length) { for (const p of fresh) { const m = meshFor(p); worldGroup.add(m); ring(m, sc, p); } return; }
+  if (!animate) { for (const p of fresh) { const m = born(p); applyNow(m, p); ring(m, sc, p); } return; }
 
-  // Fast enough to feel like assembly, slow enough to see. A hundred and five parts
-  // at a flat 120 ms each is twelve seconds of watching, so the per-part pause
-  // shrinks as the pile grows.
-  const step = Math.max(22, Math.min(120, 1400 / fresh.length)) / rate;
+  // Fast enough to feel like assembly, slow enough to see. The per-part pause shrinks
+  // as the pile grows, so a hundred and five parts is a couple of seconds, not twelve.
+  const step = Math.max(18, Math.min(110, 1300 / Math.max(1, fresh.length))) / rate;
   for (const p of fresh) {
-    if (token !== laying) return;
-    const m = meshFor(p);
-    m.scale.multiplyScalar(0.01);
-    worldGroup.add(m); ring(m, sc, p);
-    const t0 = performance.now(), s1 = new THREE.Vector3(p.scale[0], p.scale[1], p.scale[2]);
-    (function grow(now) {
-      const f = Math.min(1, ((now || performance.now()) - t0) / 180);
-      const e = 1 - Math.pow(1 - f, 3);
-      m.scale.copy(s1).multiplyScalar(0.01 + 0.99 * e);
-      if (f < 1 && token === laying) requestAnimationFrame(grow);
-    })();
+    if (token !== laying) { for (const q of fresh) if (!live.has(q.id)) { const m = born(q); applyNow(m, q); } return; }
+    const m = born(p);
+    m.scale.set(0.01, 0.01, 0.01);
+    ease(m, { scale: p.scale }, 200);
+    ring(m, sc, p);
     await new Promise(r => setTimeout(r, step));
   }
 }
+
+function born(p) { const m = meshFor(p); worldGroup.add(m); live.set(p.id, m); return m; }
+function applyNow(m, p) {
+  m.position.set(p.pos[0], p.pos[1], p.pos[2]);
+  m.rotation.set(p.rot[0] || 0, p.rot[1] || 0, p.rot[2] || 0);
+  m.scale.set(p.scale[0], p.scale[1], p.scale[2]);
+}
+/** One tween, cubic out, cancelling any tween already running on that mesh. */
+function ease(m, to, ms, done) {
+  const from = { pos: m.position.clone(), rot: m.rotation.clone(), scale: m.scale.clone() };
+  const t0 = performance.now();
+  m.userData.tween = (m.userData.tween || 0) + 1;
+  const mine = m.userData.tween;
+  (function step(now) {
+    if (m.userData.tween !== mine) return;
+    const f = Math.min(1, ((now || performance.now()) - t0) / ms), e = 1 - Math.pow(1 - f, 3);
+    if (to.pos) m.position.set(from.pos.x + (to.pos[0] - from.pos.x) * e,
+                               from.pos.y + (to.pos[1] - from.pos.y) * e,
+                               from.pos.z + (to.pos[2] - from.pos.z) * e);
+    if (to.rot) m.rotation.set(from.rot.x + ((to.rot[0] || 0) - from.rot.x) * e,
+                               from.rot.y + ((to.rot[1] || 0) - from.rot.y) * e,
+                               from.rot.z + ((to.rot[2] || 0) - from.rot.z) * e);
+    if (to.scale) m.scale.set(from.scale.x + (to.scale[0] - from.scale.x) * e,
+                              from.scale.y + (to.scale[1] - from.scale.y) * e,
+                              from.scale.z + (to.scale[2] - from.scale.z) * e);
+    if (f < 1) requestAnimationFrame(step); else if (done) done();
+  })();
+}
+
 function ring(m, sc, p) {
   const col = sc.added.has(p.id) ? cssColour('--added') : sc.changed.has(p.id) ? cssColour('--changed') : null;
   if (!col || sc.final) return;
@@ -621,6 +749,7 @@ function bubble(m, i) {
         <div class="n" style="color:${scoreInk(m.score)}">${m.score ?? '—'}<small>suck</small></div>
         <div class="txt">${esc(m.text)}</div>
       </div>
+      ${effort(m)}
     </div></div>`;
   }
 
@@ -628,10 +757,20 @@ function bubble(m, i) {
     <div class="turn right" data-i="${i}"><div class="bub">
       <div class="who">${m.cycle ? `<span>cycle ${m.cycle}</span>` : ''}<span>builder</span></div>
       <div class="txt">${esc(m.text)}</div>
-      ${m.changedCount != null ? `<div class="focus">${m.changedCount} parts changed</div>` : ''}
+      ${effort(m)}
       ${m.raw ? `<div class="raw"><button data-raw="${i}">what it was asked</button>
         <pre>${esc(m.raw)}</pre></div>` : ''}
     </div></div>`;
+}
+
+/** What the turn cost, in the only units either file records. */
+function effort(m) {
+  const bits = [];
+  if (m.changedCount != null) bits.push(`${m.changedCount} parts changed`);
+  if (m.think) bits.push(`${fmt(m.think)} thinking`);
+  if (m.cost && m.cost.chars) bits.push(`${m.cost.chars.toLocaleString()} chars back`);
+  if (m.cost && m.cost.kb) bits.push(`~${m.cost.kb} KB sent`);
+  return bits.length ? `<div class="focus">${bits.join(' · ')}</div>` : '';
 }
 
 function paint({ animate = false } = {}) {
@@ -675,10 +814,19 @@ async function advance() {
   }
   if (next.kind !== 'note') {
     const side = (next.kind === 'builder' || next.kind === 'you') ? 'right' : '';
+    const who = next.kind === 'critic' ? 'critic' : next.kind === 'you' ? 'you' : 'builder';
+    // The real wait, if the file recorded one. This is the whole of "slow it down to
+    // how long it actually took": the builder sat for eighty-six seconds on cycle 3
+    // of the castle, and watching that number climb is the most honest thing on the
+    // page. No file records tokens, so seconds is the only measure of effort there is.
+    const real = next.think || (next.kind === 'critic' ? 950 : 750);
     $('#log').insertAdjacentHTML('beforeend',
-      `<div class="turn typing ${side}" id="typing"><div class="bub"><div class="dots"><i></i><i></i><i></i></div></div></div>`);
+      `<div class="turn typing ${side}" id="typing"><div class="bub">
+         <div class="dots"><i></i><i></i><i></i></div>
+         ${next.think ? `<div class="waiting">${who} thinking · <b id="waited">0s</b> of ${fmt(next.think)}</div>` : ''}
+       </div></div>`);
     if (stick) toBottom();
-    await hold(next.kind === 'critic' ? 950 : 750);
+    await countdown(real);
     const t = document.getElementById('typing'); if (t) t.remove();
     if (!playing) return;
   }
@@ -689,6 +837,19 @@ async function advance() {
   if (next.scene) await hold(Math.min(2600, 300 + next.scene.parts.length * 12));
 }
 const hold = (ms) => new Promise(r => setTimeout(r, ms / rate));
+const fmt = (ms) => ms >= 60000 ? Math.round(ms / 6000) / 10 + 'min'
+  : ms >= 1000 ? Math.round(ms / 100) / 10 + 's' : ms + 'ms';
+/** Wait out a turn at the chosen pace, showing the real clock rather than the replay's. */
+function countdown(realMs) {
+  const t0 = performance.now(), out = document.getElementById('waited');
+  return new Promise(done => {
+    (function step(now) {
+      const f = Math.min(1, ((now || performance.now()) - t0) / (realMs / rate));
+      if (out && out.isConnected) out.textContent = fmt(Math.round(realMs * f / 100) * 100);
+      if (f < 1 && playing) requestAnimationFrame(step); else done();
+    })();
+  });
+}
 
 function show(i) {
   at = Math.max(0, Math.min(msgs.length - 1, i));
@@ -713,13 +874,17 @@ function stop() {
   playing = false; $('#play').textContent = '▶';
   const t = document.getElementById('typing'); if (t) t.remove();
 }
-const RATES = [0.5, 1, 2, 4];
-$('#speed').onclick = () => {
-  rate = RATES[(RATES.indexOf(rate) + 1) % RATES.length];
-  $('#speed').textContent = rate + '×';
-};
+// One control, four stops, and the first one is the truth: the loop's own pace, read
+// off the timestamps. The castle took seven and a half minutes and the lander nearly
+// nine, most of it the models thinking — which is worth sitting through once.
+const PACE = [{ r: 1, label: 'as it happened' }, { r: 4, label: '4×' },
+              { r: 12, label: '12×' }, { r: 40, label: 'skim' }];
+let pace = 1;
+$('#speed').onclick = () => { pace = (pace + 1) % PACE.length; rate = PACE[pace].r;
+  $('#speed').textContent = PACE[pace].label; };
 $('#play').onclick = () => playing ? stop() : play();
 $('#seek').oninput = e => { stop(); show(+e.target.value); };
+$('#fade').oninput = e => { $('#ghost').style.opacity = (+e.target.value / 100) * 0.85; };
 addEventListener('keydown', e => {
   if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
   if (e.key === ' ') { e.preventDefault(); playing ? stop() : play(); }
@@ -806,9 +971,11 @@ function open(raw, { autoplay = false } = {}) {
   stop();
   doc = adapt(raw);
   msgs = doc.msgs; at = 0; framed = null; paint._s = undefined; spin = true;
+  worldGroup.clear(); rings.clear(); live.clear();
   document.documentElement.dataset.builder = doc.builder;
   $('#badge').textContent = doc.builder === 'operative' ? 'operative builder' : 'correspondence builder';
   $('#refimg').src = doc.reference || '';
+  $('#ghost').src = doc.reference || '';
   $('#refname').textContent = doc.name || 'reference';
   $('#seek').max = String(msgs.length - 1);
   resize(); paint(); $('#thread').scrollTop = 0;
@@ -852,13 +1019,35 @@ function renderDocs() {
   <p>They are shown in different colours for that reason. The reader is the same; what
   each can honestly show is not.</p>
 
+  <h3>Taking your time</h3>
+  <p>The pace button starts at 4×. Its first stop is <b>as it happened</b>, which
+  replays the run at the speed it actually ran — and most of a run is waiting. The
+  castle took seven and a half minutes, the lunar lander nearly nine, and while
+  something is thinking you get the real clock climbing: <em>builder thinking · 12s of
+  40.4s</em>. The eighty-six seconds the builder spent on cycle 3 of the castle was
+  eighty-six real seconds.</p>
+  <p><b>Neither file records tokens.</b> What is there is wall-clock, the size of the
+  answer in characters, and how much was posted to get it — for the correspondence
+  runs, around half a megabyte per call, because every call carries the pictures. That
+  is on each message and it is measured, not estimated.</p>
+  <p>The <b>fade</b> slider lays the reference photograph over the build. The argument
+  is always render-against-reference, so sliding one onto the other is the argument
+  itself. It is usually more damning than the critic.</p>
+
   <h3>What the model is doing</h3>
-  <p>It is the real geometry, rebuilt here from the parts the file carries, and it
-  goes up a piece at a time so you can see what the move actually did. On an
-  operative trace each cycle rebuilds that cycle's world, ringed where the move added
-  or changed something. On a correspondence trace there is only one world in the file
-  — the finished one — so it is built once and each critic message instead lights the
-  parts it named as its target, in red, exactly as the loop does.</p>
+  <p>It is the real geometry, rebuilt from the parts the file carries. It goes up a
+  piece at a time, and a part that survives a cycle is <em>moved</em> rather than
+  destroyed and remade — so when a tower shifts four inches you see it shift, which is
+  the difference the diff is actually describing.</p>
+  <p>An operative trace carries a full world for every cycle, so each one is exact,
+  ringed where that move added or changed something.</p>
+  <p>A correspondence trace carries only the finished scene — but every cycle logs how
+  many parts stood when it ended, those counts rise and land exactly on the final
+  total, and the parts are stored in the order they were made. So the world at each
+  cycle is reconstructed as the first N-many parts. <b>It is a reconstruction.</b> A
+  part added early and moved later is shown where it finished, because where it stood
+  at the time is not in the file. Critic messages also light the parts they named as
+  the target, in red, exactly as the loop does — those ids <em>are</em> recorded.</p>
   <p>The white flash is the picture being taken. The critic never sees the model; it
   only ever sees that photograph, which is why the loop can be wrong about a building
   that is fine, and why the flash is worth marking.</p>
