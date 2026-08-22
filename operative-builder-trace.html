@@ -277,6 +277,13 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
   header select,header button,header label{font-size:11px;padding:6px 9px}
   header select{flex:1 1 auto;max-width:none;min-width:0;text-overflow:ellipsis}
   .wide{display:none}.narrow{display:inline}
+  /* Eight controls do not fit in 390 px. The filename is the first to go — it is on
+     the message in the thread anyway — and the seek is allowed to shrink. */
+  #stageTag{display:none}
+  #bar{gap:9px;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+  #seek{min-width:24px}
+  #speed,#boxes,#passRow button{font-size:10.5px;padding:4px 8px}
+  #tick{font-size:10px}
   #fadeWrap span{display:none}
   #fadeWrap input{width:52px}
       #boxes{padding:4px 7px}
@@ -661,6 +668,9 @@ const worldGroup = new THREE.Group(), rings = new THREE.Group(); scene.add(world
 // Open for inspection: the argument of this whole project is that you should be able
 // to check a claim rather than take it, and that includes this page.
 window.__wg = worldGroup; window.__rings = rings; window.camera = camera; window.scene = scene;
+// Open for inspection. The argument of this whole project is that you should be able
+// to check a claim rather than take it, and that includes this page.
+window.trace = { get msgs() { return msgs; }, get doc() { return doc; }, get at() { return at; } };
 
 // The eight cameras the loop actually uses, lifted from the clinic that took these
 // pictures. Every snapshot records which one it was shot from, so the model can be
@@ -1192,7 +1202,11 @@ function fitTo(g) {
   const aspect = Math.max(0.3, camera.aspect || 1);
   const half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   const span = Math.max(s.x, s.z);
-  orbit.dist = framed = Math.max((span / 2) / (half * aspect), (s.y / 2) / half) * 1.55 + span * .1;
+  // Generous, and generous on the short axis too: the transport bar covers the bottom
+  // fifty-odd pixels of the panel, and a model fitted to the exact frame loses its
+  // footings behind it.
+  orbit.dist = framed = Math.max((span / 2) / (half * aspect), (s.y / 2) / half) * 1.75 + span * .12;
+  orbit.target.y += s.y * .06;
 }
 
 // The last turn that produced a page.// The last turn that produced a page. A turn with no artifact leaves the last one up,
@@ -1443,11 +1457,11 @@ function open(raw, { autoplay = false } = {}) {
   $('#ghost').src = doc.reference || '';
   $('#ref').style.display = doc.reference ? '' : 'none';
   paint._m = undefined;
-  $('#artifact').classList.remove('on'); $('#brokenTag').classList.remove('on');
+  artToken++; artPasses = null; $('#brokenTag').classList.remove('on');
   // No score to show on a trace nobody scored.
   $('#meter').style.display = doc.builder === 'human' ? 'none' : '';
   $('#passRow').style.display = 'none'; $('#stageTag').textContent = '';
-  if (doc.builder !== 'human') { $('#artifact').removeAttribute('src'); $('#noModel').classList.remove('on'); }
+  if (doc.builder !== 'human') $('#noModel').classList.remove('on');
   for (const el of ['#boxes', '#fadeWrap']) $(el).style.display = doc.builder === 'human' ? 'none' : '';
   // Provenance moved off the model and into the sheet — it was a card sitting on top
   // of the thing it described.
