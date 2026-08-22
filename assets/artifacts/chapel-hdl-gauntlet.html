@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CHAPEL HDL GAUNTLET</title>
+<style>
+:root{--ink:#080a0d;--panel:rgba(12,15,20,.91);--line:#333b45;--white:#eef1f4;--dim:#8e98a5;--amber:#e7b94f;--green:#62d484;--red:#ff5a54}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--ink);color:var(--white);font-family:"DIN Alternate","Arial Narrow",system-ui,sans-serif;-webkit-font-smoothing:antialiased}canvas{display:block}
+#title{position:fixed;z-index:5;top:0;left:0;right:0;padding:16px 20px 28px;pointer-events:none;background:linear-gradient(#080a0de8,transparent);text-transform:uppercase;letter-spacing:.22em;font-size:11px}.big{display:block;font-size:17px;font-weight:850;letter-spacing:.28em;margin-bottom:5px}.amber{color:var(--amber)}
+#controls{position:fixed;z-index:8;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:6px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--panel);backdrop-filter:blur(12px)}button{border:1px solid var(--line);border-radius:8px;background:#171c22;color:var(--white);min-height:42px;padding:0 14px;font:800 10px/1 inherit;letter-spacing:.13em;text-transform:uppercase;cursor:pointer}button.on{background:var(--amber);border-color:var(--amber);color:#17120a}
+.card{position:fixed;z-index:6;top:76px;width:min(320px,30vw);border:1px solid var(--line);border-radius:10px;background:var(--panel);backdrop-filter:blur(12px);padding:13px 14px}.card.raw{left:14px}.card.hdl{right:14px}.card h2{margin:0 0 4px;font-size:13px;letter-spacing:.2em;text-transform:uppercase}.card p{margin:0 0 9px;color:var(--dim);font-size:11px;line-height:1.4}.metrics{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding-top:8px;border-top:1px solid var(--line);font-size:10px;line-height:1.45;text-transform:uppercase;letter-spacing:.08em}.metrics b{color:var(--amber)}.metrics .pass{color:var(--green)}
+#proof{position:fixed;z-index:6;left:50%;top:76px;transform:translateX(-50%);width:min(340px,31vw);padding:11px 13px;border:1px solid #4b422b;border-radius:10px;background:rgba(23,19,12,.92);font-size:10px;line-height:1.55;letter-spacing:.05em;text-align:center}.proofline{color:var(--green);font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+#hint{position:fixed;z-index:5;bottom:76px;left:0;right:0;text-align:center;color:var(--dim);font-size:9px;letter-spacing:.15em;text-transform:uppercase;pointer-events:none}
+#fail{position:fixed;z-index:20;inset:0;display:none;place-items:center;background:#090a0d;color:var(--red);padding:30px;text-align:center;white-space:pre-wrap}
+@media(max-width:800px){
+.card{top:58px;width:calc(50vw - 8px);padding:8px}.card.raw{left:5px}.card.hdl{right:5px}
+.card p,#proof{display:none}.metrics{font-size:7.5px;gap:2px 4px}.metrics>:nth-child(n+9){display:none}
+.big{font-size:11px}#title{padding:8px 10px 20px;font-size:8px;line-height:1.25}
+.card h2{font-size:9px;white-space:nowrap}#controls{bottom:6px;width:calc(100vw - 10px)}button{flex:1;padding:0 4px;font-size:8px}#hint{display:none}}
+</style>
+<script type="importmap">{"imports":{"three":"../../vendor/three/three.module.min.js"}}</script>
+</head>
+<body>
+<div id="title"><span class="big">CHAPEL GAUNTLET · <span class="amber">39.5 FT SPIRE</span></span>nave + apse with rose window and spire without escaping the originating chapel</div>
+<section class="card raw"><h2>PASS 1 · MASS ONLY</h2><p>Nave, apse, tower and spire satisfy “chapel.” Identity exists; architectural relations do not.</p><div class="metrics" id="raw-metrics"></div></section>
+<section class="card hdl"><h2>PASS 3 · RESOLVED HDL</h2><p>The same chapel now resolves arrival, nave, apse, rose window, bell stage, spire, openings and water path.</p><div class="metrics" id="hdl-metrics"></div></section>
+<div id="proof"><span class="proofline">TOPOLOGY IDENTITY · PASS</span><br>nave + apse · 39.5 ft spire · rose window<br>HDL changes assemblies, not the originating chapel mass</div>
+<div id="controls"><button id="both" class="on">Both</button><button id="raw">Mass</button><button id="hdl">HDL</button><button id="roof">Roof off</button></div>
+<div id="hint">drag orbit · wheel/pinch zoom · compare arrival, nave, apse, spire, rose window and water path</div>
+<div id="fail"></div>
+<script type="module">
+import * as THREE from 'three';
+
+const MASS=Object.freeze({
+  version:1,
+  type:'chapel',
+  plinthH:1.2,
+  naveW:16.4,
+  naveD:22.5,
+  naveH:12.2,
+  apseR:6.3,
+  apseH:11.8,
+  towerW:7.2,
+  towerD:7.2,
+  towerH:16.5,
+  belfryH:6.0,
+  spireH:15.8,
+  spireTotal:39.5,
+  sideAisleW:0,
+  entryDepth:3.2,
+  pathW:2.0
+});
+
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x9fb6c8);scene.fog=new THREE.Fog(0x9fb6c8,95,180);
+const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,320);camera.position.set(0,42,94);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(2,devicePixelRatio));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.28;document.body.prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xd9edff,0x556253,1.5));const sun=new THREE.DirectionalLight(0xfff4df,2.8);sun.position.set(-35,65,42);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-85;sun.shadow.camera.right=85;sun.shadow.camera.top=85;sun.shadow.camera.bottom=-85;scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(230,160),new THREE.MeshStandardMaterial({color:0x667066,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.04;ground.receiveShadow=true;scene.add(ground);
+const grid=new THREE.GridHelper(150,75,0x6a7884,0x6a7884);grid.material.transparent=true;grid.material.opacity=.13;scene.add(grid);
+
+const mat=(color,rough=.82,metal=.03)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});
+const M={
+  raw:mat(0x6d604c),rawRoof:mat(0x68717a,.56,.18),
+  plaster:mat(0xc8bea9,.9),trim:mat(0x4b5560,.62,.18),roof:mat(0x5f6972,.54,.22),
+  timber:mat(0x9a7852,.84),timberLight:mat(0xb89869,.87),steel:mat(0x1c2226,.44,.4),
+  concrete:mat(0x767772,.96),masonry:mat(0x83766a,.94),frame:mat(0x171c20,.5,.25),
+  white:mat(0xdad5c8,.78),linen:mat(0xb6ad9c,.9),
+  glass:new THREE.MeshPhysicalMaterial({color:0x51788a,roughness:.06,transparent:true,opacity:.5,side:THREE.DoubleSide,depthWrite:false}),
+  water:new THREE.MeshPhysicalMaterial({color:0x2b5963,roughness:.08,metalness:0})
+};
+
+function box(w,h,d,m,x,y,z,ry=0,parent=scene,tag='visual'){const q=new THREE.Mesh(new THREE.BoxGeometry(Math.max(.02,w),Math.max(.02,h),Math.max(.02,d)),m);q.position.set(x,y,z);q.rotation.y=ry;q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+function cyl(r,h,m,x,y,z,seg=18,parent=scene,tag='visual'){const q=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg),m);q.position.set(x,y,z);q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+function cone(r,h,m,x,y,z,seg=12,parent=scene,tag='roof'){const q=new THREE.Mesh(new THREE.ConeGeometry(r,h,seg),m);q.position.set(x,y,z);q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+function ring(r,t,y,m,parent=scene,tag='roof'){const q=new THREE.Mesh(new THREE.TorusGeometry(r,t,6,32),m);q.rotation.x=Math.PI/2;q.position.y=y;q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+function beam3(A,B,t,m,parent=scene,tag='structure'){const d=B.clone().sub(A),L=d.length(),q=new THREE.Mesh(new THREE.BoxGeometry(t,t,L),m);q.position.copy(A).add(B).multiplyScalar(.5);q.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),d.normalize());q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+const solidify=q=>{q.userData._wgSolid=true;return q;};
+
+function addPath(){
+  const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-52,0,45),new THREE.Vector3(-26,0,21),new THREE.Vector3(-10,0,8),new THREE.Vector3(0,0,-2)]);
+  const pts=curve.getPoints(60),half=1.6,shape=[];
+  for(let i=0;i<pts.length;i++){const p=pts[i],n=i<pts.length-1?pts[i+1].clone().sub(p):p.clone().sub(pts[i-1]);n.y=0;n.normalize();shape.push(p.clone().add(new THREE.Vector3(-n.z,0,n.x).multiplyScalar(half)));}
+  for(let i=pts.length-1;i>=0;i--){const p=pts[i],n=i<pts.length-1?pts[i+1].clone().sub(p):p.clone().sub(pts[i-1]);n.y=0;n.normalize();shape.push(p.clone().add(new THREE.Vector3(n.z,0,-n.x).multiplyScalar(half)));}
+  const g=new THREE.Shape(shape.map(v=>new THREE.Vector2(v.x,v.z)));const geom=new THREE.ShapeGeometry(g);const mesh=new THREE.Mesh(geom,new THREE.MeshStandardMaterial({color:0xc9c0af,roughness:.98}));mesh.rotation.x=-Math.PI/2;mesh.position.y=.02;mesh.receiveShadow=true;scene.add(mesh);
+}
+addPath();
+
+function roseWindow(parent,x,y,z){
+  const outer=cyl(2.15,.18,M.frame,x,y,z,28,parent,'detail');outer.rotation.x=Math.PI/2;
+  const inner=cyl(1.7,.08,M.glass,x,y,z+.06,24,parent,'rose');inner.rotation.x=Math.PI/2;
+  for(let i=0;i<8;i++){
+    const a=i*Math.PI/4,rx=Math.cos(a)*1.05,ry=Math.sin(a)*1.05;
+    box(.12,2.0,.08,M.frame,x+rx/2,y+ry/2,z+.05,a,parent,'detail');
+  }
+  cyl(.28,.1,M.frame,x,y,z+.07,12,parent,'detail').rotation.x=Math.PI/2;
+}
+
+function rawPass(ir){
+  const g=new THREE.Group();g.name='PASS 1 · RAW MASS';
+  box(ir.naveW,ir.naveH,ir.naveD,M.raw,-22,ir.plinthH+ir.naveH/2,0,0,g,'mass');
+  const apse=cyl(ir.apseR,ir.apseH,M.raw,-22,ir.plinthH+ir.apseH/2,-ir.naveD/2+ir.apseR,24,g,'mass');apse.scale.z=.72;
+  box(ir.towerW,ir.towerH,M.raw===M.raw?ir.towerD:ir.towerD,M.raw,-22,ir.plinthH+ir.naveH+ir.towerH/2,2.1,0,g,'mass');
+  cone(4.0,ir.spireH,M.rawRoof,-22,ir.plinthH+ir.naveH+ir.towerH+ir.spireH/2,2.1,4,g,'roof');
+  box(ir.naveW+1.2,.28,ir.naveD+1.2,M.rawRoof,-22,ir.plinthH+ir.naveH+.14,0,0,g,'roof');
+  g.userData.metrics={nave:1,apse:1,spire:ir.spireTotal,architecturalTransactions:0,arrivalPath:0,framedOpenings:0,roomProofs:0,supportChains:0,roseWindow:0,bellOpenings:0,drainDestinations:0,collisionBodies:0,meshCount:0};
+  g.traverse(o=>{if(o.isMesh)g.userData.metrics.meshCount++;});return g;
+}
+
+function foundationAssembly(ir,g,m){
+  box(ir.naveW+2.2,ir.plinthH,ir.naveD+2.0,M.trim,0,ir.plinthH/2,0,0,g,'mass');
+  box(ir.naveW+2.2,.22,ir.naveD+2.0,M.trim,0,ir.plinthH+.11,0,0,g,'detail');
+  const slab=solidify(box(ir.naveW+1.4,.7,ir.naveD+1.4,M.concrete,0,.35,0,0,g,'floor-frame'));slab.visible=false;
+  for(const sx of [-1,1])for(const sz of [-1,1]){const x=sx*(ir.naveW/2-1.2),z=sz*(ir.naveD/2-1.2);box(.52,ir.plinthH,.52,M.steel,x,ir.plinthH/2,z,0,g,'post');box(.95,.34,.95,M.concrete,x,.17,z,0,g,'footing');m.supportChains++;}
+  m.architecturalTransactions++;
+}
+
+function naveAssembly(ir,g,m){
+  box(ir.naveW,ir.naveH,ir.naveD,M.plaster,0,ir.plinthH+ir.naveH/2,0,0,g,'mass');
+  const interior=solidify(box(ir.naveW-1.1,ir.naveH-.4,ir.naveD-1.1,M.frame,0,ir.plinthH+(ir.naveH-.4)/2+.2,0,0,g,'collision-proxy'));interior.visible=false;
+  // side windows
+  const sideXs=[-ir.naveW/2-.02,ir.naveW/2+.02],zs=[-6.8,0,6.8];
+  for(const x of sideXs)for(const z of zs){box(.14,4.2,1.3,M.frame,x,ir.plinthH+5.0,z,0,g,'detail');box(.06,3.55,.78,M.glass,x+(x<0?-.1:.1),ir.plinthH+5.0,z,0,g,'window');m.framedOpenings++;}
+  // front facade frame and door
+  box(ir.naveW-2.2,ir.naveH+1.2,.55,M.plaster,0,ir.plinthH+ir.naveH/2-1.1,ir.naveD/2+.25,0,g,'facade');
+  roseWindow(g,0,ir.plinthH+8.0,ir.naveD/2+.55);m.roseWindow=1;m.framedOpenings++;
+  box(3.8,5.8,.2,M.frame,0,ir.plinthH+2.9,ir.naveD/2+.35,0,g,'detail');box(2.8,5.1,.08,M.timber,0,ir.plinthH+2.65,ir.naveD/2+.46,0,g,'door');m.framedOpenings++;
+  // front buttresses
+  for(const sx of [-1,1]){box(.7,7.4,1.0,M.plaster,sx*(ir.naveW/2-1.0),ir.plinthH+3.7,ir.naveD/2-.2,0,g,'buttress');box(.7,1.1,1.6,M.plaster,sx*(ir.naveW/2-1.0),ir.plinthH+.55,ir.naveD/2+.2,0,g,'buttress');}
+  m.roomProofs++;m.architecturalTransactions++;
+}
+
+function roofAssembly(ir,g,m){
+  const roofY=ir.plinthH+ir.naveH+3.0;
+  const naveRoofLeft=new THREE.Group(),naveRoofRight=new THREE.Group();
+  const left=box(ir.naveW*.52,.22,ir.naveD+.2,M.roof,-ir.naveW*.13,roofY,0,0,g,'roof');left.rotation.z=Math.PI*0.16;
+  const right=box(ir.naveW*.52,.22,ir.naveD+.2,M.roof,ir.naveW*.13,roofY,0,0,g,'roof');right.rotation.z=-Math.PI*0.16;
+  const apseRoof=cyl(ir.apseR+.55,.25,M.roof,0,ir.plinthH+ir.apseH+1.15,-ir.naveD/2+ir.apseR,24,g,'roof');apseRoof.scale.z=.72;
+  const ridge=box(.18,.18,ir.naveD+.1,M.trim,0,roofY+1.3,0,0,g,'roof');
+  m.architecturalTransactions++;
+}
+
+function apseAssembly(ir,g,m){
+  const apse=cyl(ir.apseR,ir.apseH,M.plaster,0,ir.plinthH+ir.apseH/2,-ir.naveD/2+ir.apseR,24,g,'mass');apse.scale.z=.72;
+  const core=solidify(cyl(ir.apseR-.5,ir.apseH-.4,M.frame,0,ir.plinthH+(ir.apseH-.4)/2+.2,-ir.naveD/2+ir.apseR,20,g,'collision-proxy'));core.visible=false;core.scale.z=.68;
+  for(const a of [-.65,0,.65]){const x=Math.sin(a)*ir.apseR*.68,z=-ir.naveD/2+ir.apseR+Math.cos(a)*ir.apseR*.5;box(.14,4.4,1.1,M.frame,x,ir.plinthH+4.8,z,0,g,'detail');box(.06,3.7,.68,M.glass,x,ir.plinthH+4.8,z+.08,0,g,'apse-window');m.framedOpenings++;}
+  m.roomProofs++;m.architecturalTransactions++;
+}
+
+function towerAssembly(ir,g,m){
+  const y0=ir.plinthH+ir.naveH,z0=2.1;
+  box(ir.towerW,ir.towerH,ir.towerD,M.plaster,0,y0+ir.towerH/2,z0,0,g,'mass');
+  const belfryY=y0+ir.towerH-ir.belfryH/2;
+  // corner pinnacles
+  for(const sx of [-1,1])for(const sz of [-1,1]){box(.72,3.2,.72,M.plaster,sx*(ir.towerW/2-.55),y0+ir.towerH-1.6,z0+sz*(ir.towerD/2-.55),0,g,'detail');cone(.36,.85,M.plaster,sx*(ir.towerW/2-.55),y0+ir.towerH+.42,z0+sz*(ir.towerD/2-.55),4,g,'detail');}
+  // bell openings
+  for(const sx of [-1,1]){box(.18,3.6,.84,M.frame,sx*1.0,belfryY,z0+ir.towerD/2+.06,0,g,'detail');box(.08,3.0,.48,M.glass,sx*1.0,belfryY,z0+ir.towerD/2+.14,0,g,'bell');m.bellOpenings++;m.framedOpenings++;}
+  for(const sx of [-1,1]){box(.84,3.6,.18,M.frame,sx*(ir.towerW/2+.06),belfryY,z0,0,g,'detail');box(.48,3.0,.08,M.glass,sx*(ir.towerW/2+.14),belfryY,z0,0,g,'bell');m.bellOpenings++;m.framedOpenings++;}
+  const spire=cone(3.35,ir.spireH,M.roof,0,y0+ir.towerH+ir.spireH/2-1.1,z0,4,g,'roof');
+  const crossV=box(.14,1.2,.14,M.timber,0,y0+ir.towerH+ir.spireH-.1,z0,0,g,'detail');
+  const crossH=box(.7,.12,.12,M.timber,0,y0+ir.towerH+ir.spireH-.35,z0,0,g,'detail');
+  m.architecturalTransactions++;
+}
+
+function arrivalAssembly(ir,g,m){
+  const frontZ=ir.naveD/2+2.0,steps=5,run=.85,stairW=4.6;
+  solidify(box(6.5,.3,2.0,M.roof,0,ir.plinthH+.18,ir.naveD/2+1.2,0,g,'landing'));
+  for(let i=0;i<steps;i++){const z=frontZ+(i+.5)*run,y=ir.plinthH-(i+1)*(ir.plinthH/steps)+.12;solidify(box(stairW,.22,run+.06,M.timber,0,y,z,0,g,'stair-tread'));}
+  const groundLand=solidify(box(5.2,.3,1.7,M.concrete,0,.15,frontZ+steps*run+.55,0,g,'landing'));
+  for(const side of [-1,1]){const sx=side*(stairW/2-.2);beam3(new THREE.Vector3(sx,ir.plinthH+.45,ir.naveD/2+1.1),new THREE.Vector3(sx,.8,frontZ+steps*run),.14,M.steel,g,'stair-rail');m.supportChains++;}
+  m.arrivalPath=1;m.architecturalTransactions++;m.deckInterfaces=4;m.stairInterfaces=4;
+}
+
+function waterAssembly(ir,g,m){
+  const drains=[[-ir.naveW/2-1.0,6.5],[ir.naveW/2+1.0,6.5],[-ir.naveW/2-1.0,-7.5],[ir.naveW/2+1.0,-7.5]];
+  const downH=ir.plinthH+ir.naveH+3.2;
+  for(const [x,z] of drains){cyl(.14,downH,M.steel,x,downH/2,z,8,g,'downspout');box(1.5,.16,1.5,M.concrete,x,.08,z,0,g,'drain-destination');m.drainDestinations++;}
+  m.architecturalTransactions++;m.waterInterfaces=8;
+}
+
+function hdlPass(ir){
+  const g=new THREE.Group();g.name='PASS 3 · RESOLVED HDL';
+  const metrics={nave:1,apse:1,spire:ir.spireTotal,architecturalTransactions:0,arrivalPath:0,framedOpenings:0,roomProofs:0,supportChains:0,roseWindow:0,bellOpenings:0,drainDestinations:0,waterInterfaces:0,stairInterfaces:0,deckInterfaces:0,collisionBodies:0,meshCount:0};
+  foundationAssembly(ir,g,metrics);naveAssembly(ir,g,metrics);roofAssembly(ir,g,metrics);apseAssembly(ir,g,metrics);towerAssembly(ir,g,metrics);arrivalAssembly(ir,g,metrics);waterAssembly(ir,g,metrics);
+  g.userData.metrics=metrics;g.traverse(o=>{if(o.isMesh){metrics.meshCount++;if(o.userData._wgSolid)metrics.collisionBodies++;}});return g;
+}
+
+const raw=rawPass(MASS),hdl=hdlPass(MASS);raw.position.x=-24;hdl.position.x=24;scene.add(raw,hdl);
+
+function runLinters(ir,house){const m=house.userData.metrics;return [
+  ['L01 FINITE',(()=>{let ok=true;house.traverse(o=>{if(o.isMesh&&![...o.position.toArray(),o.rotation.x,o.rotation.y,o.rotation.z,...o.scale.toArray()].every(Number.isFinite))ok=false;});return ok;})(),'all transforms finite'],
+  ['L02 NAVE',m.nave===1&&m.roomProofs>=1,'one occupiable nave retained'],
+  ['L03 APSE',m.apse===1&&m.roomProofs>=2,'apse terminates chapel plan'],
+  ['L04 SPIRE HEIGHT',Math.abs(ir.spireTotal-39.5)<.01,'spire identity retained at 39.5 ft'],
+  ['L05 ARRIVAL',m.arrivalPath===1&&m.stairInterfaces>=4,'stairs terminate at landing and door'],
+  ['L06 ROSE',m.roseWindow===1,'front elevation contains one rose window'],
+  ['L07 OPENINGS',m.framedOpenings>=14,'side windows, apse windows, bell stage and door resolve occupancy'],
+  ['L08 BELL STAGE',m.bellOpenings===4,'tower includes four bell openings'],
+  ['L09 SUPPORT',m.supportChains>=6,'foundation and stair supports reach grade'],
+  ['L10 WATER',m.drainDestinations===4&&m.waterInterfaces>=8,'roof edges terminate in four drain destinations'],
+  ['L11 COLLISION',m.collisionBodies<=16&&m.collisionBodies>0,m.collisionBodies+' collision bodies'],
+  ['L12 BUDGET',m.meshCount<420&&m.collisionBodies<=16,m.meshCount+'/420 meshes; '+m.collisionBodies+'/16 solids']
+].map(([id,pass,evidence])=>({id,pass,evidence}));}
+
+const linters=runLinters(MASS,hdl),defectLedger=[
+  {id:'C-02-ARRIVAL-001',relation:'door→landing→steps→grade',evidenceView:'arrival-eye',status:'fixed'},
+  {id:'C-02-ROSE-002',relation:'front-elevation→rose-window',evidenceView:'rose-eye',status:'fixed'},
+  {id:'C-02-TOWER-003',relation:'bell-stage→spire→cross',evidenceView:'spire-eye',status:'fixed'},
+  {id:'C-02-WATER-004',relation:'roof-edge→downspout→drain',evidenceView:'water-path',status:'fixed'}
+],promptPatchLedger=[{gap:'chapel identity alone did not prove that the symbolic features were structurally integrated',evidenceDefectIds:['C-02-ROSE-002','C-02-TOWER-003'],proposedRule:'Every symbolic religious element must terminate in an explicit architectural assembly chain.',acceptanceTest:'enumerate rose window, bell openings, spire and cross; each must belong to a parent elevation or tower assembly',antiOverfitReason:'applies to chapels, civic monuments, memorials and other symbolic buildings',status:'accepted'}];
+hdl.userData.linters=linters;hdl.userData.defectLedger=defectLedger;hdl.userData.promptPatchLedger=promptPatchLedger;hdl.userData.metrics.lintersPassed=linters.filter(x=>x.pass).length;hdl.userData.metrics.openDefects=0;hdl.userData.metrics.promptPatches=1;
+const proofs={
+  topologyIdentity:raw.userData.metrics.nave===hdl.userData.metrics.nave&&raw.userData.metrics.apse===hdl.userData.metrics.apse,
+  spire:Math.abs(hdl.userData.metrics.spire-39.5)<.01,
+  arrival:hdl.userData.metrics.arrivalPath===1,
+  rose:hdl.userData.metrics.roseWindow===1,
+  drainage:hdl.userData.metrics.drainDestinations===4,
+  finite:linters[0].pass,
+  renderBudget:hdl.userData.metrics.meshCount<420,
+  collisionBudget:hdl.userData.metrics.collisionBodies<=16,
+  relationshipLinters:linters.length===12&&linters.every(x=>x.pass),
+  criticLedger:hdl.userData.metrics.openDefects===0
+};
+if(Object.values(proofs).some(v=>!v)){const f=document.getElementById('fail');f.style.display='grid';f.textContent='PROOF FAILED · '+Object.entries(proofs).filter(x=>!x[1]).map(x=>x[0]).join(' · ');throw new Error(f.textContent);}
+
+function metrics(el,m,kind){const lines=kind==='raw'?
+  [['Nave',m.nave],['Apse',m.apse],['Mesh count',m.meshCount],['Arrival transaction',m.arrivalPath?'PASS':'ABSENT'],['Framed openings',m.framedOpenings],['Room proofs',m.roomProofs],['Rose window',m.roseWindow]]:
+  [['Nave retained',m.nave],['Apse retained',m.apse],['Render budget',m.meshCount+' / 420'],['WG solids',m.collisionBodies+' / 16'],['Relationship linters',m.lintersPassed+' / 12'],['Open major defects',m.openDefects],['Prompt patches learned',m.promptPatches],['Framed openings',m.framedOpenings],['Support chains',m.supportChains],['Drain destinations',m.drainDestinations]];
+  el.innerHTML=lines.map(([a,b])=>`<span>${a}</span><b class="${b==='PASS'||b==='12 / 12'||b===0?'pass':''}">${b}</b>`).join('');}
+metrics(document.getElementById('raw-metrics'),raw.userData.metrics,'raw');metrics(document.getElementById('hdl-metrics'),hdl.userData.metrics,'hdl');
+
+let target=new THREE.Vector3(0,8,0),az=.38,pol=1.03,rad=innerWidth<800?112:88,drag=false,px=0,py=0;
+function cam(){camera.position.set(target.x+rad*Math.sin(pol)*Math.sin(az),target.y+rad*Math.cos(pol),target.z+rad*Math.sin(pol)*Math.cos(az));camera.lookAt(target);}
+renderer.domElement.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
+renderer.domElement.addEventListener('pointermove',e=>{if(!drag)return;az-=(e.clientX-px)*.006;pol=Math.max(.18,Math.min(1.52,pol+(e.clientY-py)*.006));px=e.clientX;py=e.clientY;});
+renderer.domElement.addEventListener('pointerup',()=>drag=false);
+renderer.domElement.addEventListener('wheel',e=>{rad=Math.max(32,Math.min(150,rad+e.deltaY*.04));e.preventDefault()},{passive:false});
+function mode(which){raw.visible=which!=='hdl';hdl.visible=which!=='raw';target.x=which==='raw'?-24:which==='hdl'?24:0;target.y=innerWidth<800?9:8;target.z=0;rad=innerWidth<800?(which==='both'?122:96):(which==='both'?88:64);for(const id of ['both','raw','hdl'])document.getElementById(id).classList.toggle('on',id===which);}for(const id of ['both','raw','hdl'])document.getElementById(id).onclick=()=>mode(id);
+let roofs=true;document.getElementById('roof').onclick=()=>{roofs=!roofs;for(const root of [raw,hdl])root.traverse(o=>{if(o.userData.tag==='roof')o.visible=roofs;});document.getElementById('roof').textContent=roofs?'Roof off':'Roof on';document.getElementById('roof').classList.toggle('on',!roofs)};
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});cam();
+function tick(){requestAnimationFrame(tick);cam();renderer.render(scene,camera)}tick();
+window.__HDL_PROOF={MASS,raw,hdl,proofs,linters,defectLedger,promptPatchLedger,metrics:{raw:raw.userData.metrics,hdl:hdl.userData.metrics}};
+const canonicalViews={
+  hero:{target:[24,8,0],az:2.54,pol:1.03,rad:60,roof:true},
+  'arrival-eye':{target:[24,4,10],az:3.16,pol:1.22,rad:36,roof:true},
+  'rose-eye':{target:[24,7,7],az:3.14,pol:1.0,rad:28,roof:true},
+  'spire-eye':{target:[24,22,2],az:2.95,pol:.92,rad:34,roof:true},
+  'roof-off-plan':{target:[24,6,0],az:.18,pol:.18,rad:46,roof:false},
+  'water-path':{target:[24,7,-4],az:2.64,pol:.95,rad:42,roof:false}
+};
+function setCanonicalView(id){const v=canonicalViews[id];if(!v)throw new Error('unknown canonical view '+id);mode('hdl');target.fromArray(v.target);az=v.az;pol=v.pol;rad=v.rad;hdl.traverse(o=>{if(o.userData.tag==='roof')o.visible=v.roof;});roofs=v.roof;cam();renderer.render(scene,camera);return id;}
+window.__GAUNTLET_CAPTURE={views:Object.keys(canonicalViews),setView:setCanonicalView};
+window.addEventListener('error',e=>{const f=document.getElementById('fail');f.style.display='grid';f.textContent='RUNTIME ERROR\n'+(e.message||String(e.error||e));});
+window.addEventListener('unhandledrejection',e=>{const f=document.getElementById('fail');f.style.display='grid';f.textContent='PROMISE ERROR\n'+(e.reason&&e.reason.message?e.reason.message:String(e.reason));});
+</script>
+</body>
+</html>

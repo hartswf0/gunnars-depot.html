@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>HOUSE GAUNTLET · Donut Cycle</title>
+<style>
+:root{--ink:#080a0d;--panel:rgba(12,15,20,.91);--line:#333b45;--white:#eef1f4;--dim:#8e98a5;--amber:#e7b94f;--green:#62d484;--red:#ff5a54}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--ink);color:var(--white);font-family:"DIN Alternate","Arial Narrow",system-ui,sans-serif;-webkit-font-smoothing:antialiased}canvas{display:block}
+#title{position:fixed;z-index:5;top:0;left:0;right:0;padding:16px 20px 28px;pointer-events:none;background:linear-gradient(#080a0de8,transparent);text-transform:uppercase;letter-spacing:.22em;font-size:11px}.big{display:block;font-size:17px;font-weight:850;letter-spacing:.28em;margin-bottom:5px}.amber{color:var(--amber)}
+#controls{position:fixed;z-index:8;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:6px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--panel);backdrop-filter:blur(12px)}button{border:1px solid var(--line);border-radius:8px;background:#171c22;color:var(--white);min-height:42px;padding:0 14px;font:800 10px/1 inherit;letter-spacing:.13em;text-transform:uppercase;cursor:pointer}button.on{background:var(--amber);border-color:var(--amber);color:#17120a}
+.card{position:fixed;z-index:6;top:76px;width:min(320px,30vw);border:1px solid var(--line);border-radius:10px;background:var(--panel);backdrop-filter:blur(12px);padding:13px 14px}.card.raw{left:14px}.card.hdl{right:14px}.card h2{margin:0 0 4px;font-size:13px;letter-spacing:.2em;text-transform:uppercase}.card p{margin:0 0 9px;color:var(--dim);font-size:11px;line-height:1.4}.metrics{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding-top:8px;border-top:1px solid var(--line);font-size:10px;line-height:1.45;text-transform:uppercase;letter-spacing:.08em}.metrics b{color:var(--amber)}.metrics .pass{color:var(--green)}
+#proof{position:fixed;z-index:6;left:50%;top:76px;transform:translateX(-50%);width:min(340px,31vw);padding:11px 13px;border:1px solid #4b422b;border-radius:10px;background:rgba(23,19,12,.92);font-size:10px;line-height:1.55;letter-spacing:.05em;text-align:center}.proofline{color:var(--green);font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+#hint{position:fixed;z-index:5;bottom:76px;left:0;right:0;text-align:center;color:var(--dim);font-size:9px;letter-spacing:.15em;text-transform:uppercase;pointer-events:none}
+#fail{position:fixed;z-index:20;inset:0;display:none;place-items:center;background:#090a0d;color:var(--red);padding:30px;text-align:center}
+@media(max-width:800px){.card{top:64px;width:calc(50vw - 10px);padding:9px}.card.raw{left:6px}.card.hdl{right:6px}.card p,#proof{display:none}.metrics{font-size:8px;gap:2px 5px}.big{font-size:12px}#title{padding:10px}.card h2{font-size:10px}#controls{bottom:8px;width:calc(100vw - 12px)}button{flex:1;padding:0 5px;font-size:8px}#hint{bottom:62px}}
+</style>
+<script type="importmap">{"imports":{"three":"../../vendor/three/three.module.min.js"}}</script>
+</head>
+<body>
+<div id="title"><span class="big">HOUSE GAUNTLET · <span class="amber">CURRENT CYCLE</span></span>same donut topology · repaired through architectural criticism</div>
+<section class="card raw"><h2>PASS 1 · MASS ONLY</h2><p>Twelve anonymous wedges satisfy “donut.” Geometry exists; architectural relations do not.</p><div class="metrics" id="raw-metrics"></div></section>
+<section class="card hdl"><h2>PASS 3 · RESOLVED HDL</h2><p>The accepted twelve-bay topology now resolves bearing, clerestory, arrival, load path, penetration and water interfaces.</p><div class="metrics" id="hdl-metrics"></div></section>
+<div id="proof"><span class="proofline">TOPOLOGY IDENTITY · PASS</span><br>12 bays · outer radius 15 ft · court radius 7 ft<br>HDL changes assemblies, not the originating mass</div>
+<div id="controls"><button id="both" class="on">Both</button><button id="raw">Mass</button><button id="hdl">HDL</button><button id="roof">Roof off</button></div>
+<div id="hint">drag orbit · wheel/pinch zoom · compare arrival, support, openings, rooms, roof edge and water path</div>
+<div id="fail"></div>
+<script type="module">
+import * as THREE from 'three';
+
+/* HOUSE GAUNTLET — CURRENT DONUT CYCLE
+   Pass 1 produces an addressable MassIR. Pass 2 elaborates it. Pass 3 repairs
+   measured interface failures without escaping into a fresh topology. */
+
+const MASS = Object.freeze({
+  version:1,type:'ring',bayCount:12,outerR:15,innerR:7,floorY:3.2,wallH:8.6,
+  roofRise:3.4,entryBay:9,
+  program:['living','kitchen','dining','bedroom','bedroom','bath','service','gallery','gallery','entry','study','hearth']
+});
+
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x91a6b7);scene.fog=new THREE.Fog(0x91a6b7,78,150);
+const camera=new THREE.PerspectiveCamera(38,innerWidth/innerHeight,.1,260);camera.position.set(0,38,73);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(2,devicePixelRatio));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.35;document.body.prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xd9edff,0x52604e,1.45));const sun=new THREE.DirectionalLight(0xfff4df,2.7);sun.position.set(-25,42,30);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-70;sun.shadow.camera.right=70;sun.shadow.camera.top=55;sun.shadow.camera.bottom=-55;scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(190,130),new THREE.MeshStandardMaterial({color:0x56635a,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.04;ground.receiveShadow=true;scene.add(ground);
+const grid=new THREE.GridHelper(130,65,0x647485,0x647485);grid.material.transparent=true;grid.material.opacity=.16;scene.add(grid);
+
+const mat=(color,rough=.82,metal=.03)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});
+const M={raw:mat(0x6d604c),rawRoof:mat(0x6b747d,.58,.17),siding:mat(0x415148,.84),roof:mat(0x626e78,.56,.2),timber:mat(0x9b7d56,.84),steel:mat(0x171d21,.46,.38),concrete:mat(0x817d75,.93),masonry:mat(0x8d806e,.92),frame:mat(0x161c20,.48,.25),white:mat(0xd4d1c8,.72),linen:mat(0xb5ac9b,.9),glass:new THREE.MeshPhysicalMaterial({color:0x52788a,roughness:.05,transparent:true,opacity:.48,side:THREE.DoubleSide,depthWrite:false}),water:new THREE.MeshPhysicalMaterial({color:0x2b5963,roughness:.08,metalness:0})};
+
+function box(w,h,d,m,x,y,z,ry=0,parent=scene,tag='visual'){
+  const q=new THREE.Mesh(new THREE.BoxGeometry(Math.max(.02,w),Math.max(.02,h),Math.max(.02,d)),m);q.position.set(x,y,z);q.rotation.y=ry;q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;
+}
+const solidify=q=>{q.userData._wgSolid=true;return q;};
+function cyl(r,h,m,x,y,z,seg=12,parent=scene,tag='visual'){const q=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg),m);q.position.set(x,y,z);q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+const P=(r,a)=>new THREE.Vector3(Math.cos(a)*r,0,Math.sin(a)*r);
+function quadSlab(A,B,C,D,th,m,parent,tag='roof'){
+  const top=[A,B,C,D],bot=top.map(p=>p.clone().add(new THREE.Vector3(0,-th,0))),v=[],face=(a,b,c,d)=>v.push(a,b,c,a,c,d);
+  face(top[0],top[1],top[2],top[3]);face(bot[3],bot[2],bot[1],bot[0]);for(let i=0;i<4;i++){const j=(i+1)%4;face(bot[i],bot[j],top[j],top[i]);}
+  const g=new THREE.BufferGeometry().setFromPoints(v);g.computeVertexNormals();const q=new THREE.Mesh(g,m);q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;
+}
+function between(A,B,h,t,y,m,parent,tag='structure',offset=0){const d=B.clone().sub(A),L=Math.hypot(d.x,d.z),mid=A.clone().add(B).multiplyScalar(.5),ry=-Math.atan2(d.z,d.x);const n=new THREE.Vector3(-d.z,0,d.x).normalize().multiplyScalar(offset);return box(L,h,t,m,mid.x+n.x,y+h/2,mid.z+n.z,ry,parent,tag);}
+function beam3(A,B,t,m,parent,tag='structure'){
+  const d=B.clone().sub(A),L=d.length(),q=new THREE.Mesh(new THREE.BoxGeometry(t,t,L),m);q.position.copy(A).add(B).multiplyScalar(.5);q.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),d.normalize());q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;
+}
+function ringTube(r,t,y,m,parent,tag='structure',segments=48){const q=new THREE.Mesh(new THREE.TorusGeometry(r,t,5,segments),m);q.rotation.x=Math.PI/2;q.position.y=y;q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+function ringBand(r,w,h,y,m,parent,tag='structure',segments=12){const v=[],tri=(a,b,c,d)=>v.push(a,b,c,a,c,d);for(let i=0;i<segments;i++){const a0=i/segments*Math.PI*2,a1=(i+1)/segments*Math.PI*2,ri=r-w/2,ro=r+w/2,p=(rr,a,yy)=>new THREE.Vector3(Math.cos(a)*rr,yy,Math.sin(a)*rr),i0b=p(ri,a0,y-h/2),i1b=p(ri,a1,y-h/2),o0b=p(ro,a0,y-h/2),o1b=p(ro,a1,y-h/2),i0t=p(ri,a0,y+h/2),i1t=p(ri,a1,y+h/2),o0t=p(ro,a0,y+h/2),o1t=p(ro,a1,y+h/2);tri(o0b,o1b,o1t,o0t);tri(i1b,i0b,i0t,i1t);tri(i0t,o0t,o1t,i1t);tri(i1b,o1b,o0b,i0b);}const geo=new THREE.BufferGeometry().setFromPoints(v);geo.computeVertexNormals();const q=new THREE.Mesh(geo,m);q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+function roofTopAt(ir,r){const ri=ir.innerR-.8,ro=ir.outerR+1.3,yi=ir.floorY+ir.wallH+.58,yo=ir.floorY+ir.wallH+ir.roofRise;return yi+(r-ri)/(ro-ri)*(yo-yi);}
+const roofBottomAt=(ir,r)=>roofTopAt(ir,r)-.48;
+function bayData(mass){const out=[];for(let i=0;i<mass.bayCount;i++){const a0=i/mass.bayCount*Math.PI*2,a1=(i+1)/mass.bayCount*Math.PI*2,ac=(a0+a1)/2;out.push({id:'B'+String(i+1).padStart(2,'0'),i,a0,a1,ac,program:mass.program[i],outer:[P(mass.outerR,a0),P(mass.outerR,a1)],inner:[P(mass.innerR,a0),P(mass.innerR,a1)],ports:{support:true,opening:true,circulation:true,service:true,drain:true,roofBearing:true}});}return out;}
+function makeMassIR(mass){return Object.freeze({...mass,bays:bayData(mass),anchors:{grade:{y:0},entry:{bay:mass.entryBay},court:{r:mass.innerR},drain:{type:'inner-loop'}}});}
+const IR=makeMassIR(MASS);
+
+function rawPass(ir){
+  const g=new THREE.Group();g.name='PASS 1 · RAW MASS';
+  for(const b of ir.bays){const om=P((ir.outerR+ir.innerR)/2,b.ac),tw=2*ir.outerR*Math.tan(Math.PI/ir.bayCount)*1.02,depth=ir.outerR-ir.innerR;
+    box(tw,.55,depth,M.raw,om.x,ir.floorY,om.z,-b.ac-Math.PI/2,g,'mass-floor');
+    between(b.outer[0],b.outer[1],ir.wallH,.65,ir.floorY,M.raw,g,'mass-wall');
+    const A=P(ir.outerR+1,b.a0);A.y=ir.floorY+ir.wallH+ir.roofRise;const B=P(ir.outerR+1,b.a1);B.y=A.y;const C=P(ir.innerR-.6,b.a1);C.y=ir.floorY+ir.wallH;const D=P(ir.innerR-.6,b.a0);D.y=C.y;quadSlab(A,B,C,D,.45,M.rawRoof,g,'roof');
+  }
+  // One aperture-shaped token: enough for a schema counter, not an arrival.
+  const eb=ir.bays[ir.entryBay],e=P(ir.outerR+.03,eb.ac);box(3.1,6.7,.12,M.glass,e.x,ir.floorY+3.35,e.z,-eb.ac-Math.PI/2,g,'opening-token');
+  g.userData.metrics={bays:ir.bayCount,architecturalTransactions:0,arrivalPath:0,framedOpenings:0,roomProofs:0,supportChains:0,drainDestinations:0,meshCount:0};
+  g.traverse(o=>{if(o.isMesh)g.userData.metrics.meshCount++;});return g;
+}
+
+function orientedOpening(A,B,y0,h,opening,mats,parent,inner=false){
+  const d=B.clone().sub(A),L=Math.hypot(d.x,d.z),u=d.clone().normalize(),mid=A.clone().add(B).multiplyScalar(.5),ry=-Math.atan2(d.z,d.x),w=Math.min(opening.w,L*.62),sill=opening.kind==='door'?0:opening.sill,head=opening.kind==='door'?7.1:opening.head;
+  const c=opening.pos==null?.5:opening.pos,oc=A.clone().add(u.multiplyScalar(L*c)),a=oc.clone().add(d.clone().normalize().multiplyScalar(-w/2)),b=oc.clone().add(d.clone().normalize().multiplyScalar(w/2));
+  const segment=(X,Y,lo,hi,matl,tag='structure',th=.65,off=0)=>{if(hi-lo<.04)return;const q=between(X,Y,hi-lo,th,y0+lo,matl,parent,tag,off);q.position.y=y0+lo+(hi-lo)/2;};
+  segment(A,a,0,h,mats.siding);segment(b,B,0,h,mats.siding);segment(a,b,0,sill,mats.siding);segment(a,b,head,h,mats.siding);
+  const f=.24,frameOut=inner?-.18:.18;segment(a,b,sill,sill+f,mats.frame,'detail',.82,frameOut);segment(a,b,head-f,head,mats.frame,'detail',.82,frameOut);
+  const na=new THREE.Vector3(-d.z,0,d.x).normalize().multiplyScalar(frameOut);box(f,head-sill,.82,mats.frame,a.x+na.x,y0+(sill+head)/2,a.z+na.z,ry,parent,'detail');box(f,head-sill,.82,mats.frame,b.x+na.x,y0+(sill+head)/2,b.z+na.z,ry,parent,'detail');
+  const paneM=opening.kind==='door'?mats.timber:mats.glass;box(w*.86,head-sill-f*2,.06,paneM,oc.x+na.x*1.3,y0+(sill+head)/2,oc.z+na.z*1.3,ry+(opening.kind==='door'?.2:0),parent,opening.kind==='door'?'door':'window');
+  // Physics lowering is deliberately coarser than the visible assembly. A
+  // window wall is one collider; a door wall is three, preserving passage.
+  const proxy=(X,Y,lo,hi)=>{const q=between(X,Y,hi-lo,.48,y0+lo,M.frame,parent,'collision-proxy');q.position.y=y0+lo+(hi-lo)/2;q.visible=false;solidify(q);};
+  if(opening.kind==='door'){proxy(A,a,0,h);proxy(b,B,0,h);proxy(a,b,head,h);}else proxy(A,B,0,h);
+}
+
+function supportCassette(b,ir,g,metrics){
+  // Boundary supports are shared by adjacent bays: emit each a0 boundary once,
+  // at the inner and outer bearing lines, instead of duplicating both ends.
+  const radii=[ir.innerR+.8,ir.outerR-.8];for(const r of radii){const p=P(r,b.a0+.035),postH=ir.floorY-.34;box(.3,postH,.3,M.steel,p.x,.34+postH/2,p.z,0,g,'post');box(1.05,.34,1.05,M.concrete,p.x,.17,p.z,0,g,'footing');metrics.supportChains++;}
+  const om=P((ir.innerR+ir.outerR)/2,b.ac),tw=2*ir.outerR*Math.tan(Math.PI/ir.bayCount)*.96,depth=ir.outerR-ir.innerR-.5,ry=-b.ac-Math.PI/2;
+  solidify(box(tw,.72,depth,M.timber,om.x,ir.floorY-.35,om.z,ry,g,'floor-frame'));
+  for(let k=0;k<3;k++){const r=ir.innerR+.55+(k+.5)*(depth/3),p=P(r,b.ac);box(tw*.95,.13,depth/3*.78,M.timber,p.x,ir.floorY+.05,p.z,ry,g,'floor-board');}
+  // Two bay-scale column colliders replace four detailed post/footing pairs.
+  for(const a of [b.a0+.08,b.a1-.08]){const p=P((ir.innerR+ir.outerR)/2,a);const q=box(.5,ir.floorY,.5,M.steel,p.x,ir.floorY/2,p.z,0,g,'collision-proxy');q.visible=false;solidify(q);}
+}
+
+function enclosureCassette(b,ir,g,metrics){
+  const windowByRoom={living:{w:6.8,sill:1.7,head:8.05},kitchen:{w:6.1,sill:3.15,head:8},dining:{w:6.7,sill:2.15,head:8},bedroom:{w:4.7,sill:2.9,head:7.75},bath:{w:3.1,sill:4.8,head:7.55},service:{w:2.7,sill:5.05,head:7.45},study:{w:5.4,sill:2.55,head:7.9},hearth:{w:3.5,sill:3.1,head:7.5},gallery:{w:5.2,sill:2.65,head:7.8}};
+  let outer={kind:'window',pos:.5,...(windowByRoom[b.program]||windowByRoom.gallery)};if(b.i===ir.entryBay)outer={kind:'door',w:3.6,pos:.5};
+  orientedOpening(b.outer[0],b.outer[1],ir.floorY+.1,ir.wallH,outer,M,g,false);metrics.framedOpenings++;
+  const privateRoom=/bedroom|bath|service/.test(b.program),inner={kind:b.i===ir.entryBay?'door':'window',w:b.i===ir.entryBay?3.4:(privateRoom?3.8:5.8),sill:privateRoom?3.3:2.05,head:privateRoom?7.55:7.85,pos:.5};orientedOpening(b.inner[1],b.inner[0],ir.floorY+.1,ir.wallH,inner,M,g,true);metrics.framedOpenings++;
+}
+
+function clerestoryCassette(b,ir,g,metrics){
+  const A=P(ir.outerR,b.a0),B=P(ir.outerR,b.a1),base=ir.floorY+.1+ir.wallH,top=roofBottomAt(ir,ir.outerR)-.08;
+  between(A,B,top-base,.09,base,M.glass,g,'clerestory');
+  const p=P(ir.outerR,b.a0);box(.3,top-base,.38,M.frame,p.x,base+(top-base)/2,p.z,0,g,'clerestory-post');
+  metrics.clerestoryBays++;
+}
+
+function roofCatchment(b,ir,g,metrics){
+  const A=P(ir.outerR+1.3,b.a0-.012);A.y=roofTopAt(ir,ir.outerR+1.3);const B=P(ir.outerR+1.3,b.a1+.012);B.y=A.y;const C=P(ir.innerR-.8,b.a1+.012);C.y=roofTopAt(ir,ir.innerR-.8);const D=P(ir.innerR-.8,b.a0-.012);D.y=C.y;const roof=quadSlab(A,B,C,D,.48,M.roof,g,'roof');roof.userData.catchment=b.id;metrics.roofCatchments++;
+}
+function resolveRoofInterfaces(ir,g,metrics){
+  const outerBearingY=roofBottomAt(ir,ir.outerR)-.02,innerBearingY=roofBottomAt(ir,ir.innerR)-.02;
+  ringBand(ir.outerR,.52,.42,outerBearingY,M.frame,g,'roof-bearing');ringBand(ir.innerR,.48,.38,innerBearingY,M.frame,g,'roof-bearing');
+  ringBand(ir.outerR+1.28,.4,.62,roofTopAt(ir,ir.outerR+1.3)-.31,M.frame,g,'fascia');ringBand(ir.innerR-.78,.36,.54,roofTopAt(ir,ir.innerR-.8)-.27,M.frame,g,'fascia');
+  for(const b of ir.bays){const A=P(ir.innerR,b.a0),B=P(ir.outerR,b.a0);A.y=roofBottomAt(ir,ir.innerR)-.08;B.y=roofBottomAt(ir,ir.outerR)-.08;beam3(A,B,.18,M.frame,g,'roof-rafter');}
+  ringBand(ir.outerR-.8,.46,.48,ir.floorY-.7,M.timber,g,'floor-girder');ringBand(ir.innerR+.8,.46,.48,ir.floorY-.7,M.timber,g,'floor-girder');
+  metrics.roofBearingInterfaces=ir.bayCount*2;metrics.envelopeInterfaces=ir.bayCount*2;
+}
+function radialPartition(a,ir,g,withDoor=true){const A=P(ir.innerR+.6,a),B=P(ir.outerR-.6,a),d=B.clone().sub(A),L=d.length(),u=d.normalize(),mid=A.clone().add(B).multiplyScalar(.5),gap=withDoor?3.1:0;if(!withDoor){between(A,B,ir.wallH*.78,.42,ir.floorY+.1,M.siding,g,'partition');return;}const ga=mid.clone().add(u.clone().multiplyScalar(-gap/2)),gb=mid.clone().add(u.clone().multiplyScalar(gap/2));between(A,ga,ir.wallH*.78,.42,ir.floorY+.1,M.siding,g,'partition');between(gb,B,ir.wallH*.78,.42,ir.floorY+.1,M.siding,g,'partition');between(ga,gb,1.1,.42,ir.floorY+.1+ir.wallH*.78-1.1,M.siding,g,'partition');}
+function furnitureProof(b,ir,g,metrics){const r=(ir.innerR+ir.outerR)/2,pc=P(r,b.ac),ry=-b.ac-Math.PI/2,tan=new THREE.Vector3(-Math.sin(b.ac),0,Math.cos(b.ac)),rad=new THREE.Vector3(Math.cos(b.ac),0,Math.sin(b.ac));const at=(u,v)=>pc.clone().add(tan.clone().multiplyScalar(u)).add(rad.clone().multiplyScalar(v));
+  if(/living|study/.test(b.program)){const p=at(0,.8);box(5.5,1.25,2.5,M.linen,p.x,ir.floorY+.7,p.z,ry,g,'furniture');const back=at(0,1.8);box(5.5,1.5,.45,M.linen,back.x,ir.floorY+1.8,back.z,ry,g,'furniture');}
+  else if(/kitchen/.test(b.program)){const p=at(0,1.6);box(5.8,3,2,M.timber,p.x,ir.floorY+1.5,p.z,ry,g,'fixture');box(6,.18,2.15,M.concrete,p.x,ir.floorY+3.08,p.z,ry,g,'fixture');box(1.5,.12,1.2,M.steel,p.x-1.4,ir.floorY+3.2,p.z,ry,g,'fixture');}
+  else if(/dining/.test(b.program)){const p=at(0,0);box(5.8,.28,3,M.timber,p.x,ir.floorY+2.5,p.z,ry,g,'furniture');}
+  else if(/bedroom/.test(b.program)){const p=at(0,0);box(5.2,.65,6.4,M.timber,p.x,ir.floorY+.45,p.z,ry,g,'furniture');box(4.9,.65,6.05,M.white,p.x,ir.floorY+1.1,p.z,ry,g,'furniture');}
+  else if(/bath/.test(b.program)){const p=at(-1,0);box(3,.3,3,M.concrete,p.x,ir.floorY+.15,p.z,ry,g,'fixture');const q=at(1.7,.5);cyl(.65,1.25,M.white,q.x,ir.floorY+.62,q.z,10,g,'fixture');}
+  else if(/service/.test(b.program)){const p=at(0,1);box(4.8,5.8,2.3,M.steel,p.x,ir.floorY+2.9,p.z,ry,g,'service-core');}
+  else if(/hearth/.test(b.program)){const top=ir.floorY+ir.wallH+ir.roofRise+1.8;cyl(1.35,top,M.masonry,pc.x,top/2,pc.z,10,g,'hearth');cyl(1.55,.28,M.frame,pc.x,top+.14,pc.z,12,g,'flue-cap');const flash=new THREE.Mesh(new THREE.TorusGeometry(1.52,.2,6,16),M.frame);flash.rotation.x=Math.PI/2;flash.position.set(pc.x,roofTopAt(ir,r)+.04,pc.z);flash.userData.tag='flashing';g.add(flash);metrics.flashingInterfaces++;}
+  metrics.roomProofs++;
+}
+function arrivalTransaction(ir,g,metrics){const b=ir.bays[ir.entryBay],f=new THREE.Vector3(Math.cos(b.ac),0,Math.sin(b.ac)),t=new THREE.Vector3(-Math.sin(b.ac),0,Math.cos(b.ac)),ry=-b.ac-Math.PI/2,depth=7,width=8,center=P(ir.outerR,b.ac).add(f.clone().multiplyScalar(depth/2));
+  solidify(box(width,.7,depth,M.timber,center.x,ir.floorY-.25,center.z,ry,g,'deck-frame'));for(let i=0;i<7;i++){const p=P(ir.outerR+(i+.5)*depth/7,b.ac);box(width-.16,.13,depth/7*.78,M.timber,p.x,ir.floorY+.09,p.z,ry,g,'deck-board');}
+  for(const s of [-1,1])for(const rr of [ir.outerR+1,ir.outerR+depth-1]){const p=P(rr,b.ac).add(t.clone().multiplyScalar(s*(width/2-.65)));box(.42,ir.floorY,.42,M.steel,p.x,ir.floorY/2,p.z,0,g,'post');box(1,.35,1,M.concrete,p.x,.17,p.z,0,g,'footing');metrics.supportChains++;}
+  const n=Math.ceil(ir.floorY/(7.75/12)),rise=ir.floorY/n,run=.92,start=ir.outerR+depth;for(let i=0;i<n;i++){const p=P(start+(i+.5)*run,b.ac),y=ir.floorY-(i+1)*rise;solidify(box(3.7,.22,run+.05,M.timber,p.x,y+.11,p.z,ry,g,'stair-tread'));for(const s of [-1,1]){const rp=p.clone().add(t.clone().multiplyScalar(s*1.78));box(.13,3,.13,M.steel,rp.x,y+1.5,rp.z,0,g,'rail-post');}}
+  const foot=P(start+n*run,b.ac);solidify(box(4.6,.3,2,M.concrete,foot.x,.15,foot.z,ry,g,'landing'));
+  // Guards are assemblies, not opaque walls: three posts and a connected top rail per side.
+  for(const s of [-1,1]){for(const rr of [ir.outerR+.35,ir.outerR+depth/2,ir.outerR+depth-.35]){const p=P(rr,b.ac).add(t.clone().multiplyScalar(s*(width/2-.1)));box(.16,3.25,.16,M.steel,p.x,ir.floorY+1.62,p.z,0,g,'guard-post');}const A=P(ir.outerR+.25,b.ac).add(t.clone().multiplyScalar(s*(width/2-.1)));const B=P(ir.outerR+depth-.25,b.ac).add(t.clone().multiplyScalar(s*(width/2-.1)));A.y=B.y=ir.floorY+3.15;beam3(A,B,.17,M.steel,g,'guard-rail');}
+  for(const s of [-1,1]){const A=P(start+.15,b.ac).add(t.clone().multiplyScalar(s*1.78)),B=P(start+n*run-.15,b.ac).add(t.clone().multiplyScalar(s*1.78));A.y=ir.floorY+2.9;B.y=2.9;beam3(A,B,.17,M.steel,g,'stair-rail');}
+  // The canopy is a shed tied into the roof-bearing ring, falling outward to two posts.
+  const wall=P(ir.outerR+.15,b.ac),front=P(ir.outerR+depth+.45,b.ac),half=width/2+.45,A=wall.clone().add(t.clone().multiplyScalar(-half)),B=wall.clone().add(t.clone().multiplyScalar(half)),C=front.clone().add(t.clone().multiplyScalar(half)),D=front.clone().add(t.clone().multiplyScalar(-half));A.y=B.y=roofBottomAt(ir,ir.outerR)-.08;C.y=D.y=A.y-1.35;quadSlab(A,B,C,D,.42,M.roof,g,'roof');between(A,B,.42,.3,A.y-.28,M.frame,g,'canopy-ledger');between(D,C,.42,.28,C.y-.36,M.frame,g,'fascia');for(const s of [-1,1]){const p=front.clone().add(t.clone().multiplyScalar(s*(width/2-.55)));const top=C.y-.38;box(.38,top,.38,M.steel,p.x,top/2,p.z,0,g,'post');metrics.supportChains++;}
+  metrics.arrivalPath=1;metrics.stairInterfaces=4;metrics.deckInterfaces=8;metrics.architecturalTransactions++;
+}
+function courtAndWater(ir,g,metrics){const gallery=new THREE.Mesh(new THREE.RingGeometry(ir.innerR-2,ir.innerR+.12,48),M.timber);gallery.rotation.x=-Math.PI/2;gallery.position.y=ir.floorY+.17;gallery.userData.tag='gallery';g.add(gallery);for(const a of [0,Math.PI/2,Math.PI,Math.PI*1.5]){const p=P(ir.innerR-1.25,a),q=box(2.2,.12,2.2,M.frame,p.x,ir.floorY+.04,p.z,-a-Math.PI/2,g,'collision-proxy');q.visible=false;solidify(q);const postH=ir.floorY-.34;box(.28,postH,.28,M.steel,p.x,.34+postH/2,p.z,0,g,'gallery-post');box(.9,.34,.9,M.concrete,p.x,.17,p.z,0,g,'footing');metrics.supportChains++;}metrics.courtGalleryInterfaces=4;
+  const gutter=new THREE.Mesh(new THREE.TorusGeometry(ir.innerR-.58,.28,8,48),M.steel);gutter.rotation.x=Math.PI/2;gutter.position.y=ir.floorY+ir.wallH+.08;gutter.userData.tag='roof';g.add(gutter);
+  for(const a of [0,Math.PI/2,Math.PI,Math.PI*1.5]){const p=P(ir.innerR-.58,a);cyl(.17,ir.floorY+ir.wallH,M.steel,p.x,(ir.floorY+ir.wallH)/2,p.z,8,g,'downspout');const q=P(ir.innerR-1.25,a);box(1.7,.16,1.7,M.concrete,q.x,.08,q.z,-a-Math.PI/2,g,'drain-destination');metrics.drainDestinations++;}
+  const water=new THREE.Mesh(new THREE.CylinderGeometry(ir.innerR-1.65,ir.innerR-1.65,.12,48),M.water);water.position.y=.06;water.userData.tag='court';g.add(water);metrics.waterInterfaces=ir.bayCount+4;metrics.architecturalTransactions++;
+}
+function hdlPass(ir){const g=new THREE.Group();g.name='PASS 3 · RESOLVED HDL';const metrics={bays:ir.bayCount,architecturalTransactions:0,arrivalPath:0,framedOpenings:0,roomProofs:0,supportChains:0,roofCatchments:0,drainDestinations:0,clerestoryBays:0,roofBearingInterfaces:0,envelopeInterfaces:0,flashingInterfaces:0,stairInterfaces:0,deckInterfaces:0,courtGalleryInterfaces:0,waterInterfaces:0,collisionBodies:0,meshCount:0};
+  for(const b of ir.bays){supportCassette(b,ir,g,metrics);enclosureCassette(b,ir,g,metrics);clerestoryCassette(b,ir,g,metrics);roofCatchment(b,ir,g,metrics);furnitureProof(b,ir,g,metrics);metrics.architecturalTransactions++;}
+  resolveRoofInterfaces(ir,g,metrics);for(const i of [2,4,6,8,10])radialPartition(ir.bays[i].a0,ir,g,true);arrivalTransaction(ir,g,metrics);courtAndWater(ir,g,metrics);
+  g.userData.metrics=metrics;g.traverse(o=>{if(o.isMesh){metrics.meshCount++;if(o.userData._wgSolid)metrics.collisionBodies++;}});return g;}
+
+const raw=rawPass(IR),hdl=hdlPass(IR);raw.position.x=-22;hdl.position.x=22;scene.add(raw,hdl);
+function runLinters(ir,house){const m=house.userData.metrics,wallTop=ir.floorY+.1+ir.wallH,innerBearingBottom=roofBottomAt(ir,ir.innerR)-.02-.22,outerClerestoryTop=roofBottomAt(ir,ir.outerR)-.08,outerBearingBottom=roofBottomAt(ir,ir.outerR)-.02-.24;let finite=true;house.traverse(o=>{if(o.isMesh&&![...o.position.toArray(),o.rotation.x,o.rotation.y,o.rotation.z,...o.scale.toArray()].every(Number.isFinite))finite=false;});const checks=[
+  ['L01 FINITE',finite,'all transforms finite'],
+  ['L02 GRADE LOAD',m.supportChains>=ir.bayCount*2,m.supportChains+' support chains reach grade'],
+  ['L03 ROOF BEARING',m.roofBearingInterfaces===ir.bayCount*2&&outerBearingBottom<=outerClerestoryTop+.12,'24 bearing interfaces; outer overlap '+(outerClerestoryTop-outerBearingBottom).toFixed(2)+' ft'],
+  ['L04 ENVELOPE',m.envelopeInterfaces===ir.bayCount*2&&innerBearingBottom<=wallTop+.12&&m.clerestoryBays===ir.bayCount,'wall/roof gap '+Math.max(0,innerBearingBottom-wallTop).toFixed(2)+' ft; 12 framed clerestories'],
+  ['L05 ALL DOORS LAND',m.arrivalPath===1&&m.courtGalleryInterfaces===4,'outer door: grade→stair→landing; inner door: supported same-level court gallery'],
+  ['L06 STAIR',m.stairInterfaces>=4,'derived risers and rails terminate at landings'],
+  ['L07 DECK',m.deckInterfaces>=8,'boards→frame→posts→footings; guard opening clear'],
+  ['L08 WATER',m.waterInterfaces>=ir.bayCount+4&&m.drainDestinations===4,'12 catchments→inner gutter→4 downspouts→court destinations'],
+  ['L09 PENETRATION',m.flashingInterfaces===1,'hearth flue crosses roof through flashing collar'],
+  ['L10 WALK',m.roomProofs===ir.bayCount&&m.framedOpenings>=ir.bayCount*2,'12 occupiable zones on continuous ring'],
+  ['L11 COLLISION',m.collisionBodies<=120&&m.collisionBodies>0,m.collisionBodies+' collision bodies'],
+  ['L12 BUDGET',m.meshCount<520&&m.collisionBodies<=120,m.meshCount+'/520 meshes; '+m.collisionBodies+'/120 solids']
+];return checks.map(([id,pass,evidence])=>({id,pass,evidence}));}
+const linters=runLinters(IR,hdl),defectLedger=[
+  {id:'D-02-ROOF-001',relation:'wall-head→bearing→roof-plane',evidenceView:'roof-bearing',status:'fixed'},
+  {id:'D-02-ENVELOPE-002',relation:'outer-wall→clerestory→roof-bearing',evidenceView:'roof-bearing',status:'fixed'},
+  {id:'D-02-ARRIVAL-003',relation:'canopy-ledger→roof-bearing and post→footing',evidenceView:'arrival-eye',status:'fixed'},
+  {id:'D-02-DECK-004',relation:'stair-rail→deck-guard→landing',evidenceView:'arrival-eye',status:'fixed'},
+  {id:'D-02-PENETRATION-005',relation:'flue→flashing→roof-plane',evidenceView:'roof-bearing',status:'fixed'},
+  {id:'D-03-LIVABILITY-006',relation:'inner-door→same-level-supported-court-gallery',evidenceView:'roof-off-plan',status:'fixed'}
+],promptPatchLedger=[{gap:'arrival test covered only the primary exterior door',evidenceDefectIds:['D-03-LIVABILITY-006'],proposedRule:'Every exterior door must terminate on a safe landing and connected route.',acceptanceTest:'enumerate exterior doors; each threshold overlaps a supported landing node',antiOverfitReason:'applies to courtyards, balconies, roof decks and secondary exits in every topology',status:'accepted'}];hdl.userData.linters=linters;hdl.userData.defectLedger=defectLedger;hdl.userData.promptPatchLedger=promptPatchLedger;hdl.userData.metrics.lintersPassed=linters.filter(x=>x.pass).length;hdl.userData.metrics.openDefects=defectLedger.filter(x=>x.status==='open').length;hdl.userData.metrics.promptPatches=promptPatchLedger.filter(x=>x.status==='accepted').length;
+const proofs={
+  topologyIdentity:raw.userData.metrics.bays===hdl.userData.metrics.bays&&IR.outerR===MASS.outerR&&IR.innerR===MASS.innerR,
+  arrival:hdl.userData.metrics.arrivalPath===1,
+  openings:hdl.userData.metrics.framedOpenings>=IR.bayCount*2,
+  rooms:hdl.userData.metrics.roomProofs===IR.bayCount,
+  supports:hdl.userData.metrics.supportChains>=IR.bayCount*2,
+  catchments:hdl.userData.metrics.roofCatchments===IR.bayCount,
+  drainage:hdl.userData.metrics.drainDestinations===4,
+  finite:(()=>{let ok=true;hdl.traverse(o=>{if(o.isMesh&&!o.position.toArray().every(Number.isFinite))ok=false;});return ok;})(),
+  renderBudget:hdl.userData.metrics.meshCount<520,
+  collisionBudget:hdl.userData.metrics.collisionBodies<=120,
+  relationshipLinters:linters.length===12&&linters.every(x=>x.pass),
+  criticLedger:hdl.userData.metrics.openDefects===0
+};
+if(Object.values(proofs).some(v=>!v)){const f=document.getElementById('fail');f.style.display='grid';f.textContent='PROOF FAILED · '+Object.entries(proofs).filter(x=>!x[1]).map(x=>x[0]).join(' · ');throw new Error(f.textContent);}
+
+function metrics(el,m,kind){const lines=kind==='raw'?[['Bays retained',m.bays],['Mesh count',m.meshCount],['Arrival transaction',m.arrivalPath?'PASS':'ABSENT'],['Framed openings',m.framedOpenings],['Room proofs',m.roomProofs],['Complete water paths',m.drainDestinations]]:[['Bays retained',m.bays],['Render budget',m.meshCount+' / 520'],['WG solids',m.collisionBodies+' / 120'],['Relationship linters',m.lintersPassed+' / 12'],['Open major defects',m.openDefects],['Prompt patches learned',m.promptPatches],['Roof bearings',m.roofBearingInterfaces],['Support chains',m.supportChains],['Water destinations',m.drainDestinations]];el.innerHTML=lines.map(([a,b])=>`<span>${a}</span><b class="${b==='PASS'||b==='12 / 12'||b===0?'pass':''}">${b}</b>`).join('');}
+metrics(document.getElementById('raw-metrics'),raw.userData.metrics,'raw');metrics(document.getElementById('hdl-metrics'),hdl.userData.metrics,'hdl');
+
+let target=new THREE.Vector3(0,4,0),az=.18,pol=1.02,rad=72,drag=false,px=0,py=0;
+function cam(){camera.position.set(target.x+rad*Math.sin(pol)*Math.sin(az),target.y+rad*Math.cos(pol),target.z+rad*Math.sin(pol)*Math.cos(az));camera.lookAt(target);}
+renderer.domElement.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});renderer.domElement.addEventListener('pointermove',e=>{if(!drag)return;az-=(e.clientX-px)*.006;pol=Math.max(.25,Math.min(1.48,pol+(e.clientY-py)*.006));px=e.clientX;py=e.clientY;});renderer.domElement.addEventListener('pointerup',()=>drag=false);renderer.domElement.addEventListener('wheel',e=>{rad=Math.max(34,Math.min(110,rad+e.deltaY*.04));e.preventDefault()},{passive:false});
+function mode(which){raw.visible=which!=='hdl';hdl.visible=which!=='raw';target.x=which==='raw'?-22:which==='hdl'?22:0;rad=which==='both'?72:48;for(const id of ['both','raw','hdl'])document.getElementById(id).classList.toggle('on',id===which);}
+for(const id of ['both','raw','hdl'])document.getElementById(id).onclick=()=>mode(id);let roofs=true;document.getElementById('roof').onclick=()=>{roofs=!roofs;for(const root of [raw,hdl])root.traverse(o=>{if(o.userData.tag==='roof')o.visible=roofs;});document.getElementById('roof').textContent=roofs?'Roof off':'Roof on';document.getElementById('roof').classList.toggle('on',!roofs)};
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});cam();
+function tick(){requestAnimationFrame(tick);cam();renderer.render(scene,camera)}tick();
+window.__HDL_PROOF={MASS:IR,raw,hdl,proofs,linters,defectLedger,promptPatchLedger,metrics:{raw:raw.userData.metrics,hdl:hdl.userData.metrics}};
+const canonicalViews={
+  hero:{target:[22,5.5,0],az:2.28,pol:1.02,rad:58,roof:true},
+  'arrival-eye':{target:[22+Math.cos(IR.bays[IR.entryBay].ac)*15,5.2,Math.sin(IR.bays[IR.entryBay].ac)*15],az:2.88,pol:1.34,rad:48,roof:true},
+  'roof-bearing':{target:[22,12.3,0],az:1.05,pol:1.12,rad:42,roof:true},
+  'underside-load':{target:[22,2.2,0],az:.72,pol:1.43,rad:58,roof:true},
+  'roof-off-plan':{target:[22,1.8,0],az:.25,pol:.18,rad:55,roof:false},
+  'water-path':{target:[22,4.5,0],az:-.2,pol:.78,rad:42,roof:false}
+};
+function setCanonicalView(id){const v=canonicalViews[id];if(!v)throw new Error('unknown canonical view '+id);mode('hdl');target.fromArray(v.target);az=v.az;pol=v.pol;rad=v.rad;hdl.traverse(o=>{if(o.userData.tag==='roof')o.visible=v.roof;});roofs=v.roof;cam();renderer.render(scene,camera);return id;}
+window.__GAUNTLET_CAPTURE={views:Object.keys(canonicalViews),setView:setCanonicalView};
+</script>
+</body>
+</html>

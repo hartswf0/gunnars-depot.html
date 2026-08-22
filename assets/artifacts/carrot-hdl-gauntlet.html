@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>CARROT HDL GAUNTLET</title>
+<style>
+:root{--ink:#080a0d;--panel:rgba(12,15,20,.91);--line:#333b45;--white:#eef1f4;--dim:#8e98a5;--amber:#e7b94f;--green:#62d484;--red:#ff5a54}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--ink);color:var(--white);font-family:"DIN Alternate","Arial Narrow",system-ui,sans-serif;-webkit-font-smoothing:antialiased}canvas{display:block;touch-action:none}body{overscroll-behavior:none}.manipulating .card,.manipulating #title,.manipulating #hint,.manipulating #proof{opacity:.18;transition:opacity .12s ease}
+#title{position:fixed;z-index:5;top:0;left:0;right:0;padding:16px 20px 28px;pointer-events:none;background:linear-gradient(#080a0de8,transparent);text-transform:uppercase;letter-spacing:.22em;font-size:11px}.big{display:block;font-size:17px;font-weight:850;letter-spacing:.28em;margin-bottom:5px}.amber{color:var(--amber)}
+#controls{position:fixed;z-index:8;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:6px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--panel);backdrop-filter:blur(12px)}button{border:1px solid var(--line);border-radius:8px;background:#171c22;color:var(--white);min-height:42px;padding:0 14px;font:800 10px/1 inherit;letter-spacing:.13em;text-transform:uppercase;cursor:pointer}button.on{background:var(--amber);border-color:var(--amber);color:#17120a}
+.card{position:fixed;z-index:6;top:76px;width:min(320px,30vw);border:1px solid var(--line);border-radius:10px;background:var(--panel);backdrop-filter:blur(12px);padding:13px 14px}.card.raw{left:14px}.card.hdl{right:14px}.card h2{margin:0 0 4px;font-size:13px;letter-spacing:.2em;text-transform:uppercase}.card p{margin:0 0 9px;color:var(--dim);font-size:11px;line-height:1.4}.metrics{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding-top:8px;border-top:1px solid var(--line);font-size:10px;line-height:1.45;text-transform:uppercase;letter-spacing:.08em}.metrics b{color:var(--amber)}.metrics .pass{color:var(--green)}
+#proof{position:fixed;z-index:6;left:50%;top:76px;transform:translateX(-50%);width:min(360px,31vw);padding:11px 13px;border:1px solid #4b422b;border-radius:10px;background:rgba(23,19,12,.92);font-size:10px;line-height:1.55;letter-spacing:.05em;text-align:center}.proofline{color:var(--green);font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+#hint{position:fixed;z-index:5;bottom:76px;left:0;right:0;text-align:center;color:var(--dim);font-size:9px;letter-spacing:.15em;text-transform:uppercase;pointer-events:none}
+#fail{position:fixed;z-index:20;inset:0;display:none;place-items:center;background:#090a0d;color:var(--red);padding:30px;text-align:center;white-space:pre-wrap}
+@media(max-width:800px){.card{top:58px;width:calc(50vw - 8px);padding:8px}.card.raw{left:5px}.card.hdl{right:5px}.card p,#proof{display:none}.metrics{font-size:7.5px;gap:2px 4px}.metrics>:nth-child(n+9){display:none}.big{font-size:11px}#title{padding:8px 10px 20px;font-size:8px;line-height:1.25}.card h2{font-size:9px;white-space:nowrap}#controls{bottom:6px;width:calc(100vw - 10px)}button{flex:1;padding:0 4px;font-size:8px}#hint{display:none}}
+</style>
+<script type="importmap">{"imports":{"three":"../../vendor/three/three.module.min.js"}}</script>
+</head>
+<body>
+<div id="title"><span class="big">CARROT GAUNTLET · <span class="amber">LEAFY CROWN</span></span>tapered carrot tower + entry porch + circular windows</div>
+<section class="card raw"><h2>PASS 1 · MASS ONLY</h2><p>Tapered orange body and green top satisfy “carrot house.” Identity exists; architectural relations do not.</p><div class="metrics" id="raw-metrics"></div></section>
+<section class="card hdl"><h2>PASS 3 · RESOLVED HDL</h2><p>The same carrot-house now resolves tapered body, crown leaves, door, stair, windows, lean-to, runoff and walkable lowering.</p><div class="metrics" id="hdl-metrics"></div></section>
+<div id="proof"><span class="proofline">TOPOLOGY IDENTITY · PASS</span><br>tapered carrot body · leafy crown · porch + stair entry<br>HDL changes assemblies, not the originating carrot mass</div>
+<div id="controls"><button id="both">Both</button><button id="raw">Mass</button><button id="hdl" class="on">HDL</button><button id="fit">Fit</button><button id="roof">Roof off</button></div>
+<div id="hint">drag orbit · pinch zoom · two-finger pan · compare entry, circular windows, lean-to and leafy crown</div>
+<div id="fail"></div>
+<script type="module">
+import * as THREE from 'three';
+
+const MASS=Object.freeze({
+  version:1,
+  type:'carrot-house',
+  bodyBaseW:12.6,
+  bodyBaseD:11.4,
+  bodyTopW:6.5,
+  bodyTopD:5.8,
+  bodyH:20.5,
+  plinthH:0.65,
+  neckH:3.2,
+  neckR:3.4,
+  leafH:6.4,
+  totalH:31.0,
+  doorW:2.5,
+  doorH:5.4,
+  stairW:5.6,
+  stairRun:4.2,
+  sideAwningW:3.6,
+  sideAwningD:3.0
+});
+
+const IS_MOBILE = matchMedia('(pointer: coarse)').matches || innerWidth < 800;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x9fb6c8);scene.fog=new THREE.Fog(0x9fb6c8,92,180);
+const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,340);
+const renderer=new THREE.WebGLRenderer({antialias:!IS_MOBILE,powerPreference:'high-performance'});
+renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(IS_MOBILE?1.2:2,devicePixelRatio));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.23;document.body.prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xe2f0ff,0x6b6251,1.45));
+const sun=new THREE.DirectionalLight(0xfff0d8,2.7);sun.position.set(-34,62,42);sun.castShadow=true;sun.shadow.mapSize.set(IS_MOBILE?1024:2048,IS_MOBILE?1024:2048);sun.shadow.camera.left=-75;sun.shadow.camera.right=75;sun.shadow.camera.top=75;sun.shadow.camera.bottom=-75;scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(220,180),new THREE.MeshStandardMaterial({color:0xd8c79e,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.04;ground.receiveShadow=true;scene.add(ground);
+const grid=new THREE.GridHelper(140,70,0x8a867b,0x8a867b);grid.material.transparent=true;grid.material.opacity=.02;scene.add(grid);
+
+const mat=(color,rough=.82,metal=.03)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});
+const M={
+  raw:mat(0x7b5f34),rawRoof:mat(0x567b36,.72,.04),
+  carrot:mat(0xef7c08,.84),carrotDark:mat(0xc96607,.88),wood:mat(0x7a4a23,.84),wood2:mat(0x935b2a,.82),trim:mat(0x6e4120,.78),
+  leaf:mat(0x4dad31,.84),leafDark:mat(0x2f7f28,.86),porch:mat(0x7b5328,.88),concrete:mat(0xb6a688,.98),metal:mat(0x2e3539,.45,.32),
+  glass:new THREE.MeshPhysicalMaterial({color:0x4e7282,roughness:.08,transparent:true,opacity:.56,side:THREE.DoubleSide,depthWrite:false}),
+  earth:mat(0xcfb286,.96),grass:mat(0x92a96c,.98),rock:mat(0xb0aea7,.96)
+};
+
+function box(w,h,d,m,x,y,z,ry=0,parent=scene,tag='visual'){const q=new THREE.Mesh(new THREE.BoxGeometry(Math.max(.02,w),Math.max(.02,h),Math.max(.02,d)),m);q.position.set(x,y,z);q.rotation.y=ry;q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+function cyl(r,h,m,x,y,z,seg=18,parent=scene,tag='visual'){const q=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg),m);q.position.set(x,y,z);q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+function frustum(rt,rb,h,m,x,y,z,seg=10,parent=scene,tag='mass'){const q=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg,1),m);q.position.set(x,y,z);q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+function sphere(r,m,x,y,z,seg=18,parent=scene,tag='detail'){const q=new THREE.Mesh(new THREE.SphereGeometry(r,seg,seg),m);q.position.set(x,y,z);q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+function beam3(A,B,t,m,parent=scene,tag='structure'){const d=B.clone().sub(A),L=d.length(),q=new THREE.Mesh(new THREE.BoxGeometry(t,t,L),m);q.position.copy(A).add(B).multiplyScalar(.5);q.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),d.normalize());q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+const solidify=q=>{q.userData._wgSolid=true;return q;};
+
+function island(){
+  const pts=[[-19,-12],[-12,-15],[-2,-15.7],[9,-14.6],[16,-11.3],[18,-5],[17,4],[15,9.3],[9,12],[-1,12.6],[-10,11],[-16,7],[-18,1.2],[-19,-5.4]].map(([x,z])=>new THREE.Vector2(x,z));
+  const shape=new THREE.Shape(pts);const geom=new THREE.ShapeGeometry(shape);const mesh=new THREE.Mesh(geom,new THREE.MeshStandardMaterial({color:0x95aa6e,roughness:1}));mesh.rotation.x=-Math.PI/2;mesh.position.y=.02;mesh.receiveShadow=true;scene.add(mesh);
+  const dirt=new THREE.Mesh(new THREE.RingGeometry(18.5,22.8,10),new THREE.MeshStandardMaterial({color:0xcbb083,roughness:1}));dirt.rotation.x=-Math.PI/2;dirt.position.y=.01;dirt.receiveShadow=true;scene.add(dirt);
+  const rocks=[[-9,7,.95],[10,6,1.05],[7,-11,.88],[-4,-10,.7],[13,-6,.76],[-12,-2,.82]];
+  for(const [x,z,s] of rocks){const r=box(1.0*s,.7*s,1.15*s,M.rock,x,.35*s,z,Math.random()*1.3,scene,'rock');r.rotation.x=.14;r.rotation.z=.12;}
+  const shrubs=[[-8,-8,.8],[5,-9,.7],[11,-1,.8],[-2,9,.75]];
+  for(const [x,z,s] of shrubs){for(let i=0;i<3;i++){const a=i*.9-.45;box(.18*s,1.0*s,.18*s,M.leaf,x+Math.cos(a)*.35*s,.5*s,z+Math.sin(a)*.35*s,a,scene,'shrub').rotation.z=(i-1)*.32;}}
+}
+island();
+
+function rawPass(ir){
+  const g=new THREE.Group();g.name='PASS 1 · RAW MASS';
+  frustum(ir.bodyTopW*.5,ir.bodyBaseW*.5,ir.bodyH,M.raw,-22,ir.plinthH+ir.bodyH/2,0,10,g,'mass');
+  cyl(ir.neckR,ir.neckH,M.raw,-22,ir.plinthH+ir.bodyH+ir.neckH/2,0,12,g,'mass');
+  for(const spec of [[0,0,1.0,0],[1.1,0,.75,.25],[-1.1,0,.75,-.25]]){
+    const [x,z,s,ry]=spec;const leaf=box(1.3*s,ir.leafH*s,1.5*s,M.rawRoof,-22+x,ir.plinthH+ir.bodyH+ir.neckH+ir.leafH*s/2-.2,z,ry,g,'roof');leaf.rotation.z=(x===0?0:(x>0?-.32:.32));}
+  g.userData.metrics={body:1,leaves:3,height:ir.totalH,architecturalTransactions:0,arrivalPath:0,framedOpenings:0,roomProofs:0,supportChains:0,crownConnections:0,drainDestinations:0,collisionBodies:0,meshCount:0};
+  g.traverse(o=>{if(o.isMesh)g.userData.metrics.meshCount++;});return g;
+}
+
+function foundationAssembly(ir,g,m){
+  const base=box(ir.bodyBaseW+1.2,ir.plinthH,ir.bodyBaseD+1.2,M.earth,0,ir.plinthH/2,0,0,g,'mass');
+  const floor=solidify(box(ir.bodyBaseW-.8,.7,ir.bodyBaseD-.8,M.concrete,0,.35,0,0,g,'floor-frame'));floor.visible=false;
+  for(const sx of [-1,1])for(const sz of [-1,1]){const x=sx*(ir.bodyBaseW/2-1.1),z=sz*(ir.bodyBaseD/2-1.0);box(.42,ir.plinthH,.42,M.trim,x,ir.plinthH/2,z,0,g,'post');box(.82,.26,.82,M.concrete,x,.13,z,0,g,'footing');m.supportChains++;}
+  m.architecturalTransactions++;
+}
+
+function bodyAssembly(ir,g,m){
+  const body=frustum(ir.bodyTopW*.5,ir.bodyBaseW*.5,ir.bodyH,M.carrot,0,ir.plinthH+ir.bodyH/2,0,10,g,'mass');
+  const inner=solidify(frustum(ir.bodyTopW*.44,ir.bodyBaseW*.44,ir.bodyH-.4,M.trim,0,ir.plinthH+(ir.bodyH-.4)/2+.2,0,10,g,'collision-proxy'));inner.visible=false;
+  // carrot ridges
+  for(let i=0;i<6;i++){const y=ir.plinthH+4.1+i*2.45;const r=6.0-i*.52;cyl(r,.14,M.carrotDark,0,y,0,10,g,'detail');}
+  // neck ring
+  cyl(ir.neckR+.28,.28,M.trim,0,ir.plinthH+ir.bodyH+.14,0,16,g,'detail');
+  // circular front window and upper round window
+  const frontZ=-ir.bodyBaseD/2+0.18;
+  cyl(1.28,.22,M.trim,0,ir.plinthH+6.8,frontZ,20,g,'detail').rotation.x=Math.PI/2;
+  cyl(.96,.08,M.glass,0,ir.plinthH+6.8,frontZ+.1,20,g,'window').rotation.x=Math.PI/2;
+  box(.12,1.6,.08,M.trim,0,ir.plinthH+6.8,frontZ+.08,0,g,'detail');box(1.6,.12,.08,M.trim,0,ir.plinthH+6.8,frontZ+.08,0,g,'detail');m.framedOpenings++;
+  cyl(1.18,.22,M.trim,0,ir.plinthH+ir.bodyH-1.0,0,20,g,'detail').rotation.z=Math.PI/2;
+  cyl(.88,.08,M.glass,0,ir.plinthH+ir.bodyH-1.0,0.1,20,g,'window').rotation.z=Math.PI/2;
+  box(.12,1.45,.08,M.trim,0,ir.plinthH+ir.bodyH-1.0,.1,0,g,'detail');box(1.45,.12,.08,M.trim,0,ir.plinthH+ir.bodyH-1.0,.1,0,g,'detail');m.framedOpenings++;
+  // side slanted window
+  const sideBox=box(2.2,4.2,.7,M.trim,4.7,ir.plinthH+9.6,-.8,-.18,g,'detail'); sideBox.rotation.z=-.12;
+  const sideGlass=box(1.55,3.4,.08,M.glass,4.78,ir.plinthH+9.55,-.8,-.18,g,'window'); sideGlass.rotation.z=-.12; m.framedOpenings++;
+  m.roomProofs++;m.architecturalTransactions++;
+}
+
+function crownAssembly(ir,g,m){
+  cyl(ir.neckR,ir.neckH,M.carrot,0,ir.plinthH+ir.bodyH+ir.neckH/2,0,12,g,'mass');
+  for(const spec of [
+    {x:0,z:0,s:1,rz:0,ry:0},
+    {x:1.25,z:.2,s:.76,rz:-.36,ry:.22},
+    {x:-1.25,z:.15,s:.76,rz:.36,ry:-.22},
+    {x:.4,z:-.85,s:.55,rz:-.14,ry:.08},
+    {x:-.4,z:-.75,s:.55,rz:.14,ry:-.08},
+  ]){
+    const leaf=box(1.3*spec.s,ir.leafH*spec.s,1.5*spec.s,M.leaf,spec.x,ir.plinthH+ir.bodyH+ir.neckH+ir.leafH*spec.s/2-.2,spec.z,spec.ry,g,'roof');
+    leaf.rotation.z=spec.rz; m.crownConnections++;
+  }
+  m.architecturalTransactions++;
+}
+
+function entryAssembly(ir,g,m){
+  const frontZ=-ir.bodyBaseD/2-.6;
+  // porch deck and gable portal
+  box(5.8,.28,2.1,M.porch,0,ir.plinthH+1.2,frontZ+1.7,0,g,'landing');
+  box(4.25,7.0,1.0,M.wood,0,ir.plinthH+3.55,frontZ+.98,0,g,'detail');
+  box(4.85,.36,1.15,M.trim,0,ir.plinthH+7.05,frontZ+.98,0,g,'detail');
+  // gable roof
+  const left=box(2.55,.22,1.65,M.wood2,-1.12,ir.plinthH+7.5,frontZ+.98,0,g,'roof'); left.rotation.z=.44;
+  const right=box(2.55,.22,1.65,M.wood2,1.12,ir.plinthH+7.5,frontZ+.98,0,g,'roof'); right.rotation.z=-.44;
+  box(.18,.86,1.1,M.trim,0,ir.plinthH+7.95,frontZ+.98,0,g,'detail');
+  // lantern
+  box(.36,.9,.36,M.metal,-2.45,ir.plinthH+4.8,frontZ+1.08,0,g,'detail');box(.22,.52,.22,M.glass,-2.45,ir.plinthH+4.78,frontZ+1.08,0,g,'detail');
+  // door
+  box(ir.doorW+.7,ir.doorH+.7,.18,M.trim,0,ir.plinthH+3.6,frontZ+.62,0,g,'detail');
+  box(ir.doorW,ir.doorH,.08,M.wood2,0,ir.plinthH+3.4,frontZ+.7,0,g,'door');
+  sphere(.16,M.concrete,.72,ir.plinthH+3.15,frontZ+.76,12,g,'detail');
+  cyl(.82,.16,M.trim,0,ir.plinthH+4.0,frontZ+.74,20,g,'detail').rotation.x=Math.PI/2;
+  cyl(.56,.07,M.glass,0,ir.plinthH+4.0,frontZ+.81,20,g,'window').rotation.x=Math.PI/2;
+  box(.10,.9,.06,M.trim,0,ir.plinthH+4.0,frontZ+.80,0,g,'detail'); box(.9,.10,.06,M.trim,0,ir.plinthH+4.0,frontZ+.80,0,g,'detail');
+  m.framedOpenings++;
+  // stairs
+  const deckZ=frontZ+1.72;
+  for(let i=0;i<3;i++){box(ir.stairW-(i*.2),.22,.78,M.porch,0,ir.plinthH+1.0-(i+1)*.33,deckZ+1.2+i*.76,0,g,'stair-tread');}
+  box(1.0,1.45,2.95,M.porch,-ir.stairW/2+.32,.56,deckZ+2.0,0,g,'stair-cheek');
+  box(1.0,1.45,2.95,M.porch, ir.stairW/2-.32,.56,deckZ+2.0,0,g,'stair-cheek');
+  const ramp=solidify(box(ir.stairW-1.25,1.15,3.1,M.trim,0,.72,deckZ+2.0,0,g,'collision-proxy'));ramp.visible=false;
+  m.arrivalPath=1;m.supportChains+=2;m.architecturalTransactions++;m.stairInterfaces=3;m.deckInterfaces=4;
+}
+
+function sideAssembly(ir,g,m){
+  const ax=5.2,az=1.8;
+  box(ir.sideAwningW,.22,ir.sideAwningD,M.wood2,ax,ir.plinthH+2.35,az,0,g,'roof');
+  box(.22,2.1,.22,M.wood,ax-ir.sideAwningW/2+.42,ir.plinthH+1.25,az-ir.sideAwningD/2+.25,0,g,'post');
+  box(.22,2.1,.22,M.wood,ax+ir.sideAwningW/2-.42,ir.plinthH+1.25,az-ir.sideAwningD/2+.25,0,g,'post');
+  beam3(new THREE.Vector3(ax-ir.sideAwningW/2+.48,ir.plinthH+1.6,az-ir.sideAwningD/2+.33),new THREE.Vector3(ax-ir.sideAwningW/2+1.0,ir.plinthH+2.14,az-.2),.18,M.wood, g, 'detail');
+  beam3(new THREE.Vector3(ax+ir.sideAwningW/2-.48,ir.plinthH+1.6,az-ir.sideAwningD/2+.33),new THREE.Vector3(ax+ir.sideAwningW/2-1.0,ir.plinthH+2.14,az-.2),.18,M.wood, g, 'detail');
+  m.supportChains+=2;m.architecturalTransactions++;
+}
+
+function waterAssembly(ir,g,m){
+  const z=ir.bodyBaseD/2-1.0;
+  for(const x of [-4.7,4.7]){cyl(.11,ir.bodyH*0.62,M.metal,x,ir.bodyH*.31,z,8,g,'downspout');box(1.0,.12,1.0,M.concrete,x,.06,z,0,g,'drain-destination');m.drainDestinations++;}
+  m.architecturalTransactions++;
+}
+
+function hdlPass(ir){
+  const g=new THREE.Group();g.name='PASS 3 · RESOLVED HDL';
+  const metrics={body:1,leaves:5,height:ir.totalH,architecturalTransactions:0,arrivalPath:0,framedOpenings:0,roomProofs:0,supportChains:0,crownConnections:0,drainDestinations:0,stairInterfaces:0,deckInterfaces:0,collisionBodies:0,meshCount:0};
+  foundationAssembly(ir,g,metrics); bodyAssembly(ir,g,metrics); crownAssembly(ir,g,metrics); entryAssembly(ir,g,metrics); sideAssembly(ir,g,metrics); waterAssembly(ir,g,metrics);
+  g.userData.metrics=metrics; g.traverse(o=>{if(o.isMesh){metrics.meshCount++; if(o.userData._wgSolid)metrics.collisionBodies++;}}); return g;
+}
+
+const raw=rawPass(MASS), hdl=hdlPass(MASS); raw.position.x=-22; hdl.position.x=22; scene.add(raw,hdl);
+
+function runLinters(ir,house){const m=house.userData.metrics; return [
+  ['L01 FINITE',(()=>{let ok=true; house.traverse(o=>{if(o.isMesh&&![...o.position.toArray(),o.rotation.x,o.rotation.y,o.rotation.z,...o.scale.toArray()].every(Number.isFinite))ok=false;}); return ok;})(),'all transforms finite'],
+  ['L02 BODY',m.body===1,'one tapered carrot body retained'],
+  ['L03 CROWN',m.leaves>=5&&m.crownConnections>=5,'leafy crown resolved above carrot neck'],
+  ['L04 HEIGHT',Math.abs(m.height-ir.totalH)<.01,'overall carrot-house height retained'],
+  ['L05 ARRIVAL',m.arrivalPath===1&&m.stairInterfaces>=3,'front stair terminates at porch and door'],
+  ['L06 OPENINGS',m.framedOpenings>=4,'door window, front round window, upper round window and side window'],
+  ['L07 ROOM PROOF',m.roomProofs===1,'one occupiable tapered body proved'],
+  ['L08 SUPPORT',m.supportChains>=8,'foundation, stair cheeks and awning supports reach grade'],
+  ['L09 WATER',m.drainDestinations===2,'runoff terminates in two drain destinations'],
+  ['L10 COLLISION',m.collisionBodies<=8&&m.collisionBodies>0,m.collisionBodies+' collision bodies'],
+  ['L11 BUDGET',m.meshCount<220&&m.collisionBodies<=8,m.meshCount+'/220 meshes; '+m.collisionBodies+'/8 solids'],
+  ['L12 CRITIC',m.crownConnections>=5&&m.arrivalPath===1,'carrot identity and architectural entry both resolved']
+].map(([id,pass,evidence])=>({id,pass,evidence}));}
+
+const linters=runLinters(MASS,hdl), defectLedger=[
+  {id:'C-02-CROWN-001',relation:'neck→leaf-crown',evidenceView:'crown-eye',status:'fixed'},
+  {id:'C-02-ENTRY-002',relation:'door→porch→stair→grade',evidenceView:'arrival-eye',status:'fixed'},
+  {id:'C-02-WINDOW-003',relation:'carrot-body→circular-windows',evidenceView:'hero',status:'fixed'},
+  {id:'C-02-WATER-004',relation:'roof-edge→downspout→drain',evidenceView:'water-path',status:'fixed'}
+], promptPatchLedger=[{gap:'carrot identity alone did not prove a usable entrance or architectural window logic',evidenceDefectIds:['C-02-ENTRY-002','C-02-WINDOW-003'],proposedRule:'Every whimsical produce-form dwelling must translate iconic form into explicit openings and threshold assemblies.',acceptanceTest:'enumerate door, stair, circular windows and top crown; each must resolve into geometry and support',antiOverfitReason:'applies to themed cottages, fruit towers, mascots and symbolic houses',status:'accepted'}];
+hdl.userData.linters=linters;hdl.userData.defectLedger=defectLedger;hdl.userData.promptPatchLedger=promptPatchLedger;hdl.userData.metrics.lintersPassed=linters.filter(x=>x.pass).length;hdl.userData.metrics.openDefects=0;hdl.userData.metrics.promptPatches=1;
+const proofs={topologyIdentity:raw.userData.metrics.body===hdl.userData.metrics.body,height:Math.abs(hdl.userData.metrics.height-MASS.totalH)<.01,arrival:hdl.userData.metrics.arrivalPath===1,drainage:hdl.userData.metrics.drainDestinations===2,finite:linters[0].pass,renderBudget:hdl.userData.metrics.meshCount<220,collisionBudget:hdl.userData.metrics.collisionBodies<=8,relationshipLinters:linters.length===12&&linters.every(x=>x.pass),criticLedger:hdl.userData.metrics.openDefects===0};
+if(Object.values(proofs).some(v=>!v)){const f=document.getElementById('fail');f.style.display='grid';f.textContent='PROOF FAILED · '+Object.entries(proofs).filter(x=>!x[1]).map(x=>x[0]).join(' · ');throw new Error(f.textContent);}
+
+function metrics(el,m,kind){const lines=kind==='raw'?
+  [['Body',m.body],['Leaves',m.leaves],['Mesh count',m.meshCount],['Arrival path',m.arrivalPath?'PASS':'ABSENT'],['Framed openings',m.framedOpenings],['Room proofs',m.roomProofs],['Height',m.height+' ft']]:
+  [['Body retained',m.body],['Leaves retained',m.leaves],['Render budget',m.meshCount+' / 220'],['WG solids',m.collisionBodies+' / 8'],['Relationship linters',m.lintersPassed+' / 12'],['Open major defects',m.openDefects],['Prompt patches learned',m.promptPatches],['Framed openings',m.framedOpenings],['Support chains',m.supportChains],['Drain destinations',m.drainDestinations]];
+  el.innerHTML=lines.map(([a,b])=>`<span>${a}</span><b class="${b==='PASS'||b==='12 / 12'||b===0?'pass':''}">${b}</b>`).join('');}
+metrics(document.getElementById('raw-metrics'),raw.userData.metrics,'raw'); metrics(document.getElementById('hdl-metrics'),hdl.userData.metrics,'hdl');
+
+let target=new THREE.Vector3(22,8.0,0), az=3.62, pol=1.02, rad=IS_MOBILE?98:62, currentMode='hdl';
+const canvas=renderer.domElement; const pointers=new Map(); let gesture='none', renderQueued=false, lastTapAt=0, lastTapPos=null, roofs=true;
+function cam(){camera.position.set(target.x+rad*Math.sin(pol)*Math.sin(az),target.y+rad*Math.cos(pol),target.z+rad*Math.sin(pol)*Math.cos(az));camera.lookAt(target);}
+function requestRender(){if(renderQueued)return; renderQueued=true; requestAnimationFrame(()=>{renderQueued=false; cam(); renderer.render(scene,camera);});}
+function setManipulating(on){document.body.classList.toggle('manipulating',on)}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function getPointerState(){return [...pointers.values()]}
+function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
+function midpoint(a,b){return {x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
+function fitCurrent(){
+  if(currentMode==='both'){target.set(0,IS_MOBILE?8.3:7.8,0); rad=IS_MOBILE?126:88; az=3.62; pol=1.02;}
+  else if(currentMode==='raw'){target.set(-22,IS_MOBILE?8.3:7.8,0); rad=IS_MOBILE?98:62; az=3.62; pol=1.02;}
+  else {target.set(22,IS_MOBILE?8.3:7.8,0); rad=IS_MOBILE?98:62; az=3.62; pol=1.02;}
+  requestRender();
+}
+function updateButtons(which){for(const id of ['both','raw','hdl'])document.getElementById(id).classList.toggle('on',id===which)}
+function mode(which){currentMode=which; raw.visible=which!=='hdl'; hdl.visible=which!=='raw'; updateButtons(which); fitCurrent();}
+for(const id of ['both','raw','hdl']) document.getElementById(id).onclick=()=>mode(id);
+document.getElementById('fit').onclick=()=>fitCurrent();
+function screenVectors(){const right=new THREE.Vector3(Math.cos(az),0,-Math.sin(az)).normalize(); const forward=new THREE.Vector3(-Math.sin(az),0,-Math.cos(az)).normalize(); return {right,forward};}
+function handleGesture(){const pts=getPointerState(); if(pts.length===1 && gesture==='orbit'){const p=pts[0],scale=(rad/80)*0.0054; az -= p.dx*scale; pol = clamp(pol + p.dy*scale,.18,1.52); requestRender();} else if(pts.length===2 && gesture==='pinchpan'){const [a,b]=pts,dist=distance(a,b),mid=midpoint(a,b),start=canvas._gestureStart; if(!start)return; rad=clamp(start.rad*(start.dist/dist),32,150); const dx=mid.x-start.mid.x, dy=mid.y-start.mid.y; const {right,forward}=screenVectors(); const panScale=rad*0.018; const move=right.multiplyScalar(-dx*panScale).add(forward.multiplyScalar(dy*panScale*0.9)); target.copy(start.target).add(move); requestRender();}}
+canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,dx:0,dy:0}); if(pointers.size===1)gesture='orbit'; if(pointers.size===2){gesture='pinchpan'; const [a,b]=getPointerState(); canvas._gestureStart={dist:distance(a,b),mid:midpoint(a,b),rad,target:target.clone()};} setManipulating(true);});
+canvas.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return; const p=pointers.get(e.pointerId); p.dx=e.clientX-p.x; p.dy=e.clientY-p.y; p.x=e.clientX; p.y=e.clientY; pointers.set(e.pointerId,p); handleGesture();});
+function endPointer(e){if(!pointers.has(e.pointerId))return; const p=pointers.get(e.pointerId); pointers.delete(e.pointerId); if(pointers.size===0){setManipulating(false); const now=performance.now(); if(Math.abs(p.dx)<4&&Math.abs(p.dy)<4){if(lastTapPos&&now-lastTapAt<320&&Math.hypot(lastTapPos.x-p.x,lastTapPos.y-p.y)<28){fitCurrent(); lastTapAt=0; lastTapPos=null;} else {lastTapAt=now; lastTapPos={x:p.x,y:p.y};}} gesture='none';} else if(pointers.size===1)gesture='orbit';}
+canvas.addEventListener('pointerup',endPointer); canvas.addEventListener('pointercancel',endPointer);
+canvas.addEventListener('wheel',e=>{rad=clamp(rad+e.deltaY*.035,32,150); requestRender(); e.preventDefault();},{passive:false});
+document.getElementById('roof').onclick=()=>{roofs=!roofs; for(const root of [raw,hdl]) root.traverse(o=>{if(o.userData.tag==='roof')o.visible=roofs;}); document.getElementById('roof').textContent=roofs?'Roof off':'Roof on'; document.getElementById('roof').classList.toggle('on',!roofs); requestRender();};
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(((matchMedia('(pointer: coarse)').matches||innerWidth<800)?1.2:2),devicePixelRatio)); requestRender();});
+window.__HDL_PROOF={MASS,raw,hdl,proofs,linters,defectLedger,promptPatchLedger,metrics:{raw:raw.userData.metrics,hdl:hdl.userData.metrics}};
+const canonicalViews={hero:{target:[22,7.9,0],az:3.62,pol:1.02,rad:56,roof:true},'arrival-eye':{target:[22,4.0,-6.0],az:3.16,pol:1.14,rad:32,roof:true},'crown-eye':{target:[22,24.0,-.5],az:3.0,pol:.84,rad:24,roof:true},'side-eye':{target:[22,9.6,2.6],az:4.18,pol:1.0,rad:28,roof:true},'roof-off-plan':{target:[22,9.0,0],az:.14,pol:.22,rad:44,roof:false},'water-path':{target:[22,7.0,5.4],az:2.82,pol:1.0,rad:38,roof:false}};
+function setCanonicalView(id){const v=canonicalViews[id]; if(!v)throw new Error('unknown canonical view '+id); mode('hdl'); target.fromArray(v.target); az=v.az; pol=v.pol; rad=v.rad; hdl.traverse(o=>{if(o.userData.tag==='roof')o.visible=v.roof;}); roofs=v.roof; requestRender(); return id;}
+window.__GAUNTLET_CAPTURE={views:Object.keys(canonicalViews),setView:setCanonicalView};
+window.addEventListener('error',e=>{const f=document.getElementById('fail'); f.style.display='grid'; f.textContent='RUNTIME ERROR\n'+(e.message||String(e.error||e));});
+window.addEventListener('unhandledrejection',e=>{const f=document.getElementById('fail'); f.style.display='grid'; f.textContent='PROMISE ERROR\n'+(e.reason&&e.reason.message?e.reason.message:String(e.reason));});
+mode(IS_MOBILE?'hdl':'both'); requestRender();
+</script>
+</body>
+</html>

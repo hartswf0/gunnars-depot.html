@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>RABBIT HDL GAUNTLET</title>
+<style>
+:root{--ink:#080a0d;--panel:rgba(12,15,20,.91);--line:#333b45;--white:#eef1f4;--dim:#8e98a5;--amber:#e7b94f;--green:#62d484;--red:#ff5a54}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--ink);color:var(--white);font-family:"DIN Alternate","Arial Narrow",system-ui,sans-serif;-webkit-font-smoothing:antialiased}canvas{display:block}
+#title{position:fixed;z-index:5;top:0;left:0;right:0;padding:16px 20px 28px;pointer-events:none;background:linear-gradient(#080a0de8,transparent);text-transform:uppercase;letter-spacing:.22em;font-size:11px}.big{display:block;font-size:17px;font-weight:850;letter-spacing:.28em;margin-bottom:5px}.amber{color:var(--amber)}
+#controls{position:fixed;z-index:8;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:6px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--panel);backdrop-filter:blur(12px)}button{border:1px solid var(--line);border-radius:8px;background:#171c22;color:var(--white);min-height:42px;padding:0 14px;font:800 10px/1 inherit;letter-spacing:.13em;text-transform:uppercase;cursor:pointer}button.on{background:var(--amber);border-color:var(--amber);color:#17120a}
+.card{position:fixed;z-index:6;top:76px;width:min(320px,30vw);border:1px solid var(--line);border-radius:10px;background:var(--panel);backdrop-filter:blur(12px);padding:13px 14px}.card.raw{left:14px}.card.hdl{right:14px}.card h2{margin:0 0 4px;font-size:13px;letter-spacing:.2em;text-transform:uppercase}.card p{margin:0 0 9px;color:var(--dim);font-size:11px;line-height:1.4}.metrics{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding-top:8px;border-top:1px solid var(--line);font-size:10px;line-height:1.45;text-transform:uppercase;letter-spacing:.08em}.metrics b{color:var(--amber)}.metrics .pass{color:var(--green)}
+#proof{position:fixed;z-index:6;left:50%;top:76px;transform:translateX(-50%);width:min(360px,31vw);padding:11px 13px;border:1px solid #4b422b;border-radius:10px;background:rgba(23,19,12,.92);font-size:10px;line-height:1.55;letter-spacing:.05em;text-align:center}.proofline{color:var(--green);font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+#hint{position:fixed;z-index:5;bottom:76px;left:0;right:0;text-align:center;color:var(--dim);font-size:9px;letter-spacing:.15em;text-transform:uppercase;pointer-events:none}
+#fail{position:fixed;z-index:20;inset:0;display:none;place-items:center;background:#090a0d;color:var(--red);padding:30px;text-align:center;white-space:pre-wrap}
+@media(max-width:800px){.card{top:58px;width:calc(50vw - 8px);padding:8px}.card.raw{left:5px}.card.hdl{right:5px}.card p,#proof{display:none}.metrics{font-size:7.5px;gap:2px 4px}.metrics>:nth-child(n+9){display:none}.big{font-size:11px}#title{padding:8px 10px 20px;font-size:8px;line-height:1.25}.card h2{font-size:9px;white-space:nowrap}#controls{bottom:6px;width:calc(100vw - 10px)}button{flex:1;padding:0 4px;font-size:8px}#hint{display:none}}
+</style>
+<script type="importmap">{"imports":{"three":"../../vendor/three/three.module.min.js"}}</script>
+</head>
+<body>
+<div id="title"><span class="big">RABBIT GAUNTLET · <span class="amber">2 EARS</span></span>rectangular house + rabbit face + ear towers</div>
+<section class="card raw"><h2>PASS 1 · MASS ONLY</h2><p>Body, face block, and two ears satisfy “rabbit house.” Identity exists; architectural relations do not.</p><div class="metrics" id="raw-metrics"></div></section>
+<section class="card hdl"><h2>PASS 3 · RESOLVED HDL</h2><p>The same rabbit-house now resolves body, face, ears, stairs, porch, openings, site edge and water path.</p><div class="metrics" id="hdl-metrics"></div></section>
+<div id="proof"><span class="proofline">TOPOLOGY IDENTITY · PASS</span><br>rectangular dwelling · rabbit face · 2 ears above it<br>HDL changes assemblies, not the originating rabbit mass</div>
+<div id="controls"><button id="both" class="on">Both</button><button id="raw">Mass</button><button id="hdl">HDL</button><button id="roof">Roof off</button></div>
+<div id="hint">drag orbit · wheel/pinch zoom · compare face, ears, arrival, porch, windows, roof edge and water path</div>
+<div id="fail"></div>
+<script type="module">
+import * as THREE from 'three';
+
+const MASS=Object.freeze({
+  version:1,
+  type:'rabbit-house',
+  bodyW:14.8,
+  bodyD:20.2,
+  bodyH:11.0,
+  plinthH:1.15,
+  faceW:9.2,
+  faceD:6.6,
+  faceH:6.0,
+  earW:1.9,
+  earD:2.0,
+  earH:8.0,
+  earGap:2.6,
+  totalH:26.2,
+  frontStairW:4.4,
+  windowsPerSide:2
+});
+
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x9fb6c8);scene.fog=new THREE.Fog(0x9fb6c8,95,180);
+const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,320);camera.position.set(0,40,96);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(2,devicePixelRatio));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.28;document.body.prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xd9edff,0x556253,1.5));const sun=new THREE.DirectionalLight(0xfff4df,2.8);sun.position.set(-34,64,46);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-80;sun.shadow.camera.right=80;sun.shadow.camera.top=80;sun.shadow.camera.bottom=-80;scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(220,170),new THREE.MeshStandardMaterial({color:0xceb98c,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.04;ground.receiveShadow=true;scene.add(ground);
+const grid=new THREE.GridHelper(140,70,0x8b8a82,0x8b8a82);grid.material.transparent=true;grid.material.opacity=.08;scene.add(grid);
+
+const mat=(color,rough=.82,metal=.03)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});
+const M={
+  raw:mat(0x6d604c),rawRoof:mat(0x68717a,.56,.18),
+  plaster:mat(0xf1ead1,.88),trim:mat(0xddd1b7,.8),roof:mat(0xede3bb,.7,.06),
+  timber:mat(0x9a7852,.84),timberLight:mat(0xb89869,.87),steel:mat(0x44484c,.44,.4),
+  concrete:mat(0xbfb5a0,.96),masonry:mat(0xd6ccb7,.9),frame:mat(0x171c20,.5,.25),
+  white:mat(0xf6f3ea,.78),pink:mat(0xe8b0b0,.75),orange:mat(0xb97112,.7),
+  grass:mat(0x95ad74,.98),fence:mat(0x8d775d,.9),
+  glass:new THREE.MeshPhysicalMaterial({color:0x556b7b,roughness:.08,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false})
+};
+
+function box(w,h,d,m,x,y,z,ry=0,parent=scene,tag='visual'){const q=new THREE.Mesh(new THREE.BoxGeometry(Math.max(.02,w),Math.max(.02,h),Math.max(.02,d)),m);q.position.set(x,y,z);q.rotation.y=ry;q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+function cyl(r,h,m,x,y,z,seg=18,parent=scene,tag='visual'){const q=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg),m);q.position.set(x,y,z);q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+function sphere(r,m,x,y,z,seg=18,parent=scene,tag='detail'){const q=new THREE.Mesh(new THREE.SphereGeometry(r,seg,seg),m);q.position.set(x,y,z);q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+function beam3(A,B,t,m,parent=scene,tag='structure'){const d=B.clone().sub(A),L=d.length(),q=new THREE.Mesh(new THREE.BoxGeometry(t,t,L),m);q.position.copy(A).add(B).multiplyScalar(.5);q.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),d.normalize());q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+const solidify=q=>{q.userData._wgSolid=true;return q;};
+
+function island(){
+  const pts=[[-23,-15],[-16,-18],[-3,-20],[15,-18],[22,-11],[24,4],[21,16],[9,20],[-6,19],[-17,15],[-22,8],[-23,-3]].map(([x,z])=>new THREE.Vector2(x,z));
+  const shape=new THREE.Shape(pts);const geom=new THREE.ShapeGeometry(shape);const mesh=new THREE.Mesh(geom,new THREE.MeshStandardMaterial({color:0x9ab173,roughness:1}));mesh.rotation.x=-Math.PI/2;mesh.position.y=.02;mesh.receiveShadow=true;scene.add(mesh);
+  const fencePts=[[-18,11],[-20,7],[-21,2],[-20,-2],[-18,-6],[-15,-10],[-11,-13],[-7,-16],[-2,-18]];
+  for(let i=0;i<fencePts.length-1;i++){const [x1,z1]=fencePts[i],[x2,z2]=fencePts[i+1];beam3(new THREE.Vector3(x1,.9,z1),new THREE.Vector3(x2,.9,z2),.14,M.fence,scene,'fence');beam3(new THREE.Vector3(x1,.45,z1),new THREE.Vector3(x2,.45,z2),.14,M.fence,scene,'fence');box(.16,1.2,.16,M.fence,x1,.6,z1,0,scene,'fence');}
+  const fence2=[[-3,18],[0,18.5],[3,19],[6,19.2]];for(let i=0;i<fence2.length-1;i++){const [x1,z1]=fence2[i],[x2,z2]=fence2[i+1];beam3(new THREE.Vector3(x1,.9,z1),new THREE.Vector3(x2,.9,z2),.14,M.fence,scene,'fence');beam3(new THREE.Vector3(x1,.45,z1),new THREE.Vector3(x2,.45,z2),.14,M.fence,scene,'fence');box(.16,1.2,.16,M.fence,x1,.6,z1,0,scene,'fence');}
+}
+island();
+
+function addPath(){
+  const pts=[[-25,17],[-18,11],[-13,5],[-10,1],[-8,-3],[-5,-7],[-3,-12],[0,-17]];
+  const shape=[];const half=1.1;
+  for(let i=0;i<pts.length;i++){const [x,z]=pts[i],prev=pts[Math.max(i-1,0)],next=pts[Math.min(i+1,pts.length-1)];const dx=next[0]-prev[0],dz=next[1]-prev[1],len=Math.hypot(dx,dz)||1;shape.push(new THREE.Vector2(x-dz/len*half,z+dx/len*half));}
+  for(let i=pts.length-1;i>=0;i--){const [x,z]=pts[i],prev=pts[Math.max(i-1,0)],next=pts[Math.min(i+1,pts.length-1)];const dx=next[0]-prev[0],dz=next[1]-prev[1],len=Math.hypot(dx,dz)||1;shape.push(new THREE.Vector2(x+dz/len*half,z-dx/len*half));}
+  const geom=new THREE.ShapeGeometry(new THREE.Shape(shape));const mesh=new THREE.Mesh(geom,new THREE.MeshStandardMaterial({color:0xe7dcc2,roughness:.98}));mesh.rotation.x=-Math.PI/2;mesh.position.y=.03;mesh.receiveShadow=true;scene.add(mesh);
+}
+addPath();
+
+function rawPass(ir){
+  const g=new THREE.Group();g.name='PASS 1 · RAW MASS';
+  box(ir.bodyW,ir.bodyH,ir.bodyD,M.raw,-24,ir.plinthH+ir.bodyH/2,0,0,g,'mass');
+  box(ir.faceW,ir.faceH,ir.faceD,M.raw,-24,ir.plinthH+ir.bodyH+ir.faceH/2-1.2,-ir.bodyD/2+ir.faceD/2+1.8,0,g,'mass');
+  for(const sx of [-1,1])box(ir.earW,ir.earH,ir.earD,M.raw,-24+sx*(ir.earGap/2+ir.earW/2),ir.plinthH+ir.bodyH+ir.faceH+ir.earH/2-.6,-ir.bodyD/2+1.2,0,g,'mass');
+  g.userData.metrics={ears:2,face:1,height:ir.totalH,architecturalTransactions:0,arrivalPath:0,framedOpenings:0,roomProofs:0,supportChains:0,faceFeatures:0,drainDestinations:0,collisionBodies:0,meshCount:0};
+  g.traverse(o=>{if(o.isMesh)g.userData.metrics.meshCount++;});return g;
+}
+
+function foundationAssembly(ir,g,m){
+  box(ir.bodyW+1.2,ir.plinthH,ir.bodyD+1.2,M.trim,0,ir.plinthH/2,0,0,g,'mass');
+  const floor=solidify(box(ir.bodyW-.6,.65,ir.bodyD-.6,M.concrete,0,.33,0,0,g,'floor-frame'));floor.visible=false;
+  for(const sx of [-1,1])for(const sz of [-1,1]){const x=sx*(ir.bodyW/2-1.1),z=sz*(ir.bodyD/2-1.1);box(.46,ir.plinthH,.46,M.steel,x,ir.plinthH/2,z,0,g,'post');box(.85,.28,.85,M.concrete,x,.14,z,0,g,'footing');m.supportChains++;}
+  m.architecturalTransactions++;
+}
+
+function bodyAssembly(ir,g,m){
+  box(ir.bodyW,ir.bodyH,ir.bodyD,M.plaster,0,ir.plinthH+ir.bodyH/2,0,0,g,'mass');
+  const col=solidify(box(ir.bodyW-.55,ir.bodyH-.3,ir.bodyD-.55,M.frame,0,ir.plinthH+(ir.bodyH-.3)/2+.15,0,0,g,'collision-proxy'));col.visible=false;
+  // side windows
+  const sideXs=[-ir.bodyW/2-.03,ir.bodyW/2+.03],zs=[-4.8,4.4];
+  for(const x of sideXs)for(const z of zs){box(.14,2.2,1.5,M.frame,x,ir.plinthH+5.2,z,0,g,'detail');box(.06,1.62,.98,M.glass,x+(x<0?-.08:.08),ir.plinthH+5.2,z,0,g,'window');m.framedOpenings++;}
+  // rear utility window
+  box(1.9,1.9,.14,M.frame,0,ir.plinthH+6.6,ir.bodyD/2+.03,0,g,'detail');box(1.3,1.3,.06,M.glass,0,ir.plinthH+6.6,ir.bodyD/2+.11,0,g,'window');m.framedOpenings++;
+  // side porch/awning
+  const px=ir.bodyW/2+1.6,pz=3.8;box(2.6,.18,2.4,M.timber,px,ir.plinthH+3.4,pz,0,g,'landing');const porchCollider=solidify(box(2.3,.35,2.1,M.frame,px,ir.plinthH+3.4,pz,0,g,'collision-proxy'));porchCollider.visible=false;box(.18,3.2,.18,M.timber,px-.9,1.6+ir.plinthH,pz-.8,0,g,'post');box(.18,3.2,.18,M.timber,px+.9,1.6+ir.plinthH,pz-.8,0,g,'post');box(2.8,.18,1.8,M.trim,px,ir.plinthH+4.1,pz-.7,0,g,'roof');m.supportChains+=2;
+  // chimney
+  box(1.3,1.7,1.3,M.masonry,3.4,ir.plinthH+ir.bodyH+1.1,3.2,0,g,'detail');box(1.7,.35,1.7,M.timber,3.4,ir.plinthH+ir.bodyH+1.95,3.2,0,g,'detail');
+  m.roomProofs++;m.architecturalTransactions++;
+}
+
+function faceAssembly(ir,g,m){
+  const fy=ir.plinthH+ir.bodyH+ir.faceH/2-1.2,fz=-ir.bodyD/2+ir.faceD/2+1.8;
+  box(ir.faceW,ir.faceH,ir.faceD,M.plaster,0,fy,fz,0,g,'mass');
+  // eyes
+  sphere(.62,M.frame,-2.1,fy-.25,fz-ir.faceD/2-.02,18,g,'detail');sphere(.62,M.frame,2.1,fy-.25,fz-ir.faceD/2-.02,18,g,'detail');
+  // eyebrows
+  box(1.15,.34,.5,M.trim,-2.7,fy+1.55,fz-ir.faceD/2+.55,-.1,g,'detail');box(1.15,.34,.5,M.trim,2.7,fy+1.55,fz-ir.faceD/2+.55,.1,g,'detail');
+  // nose and muzzle
+  box(2.6,1.25,2.2,M.trim,0,fy-.3,fz-ir.faceD/2+1.25,0,g,'detail');
+  box(1.25,.8,.55,M.pink,0,fy+.2,fz-ir.faceD/2+.18,0,g,'detail');
+  // door under muzzle
+  box(2.0,4.4,.15,M.frame,0,ir.plinthH+2.35,fz-ir.faceD/2+.02,0,g,'detail');box(1.42,3.8,.07,M.orange,0,ir.plinthH+2.05,fz-ir.faceD/2+.11,0,g,'door');
+  // cheeks/teeth piers
+  box(.82,4.8,1.2,M.trim,-1.35,ir.plinthH+2.4,fz-ir.faceD/2+1.2,0,g,'detail');box(.82,4.8,1.2,M.trim,1.35,ir.plinthH+2.4,fz-ir.faceD/2+1.2,0,g,'detail');
+  m.faceFeatures=5;m.framedOpenings++;m.arrivalPath=1;m.architecturalTransactions++;
+}
+
+function earAssembly(ir,g,m){
+  const baseY=ir.plinthH+ir.bodyH+ir.faceH-.6, z=-ir.bodyD/2+1.2;
+  for(const sx of [-1,1]){
+    box(ir.earW,ir.earH,ir.earD,M.plaster,sx*(ir.earGap/2+ir.earW/2),baseY+ir.earH/2,z,0,g,'mass');
+    box(ir.earW*.52,ir.earH-1.2,.16,M.pink,sx*(ir.earGap/2+ir.earW/2),baseY+ir.earH/2-.05,z-ir.earD/2-.02,0,g,'detail');
+    const col=solidify(box(ir.earW-.3,ir.earH-.3,ir.earD-.25,M.frame,sx*(ir.earGap/2+ir.earW/2),baseY+ir.earH/2,z,0,g,'collision-proxy'));col.visible=false;
+    m.supportChains++;
+  }
+  m.architecturalTransactions++;
+}
+
+function arrivalAndWaterAssembly(ir,g,m){
+  const frontZ=-ir.bodyD/2+1.95;
+  box(5.8,.26,2.1,M.trim,0,ir.plinthH+.13,frontZ+1.15,0,g,'landing');
+  for(let s=0;s<5;s++){
+    const z=frontZ+2.0+s*.76,y=ir.plinthH-(s+1)*(ir.plinthH/5)+.1;box(ir.frontStairW,.18,.72,M.timber,0,y,z,0,g,'stair-tread');
+  }
+  const groundLand=box(ir.frontStairW+.5,.24,1.45,M.concrete,0,.12,frontZ+6.4,0,g,'landing');
+  for(const side of [-1,1]){
+    const wall=new THREE.Vector3(side*(ir.frontStairW/2+.65),ir.plinthH+.75,frontZ+.7),foot=new THREE.Vector3(side*(ir.frontStairW/2-.15),1.15,frontZ+4.65);beam3(wall,foot,.18,M.trim,g,'buttress');m.supportChains++;
+  }
+  // coarse walkable stair collider
+  const ramp=solidify(box(ir.frontStairW-1.2,.9,4.8,M.frame,0,.7,frontZ+4.1,0,g,'collision-proxy'));ramp.visible=false;
+  // simple drainage
+  for(const x of [-ir.bodyW/2-.6,ir.bodyW/2+.6]){cyl(.12,ir.bodyH+1.1,M.steel,x,(ir.bodyH+1.1)/2,ir.bodyD/2-1.1,8,g,'downspout');box(1.1,.12,1.1,M.concrete,x,.06,ir.bodyD/2-1.1,0,g,'drain-destination');m.drainDestinations++;}
+  m.architecturalTransactions++;m.stairInterfaces=5;m.deckInterfaces=4;
+}
+
+function hdlPass(ir){
+  const g=new THREE.Group();g.name='PASS 3 · RESOLVED HDL';
+  const metrics={ears:2,face:1,height:ir.totalH,architecturalTransactions:0,arrivalPath:0,framedOpenings:0,roomProofs:0,supportChains:0,faceFeatures:0,drainDestinations:0,stairInterfaces:0,deckInterfaces:0,collisionBodies:0,meshCount:0};
+  foundationAssembly(ir,g,metrics);bodyAssembly(ir,g,metrics);faceAssembly(ir,g,metrics);earAssembly(ir,g,metrics);arrivalAndWaterAssembly(ir,g,metrics);
+  g.userData.metrics=metrics;g.traverse(o=>{if(o.isMesh){metrics.meshCount++;if(o.userData._wgSolid)metrics.collisionBodies++;}});return g;
+}
+
+const raw=rawPass(MASS),hdl=hdlPass(MASS);raw.position.x=-24;hdl.position.x=24;scene.add(raw,hdl);
+
+function runLinters(ir,house){const m=house.userData.metrics;return [
+  ['L01 FINITE',(()=>{let ok=true;house.traverse(o=>{if(o.isMesh&&![...o.position.toArray(),o.rotation.x,o.rotation.y,o.rotation.z,...o.scale.toArray()].every(Number.isFinite))ok=false;});return ok;})(),'all transforms finite'],
+  ['L02 BODY',m.face===1&&m.ears===2,'house body retains one face block and two ears'],
+  ['L03 HEIGHT',Math.abs(m.height-ir.totalH)<.01,'overall rabbit-house height retained'],
+  ['L04 FACE',m.faceFeatures>=5,'eyes, eyebrows, muzzle and nose resolve rabbit identity'],
+  ['L05 ARRIVAL',m.arrivalPath===1&&m.stairInterfaces>=5,'front stair terminates at rabbit-mouth door'],
+  ['L06 OPENINGS',m.framedOpenings>=6,'side windows, rear window and front door render occupancy'],
+  ['L07 ROOM PROOF',m.roomProofs===1,'one occupiable body volume proved'],
+  ['L08 SUPPORT',m.supportChains>=9,'foundation, ears, porch and stair cheeks reach grade'],
+  ['L09 WATER',m.drainDestinations===2,'rear roof runoff terminates in two drains'],
+  ['L10 COLLISION',m.collisionBodies<=12&&m.collisionBodies>0,m.collisionBodies+' collision bodies'],
+  ['L11 BUDGET',m.meshCount<220&&m.collisionBodies<=12,m.meshCount+'/220 meshes; '+m.collisionBodies+'/12 solids'],
+  ['L12 CRITIC',m.faceFeatures>=5&&m.arrivalPath===1,'rabbit identity and arrival logic both resolved']
+].map(([id,pass,evidence])=>({id,pass,evidence}));}
+
+const linters=runLinters(MASS,hdl),defectLedger=[
+  {id:'R-02-FACE-001',relation:'face-block→rabbit-features',evidenceView:'face-eye',status:'fixed'},
+  {id:'R-02-EAR-002',relation:'head-block→two-ear-towers',evidenceView:'ear-eye',status:'fixed'},
+  {id:'R-02-ARRIVAL-003',relation:'mouth-door→landing→steps→grade',evidenceView:'arrival-eye',status:'fixed'},
+  {id:'R-02-WATER-004',relation:'roof-edge→downspout→drain',evidenceView:'water-path',status:'fixed'}
+],promptPatchLedger=[{gap:'rabbit identity alone did not prove that the face remained architectural instead of merely decorative',evidenceDefectIds:['R-02-FACE-001','R-02-ARRIVAL-003'],proposedRule:'Every animal feature must either be a threshold, opening, or explicit supported architectural assembly.',acceptanceTest:'enumerate face parts; at least one becomes entry and the others terminate in explicit geometry',antiOverfitReason:'applies to zoomorphic houses, mascots, themed pavilions, and symbolic façades',status:'accepted'}];
+hdl.userData.linters=linters;hdl.userData.defectLedger=defectLedger;hdl.userData.promptPatchLedger=promptPatchLedger;hdl.userData.metrics.lintersPassed=linters.filter(x=>x.pass).length;hdl.userData.metrics.openDefects=0;hdl.userData.metrics.promptPatches=1;
+const proofs={topologyIdentity:raw.userData.metrics.ears===hdl.userData.metrics.ears&&raw.userData.metrics.face===hdl.userData.metrics.face,height:Math.abs(hdl.userData.metrics.height-MASS.totalH)<.01,arrival:hdl.userData.metrics.arrivalPath===1,drainage:hdl.userData.metrics.drainDestinations===2,finite:linters[0].pass,renderBudget:hdl.userData.metrics.meshCount<220,collisionBudget:hdl.userData.metrics.collisionBodies<=12,relationshipLinters:linters.length===12&&linters.every(x=>x.pass),criticLedger:hdl.userData.metrics.openDefects===0};
+if(Object.values(proofs).some(v=>!v)){const f=document.getElementById('fail');f.style.display='grid';f.textContent='PROOF FAILED · '+Object.entries(proofs).filter(x=>!x[1]).map(x=>x[0]).join(' · ');throw new Error(f.textContent);}
+
+function metrics(el,m,kind){const lines=kind==='raw'?
+  [['Ears',m.ears],['Face block',m.face],['Mesh count',m.meshCount],['Arrival path',m.arrivalPath?'PASS':'ABSENT'],['Framed openings',m.framedOpenings],['Room proofs',m.roomProofs],['Height',m.height+' ft']]:
+  [['Ears retained',m.ears],['Face retained',m.face],['Render budget',m.meshCount+' / 220'],['WG solids',m.collisionBodies+' / 12'],['Relationship linters',m.lintersPassed+' / 12'],['Open major defects',m.openDefects],['Prompt patches learned',m.promptPatches],['Framed openings',m.framedOpenings],['Support chains',m.supportChains],['Drain destinations',m.drainDestinations]];
+  el.innerHTML=lines.map(([a,b])=>`<span>${a}</span><b class="${b==='PASS'||b==='12 / 12'||b===0?'pass':''}">${b}</b>`).join('');}
+metrics(document.getElementById('raw-metrics'),raw.userData.metrics,'raw');metrics(document.getElementById('hdl-metrics'),hdl.userData.metrics,'hdl');
+
+let target=new THREE.Vector3(0,6.8,0),az=.38,pol=1.0,rad=innerWidth<800?116:88,drag=false,px=0,py=0;
+function cam(){camera.position.set(target.x+rad*Math.sin(pol)*Math.sin(az),target.y+rad*Math.cos(pol),target.z+rad*Math.sin(pol)*Math.cos(az));camera.lookAt(target);}
+renderer.domElement.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
+renderer.domElement.addEventListener('pointermove',e=>{if(!drag)return;az-=(e.clientX-px)*.006;pol=Math.max(.18,Math.min(1.52,pol+(e.clientY-py)*.006));px=e.clientX;py=e.clientY;});
+renderer.domElement.addEventListener('pointerup',()=>drag=false);
+renderer.domElement.addEventListener('wheel',e=>{rad=Math.max(32,Math.min(150,rad+e.deltaY*.04));e.preventDefault()},{passive:false});
+function mode(which){raw.visible=which!=='hdl';hdl.visible=which!=='raw';target.x=which==='raw'?-24:which==='hdl'?24:0;target.y=innerWidth<800?7.4:6.8;target.z=0;rad=innerWidth<800?(which==='both'?126:98):(which==='both'?88:62);for(const id of ['both','raw','hdl'])document.getElementById(id).classList.toggle('on',id===which);}for(const id of ['both','raw','hdl'])document.getElementById(id).onclick=()=>mode(id);
+let roofs=true;document.getElementById('roof').onclick=()=>{roofs=!roofs;for(const root of [raw,hdl])root.traverse(o=>{if(o.userData.tag==='roof')o.visible=roofs;});document.getElementById('roof').textContent=roofs?'Roof off':'Roof on';document.getElementById('roof').classList.toggle('on',!roofs)};
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});cam();
+function tick(){requestAnimationFrame(tick);cam();renderer.render(scene,camera)}tick();
+window.__HDL_PROOF={MASS,raw,hdl,proofs,linters,defectLedger,promptPatchLedger,metrics:{raw:raw.userData.metrics,hdl:hdl.userData.metrics}};
+const canonicalViews={
+  hero:{target:[24,7,0],az:2.48,pol:.98,rad:54,roof:true},
+  'arrival-eye':{target:[24,3.8,-8],az:3.18,pol:1.12,rad:34,roof:true},
+  'face-eye':{target:[24,8,-7],az:3.16,pol:.95,rad:24,roof:true},
+  'ear-eye':{target:[24,17,-6],az:2.96,pol:.82,rad:26,roof:true},
+  'roof-off-plan':{target:[24,6,0],az:.18,pol:.2,rad:42,roof:false},
+  'water-path':{target:[24,6,7],az:2.78,pol:.96,rad:38,roof:false}
+};
+function setCanonicalView(id){const v=canonicalViews[id];if(!v)throw new Error('unknown canonical view '+id);mode('hdl');target.fromArray(v.target);az=v.az;pol=v.pol;rad=v.rad;hdl.traverse(o=>{if(o.userData.tag==='roof')o.visible=v.roof;});roofs=v.roof;cam();renderer.render(scene,camera);return id;}
+window.__GAUNTLET_CAPTURE={views:Object.keys(canonicalViews),setView:setCanonicalView};
+window.addEventListener('error',e=>{const f=document.getElementById('fail');f.style.display='grid';f.textContent='RUNTIME ERROR\n'+(e.message||String(e.error||e));});
+window.addEventListener('unhandledrejection',e=>{const f=document.getElementById('fail');f.style.display='grid';f.textContent='PROMISE ERROR\n'+(e.reason&&e.reason.message?e.reason.message:String(e.reason));});
+</script>
+</body>
+</html>

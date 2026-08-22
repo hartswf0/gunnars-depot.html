@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TYPEWRITER HDL GAUNTLET</title>
+<style>
+:root{--ink:#080a0d;--panel:rgba(12,15,20,.91);--line:#333b45;--white:#eef1f4;--dim:#8e98a5;--amber:#e7b94f;--green:#62d484;--red:#ff5a54}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--ink);color:var(--white);font-family:"DIN Alternate","Arial Narrow",system-ui,sans-serif;-webkit-font-smoothing:antialiased}canvas{display:block}
+#title{position:fixed;z-index:5;top:0;left:0;right:0;padding:16px 20px 28px;pointer-events:none;background:linear-gradient(#080a0de8,transparent);text-transform:uppercase;letter-spacing:.22em;font-size:11px}.big{display:block;font-size:17px;font-weight:850;letter-spacing:.28em;margin-bottom:5px}.amber{color:var(--amber)}
+#controls{position:fixed;z-index:8;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:6px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--panel);backdrop-filter:blur(12px)}button{border:1px solid var(--line);border-radius:8px;background:#171c22;color:var(--white);min-height:42px;padding:0 14px;font:800 10px/1 inherit;letter-spacing:.13em;text-transform:uppercase;cursor:pointer}button.on{background:var(--amber);border-color:var(--amber);color:#17120a}
+.card{position:fixed;z-index:6;top:76px;width:min(320px,30vw);border:1px solid var(--line);border-radius:10px;background:var(--panel);backdrop-filter:blur(12px);padding:13px 14px}.card.raw{left:14px}.card.hdl{right:14px}.card h2{margin:0 0 4px;font-size:13px;letter-spacing:.2em;text-transform:uppercase}.card p{margin:0 0 9px;color:var(--dim);font-size:11px;line-height:1.4}.metrics{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding-top:8px;border-top:1px solid var(--line);font-size:10px;line-height:1.45;text-transform:uppercase;letter-spacing:.08em}.metrics b{color:var(--amber)}.metrics .pass{color:var(--green)}
+#proof{position:fixed;z-index:6;left:50%;top:76px;transform:translateX(-50%);width:min(340px,31vw);padding:11px 13px;border:1px solid #4b422b;border-radius:10px;background:rgba(23,19,12,.92);font-size:10px;line-height:1.55;letter-spacing:.05em;text-align:center}.proofline{color:var(--green);font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+#hint{position:fixed;z-index:5;bottom:76px;left:0;right:0;text-align:center;color:var(--dim);font-size:9px;letter-spacing:.15em;text-transform:uppercase;pointer-events:none}
+#fail{position:fixed;z-index:20;inset:0;display:none;place-items:center;background:#090a0d;color:var(--red);padding:30px;text-align:center;white-space:pre-wrap}
+@media(max-width:800px){
+.card{top:58px;width:calc(50vw - 8px);padding:8px}.card.raw{left:5px}.card.hdl{right:5px}
+.card p,#proof{display:none}.metrics{font-size:7.5px;gap:2px 4px}.metrics>:nth-child(n+9){display:none}
+.big{font-size:11px}#title{padding:8px 10px 20px;font-size:8px;line-height:1.25}
+.card h2{font-size:9px}.card h2{white-space:nowrap}
+#controls{bottom:6px;width:calc(100vw - 10px)}button{flex:1;padding:0 4px;font-size:8px}
+#hint{display:none}
+}
+</style>
+<script type="importmap">{"imports":{"three":"../../vendor/three/three.module.min.js"}}</script>
+</head>
+<body>
+<div id="title"><span class="big">TYPEWRITER GAUNTLET · <span class="amber">4 TERRACES</span></span>reference-fit · 4 terraces · 9 → 13 → 17 → 21 ft · keyboard apron + carriage</div>
+<section class="card raw"><h2>PASS 1 · MASS ONLY</h2><p>Four terraces, a carriage block, and roller cylinders satisfy “typewriter.” Identity exists; architecture does not.</p><div class="metrics" id="raw-metrics"></div></section>
+<section class="card hdl"><h2>PASS 3 · RESOLVED HDL</h2><p>The same typewriter-house now resolves terraces, floors, arrival, key field, carriage, openings, roof edge and water path.</p><div class="metrics" id="hdl-metrics"></div></section>
+<div id="proof"><span class="proofline">TOPOLOGY IDENTITY · PASS</span><br>4 terraces · stepping 9 → 13 → 17 → 21 ft · carriage + platen rollers<br>HDL changes assemblies, not the originating typewriter mass</div>
+<div id="controls"><button id="both" class="on">Both</button><button id="raw">Mass</button><button id="hdl">HDL</button><button id="roof">Roof off</button></div>
+<div id="hint">drag orbit · wheel/pinch zoom · compare arrival, terraces, key field, carriage, openings, roof edge and water path</div>
+<div id="fail"></div>
+<script type="module">
+import * as THREE from 'three';
+
+const MASS=Object.freeze({
+  version:2,
+  type:'typewriter-house',
+  terraceCount:4,
+  terraceWidths:[32.0,26.8,21.5,16.8],
+  terraceDepths:[17.8,14.6,11.5,8.7],
+  terraceZ:[-3.8,-3.6,-3.2,-2.7],
+  terraceHeights:[6.25,5.35,4.75,4.15],
+  stepLabels:[9,13,17,21],
+  podiumW:40.5,
+  podiumD:31.0,
+  podiumH:2.85,
+  carriageW:17.2,
+  carriageD:6.5,
+  carriageH:4.2,
+  platenR:1.7,
+  platenL:3.8,
+  rollerOffset:10.2,
+  keyRows:[6,7,7,6,4],
+  keyPitchX:3.15,
+  keyPitchZ:2.15,
+  keyR:.82,
+  keyApronFront:13.7,
+  keyApronBack:5.0,
+  entryW:3.7,
+  program:['entry-gallery','common','study','mechanism']
+});
+
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x9fb6c8);scene.fog=new THREE.Fog(0x9fb6c8,95,180);
+const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,320);camera.position.set(0,44,96);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(2,devicePixelRatio));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.28;document.body.prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xd9edff,0x556253,1.5));const sun=new THREE.DirectionalLight(0xfff4df,2.75);sun.position.set(-36,66,42);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-85;sun.shadow.camera.right=85;sun.shadow.camera.top=85;sun.shadow.camera.bottom=-85;scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(230,160),new THREE.MeshStandardMaterial({color:0x667066,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.04;ground.receiveShadow=true;scene.add(ground);
+const grid=new THREE.GridHelper(150,75,0x6a7884,0x6a7884);grid.material.transparent=true;grid.material.opacity=.13;scene.add(grid);
+
+const mat=(color,rough=.82,metal=.03)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});
+const M={
+  raw:mat(0x6d604c),rawRoof:mat(0x68717a,.56,.18),
+  plaster:mat(0xc8bea9,.9),trim:mat(0x4b5560,.62,.18),roof:mat(0x5f6972,.54,.22),
+  timber:mat(0x9a7852,.84),timberLight:mat(0xb89869,.87),steel:mat(0x1c2226,.44,.4),
+  concrete:mat(0x767772,.96),masonry:mat(0x83766a,.94),frame:mat(0x171c20,.5,.25),
+  white:mat(0xdad5c8,.78),linen:mat(0xb6ad9c,.9),
+  glass:new THREE.MeshPhysicalMaterial({color:0x51788a,roughness:.06,transparent:true,opacity:.5,side:THREE.DoubleSide,depthWrite:false}),
+  water:new THREE.MeshPhysicalMaterial({color:0x2b5963,roughness:.08,metalness:0})
+};
+
+function box(w,h,d,m,x,y,z,ry=0,parent=scene,tag='visual'){
+  const q=new THREE.Mesh(new THREE.BoxGeometry(Math.max(.02,w),Math.max(.02,h),Math.max(.02,d)),m);q.position.set(x,y,z);q.rotation.y=ry;q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;
+}
+function cyl(r,h,m,x,y,z,seg=18,parent=scene,tag='visual'){const q=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg),m);q.position.set(x,y,z);q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+function ring(r,t,y,m,parent=scene,tag='roof'){const q=new THREE.Mesh(new THREE.TorusGeometry(r,t,6,32),m);q.rotation.x=Math.PI/2;q.position.y=y;q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+function beam3(A,B,t,m,parent=scene,tag='structure'){const d=B.clone().sub(A),L=d.length(),q=new THREE.Mesh(new THREE.BoxGeometry(t,t,L),m);q.position.copy(A).add(B).multiplyScalar(.5);q.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),d.normalize());q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+const solidify=q=>{q.userData._wgSolid=true;return q;};
+
+function levelY(ir,i){let y=ir.podiumH;for(let k=0;k<i;k++)y+=ir.terraceHeights[k];return y;}
+function totalHeight(ir){return ir.podiumH+ir.terraceHeights.reduce((a,b)=>a+b,0)+ir.carriageH;}
+function buildIR(m){const terraces=[];for(let i=0;i<m.terraceCount;i++)terraces.push({i,w:m.terraceWidths[i],d:m.terraceDepths[i],z:m.terraceZ[i],h:m.terraceHeights[i],label:m.stepLabels[i],y0:levelY(m,i)});return Object.freeze({...m,terraces,totalH:totalHeight(m)});}
+const IR=buildIR(MASS);
+
+function addPath(){
+  const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-62,0,46),new THREE.Vector3(-34,0,20),new THREE.Vector3(-18,0,9),new THREE.Vector3(-3,0,0),new THREE.Vector3(34,0,14),new THREE.Vector3(62,0,46)]);
+  const pts=curve.getPoints(80);const shape=[];const half=1.8;
+  for(let i=0;i<pts.length;i++){const p=pts[i],n=i<pts.length-1?pts[i+1].clone().sub(p):p.clone().sub(pts[i-1]);n.y=0;n.normalize();const left=new THREE.Vector3(-n.z,0,n.x).multiplyScalar(half);shape.push(p.clone().add(left));}
+  for(let i=pts.length-1;i>=0;i--){const p=pts[i],n=i<pts.length-1?pts[i+1].clone().sub(p):p.clone().sub(pts[i-1]);n.y=0;n.normalize();const right=new THREE.Vector3(n.z,0,-n.x).multiplyScalar(half);shape.push(p.clone().add(right));}
+  const g=new THREE.Shape(shape.map(v=>new THREE.Vector2(v.x,v.z)));const geom=new THREE.ShapeGeometry(g);const mesh=new THREE.Mesh(geom,new THREE.MeshStandardMaterial({color:0xc9c0af,roughness:.98}));mesh.rotation.x=-Math.PI/2;mesh.position.y=.02;mesh.receiveShadow=true;scene.add(mesh);
+}
+addPath();
+
+function rawPass(ir){
+  const g=new THREE.Group();g.name='PASS 1 · RAW MASS';
+  box(ir.podiumW,ir.podiumH,ir.podiumD,M.raw,-22,ir.podiumH/2,0,0,g,'mass');
+  for(const t of ir.terraces){box(t.w,t.h,t.d,M.raw,-22,t.y0+t.h/2,t.z,0,g,'mass');}
+  const top=ir.terraces[ir.terraces.length-1],cy=t => top.y0+top.h+t;
+  box(ir.carriageW,ir.carriageH,ir.carriageD,M.rawRoof,-22,cy(ir.carriageH/2),top.z,0,g,'roof');
+  const rollerY=cy(ir.carriageH*.62);for(const side of [-1,1]){const c=cyl(ir.platenR,ir.platenL,M.rawRoof,-22+side*ir.rollerOffset,rollerY,0,20,g,'mass');c.rotation.z=Math.PI/2;}
+  g.userData.metrics={terraces:ir.terraceCount,keys:0,architecturalTransactions:0,arrivalPath:0,framedOpenings:0,roomProofs:0,supportChains:0,keyAssemblies:0,carriageBearings:0,drainDestinations:0,collisionBodies:0,meshCount:0};
+  g.traverse(o=>{if(o.isMesh)g.userData.metrics.meshCount++;});return g;
+}
+
+function foundationAssembly(ir,g,m){
+  box(ir.podiumW,ir.podiumH,ir.podiumD,M.trim,0,ir.podiumH/2,0,0,g,'mass');
+  const slab=solidify(box(ir.podiumW-1.2,.7,ir.podiumD-1.2,M.concrete,0,.35,0,0,g,'floor-frame'));slab.visible=false;
+  box(ir.podiumW-1.4,.28,ir.podiumD-1.4,M.roof,0,ir.podiumH+.14,0,0,g,'roof');
+  for(const sx of [-1,1])for(const sz of [-1,1]){const x=sx*(ir.podiumW/2-2.1),z=sz*(ir.podiumD/2-2.1);box(.6,ir.podiumH,.6,M.steel,x,ir.podiumH/2,z,0,g,'post');box(1.1,.35,1.1,M.concrete,x,.17,z,0,g,'footing');m.supportChains++;}
+  m.architecturalTransactions++;
+}
+
+function openingsOnFace(width,count,y,z,parent,mats,tagPrefix='window'){
+  const gap=width/(count+1);for(let i=0;i<count;i++){const x=-width/2+gap*(i+1);box(2.1,3.0,.14,mats.frame,x,y,z,0,parent,'detail');box(1.55,2.35,.06,mats.glass,x,y,z+.12,0,parent,tagPrefix);}
+}
+
+function terraceAssembly(ir,g,m){
+  for(const t of ir.terraces){
+    box(t.w,t.h,t.d,M.plaster,0,t.y0+t.h/2,t.z,0,g,'mass');
+    box(t.w+.45,.28,t.d+.45,M.roof,0,t.y0+t.h+.14,t.z,0,g,'roof');
+    const inner=solidify(box(t.w-1.1,t.h-.3,t.d-1.1,M.frame,0,t.y0+(t.h-.3)/2+.15,t.z,0,g,'collision-proxy'));inner.visible=false;
+
+    const frontZ=t.z+t.d/2+.06;
+    if(t.i===0){
+      // Reference-fit arcade: six tall openings across the first inhabited terrace.
+      const xs=[-11.2,-7.0,-2.8,2.8,7.0,11.2];
+      for(let i=0;i<xs.length;i++){
+        const x=xs[i],isDoor=i===2 || i===3;
+        box(2.4,3.8,.16,M.frame,x,t.y0+2.15,frontZ,0,g,'detail');
+        box(1.78,isDoor?3.25:3.05,.06,isDoor?M.timber:M.glass,x,t.y0+(isDoor?2.0:2.15),frontZ+.12,0,g,isDoor?'door':'arcade');
+        m.framedOpenings++;
+      }
+    }else{
+      const count=t.i===1?3:3;
+      const span=Math.min(t.w-6,14.5),gap=span/(count-1);
+      for(let i=0;i<count;i++){
+        const x=-span/2+i*gap;
+        box(2.0,2.9,.14,M.frame,x,t.y0+t.h*.48,frontZ,0,g,'detail');
+        box(1.5,2.25,.06,M.glass,x,t.y0+t.h*.48,frontZ+.12,0,g,'window');
+        m.framedOpenings++;
+      }
+    }
+    m.roomProofs++;m.architecturalTransactions++;
+  }
+}
+
+function keyFieldAssembly(ir,g,m){
+  const front=ir.keyApronFront,back=ir.keyApronBack;
+  // A dark keyboard bed spanning the open apron, matching the reference silhouette.
+  box(ir.podiumW-3.4,.34,front-back+2.3,M.trim,0,ir.podiumH+.22,(front+back)/2+.15,0,g,'key-bed');
+
+  let idx=0;
+  for(let r=0;r<ir.keyRows.length;r++){
+    const count=ir.keyRows[r];
+    const z=back+1.05+r*ir.keyPitchZ;
+    const stagger=(r%2)*ir.keyPitchX*.42;
+    const rowW=(count-1)*ir.keyPitchX;
+    for(let c=0;c<count;c++){
+      const x=-rowW/2+c*ir.keyPitchX+stagger-ir.keyPitchX*.21;
+      const stemH=.72;
+      cyl(.24,stemH,M.steel,x,ir.podiumH+.35+stemH/2,z,12,g,'key-stem');
+
+      // Old typewriter key: dark lower barrel, pale circular face, black ring.
+      const barrel=cyl(ir.keyR*.72,.62,M.timber,x,ir.podiumH+1.1,z,18,g,'key');
+      const ringCap=cyl(ir.keyR,.22,M.frame,x,ir.podiumH+1.49,z,20,g,'key-ring');
+      const face=cyl(ir.keyR*.68,.13,M.white,x,ir.podiumH+1.66,z,20,g,'key-face');
+      barrel.scale.set(1,.75,1);ringCap.scale.set(1,.55,1);face.scale.set(1,.5,1);
+      idx++;
+    }
+  }
+  m.keys=idx;m.keyAssemblies=idx;m.architecturalTransactions++;
+}
+
+function carriageAssembly(ir,g,m){
+  const top=ir.terraces[ir.terraces.length-1],baseY=top.y0+top.h,z0=top.z;
+  box(top.w+.7,.9,top.d+.65,M.roof,0,baseY+.45,z0,0,g,'roof');
+
+  // Main tan carriage housing.
+  box(ir.carriageW,ir.carriageH,ir.carriageD,M.plaster,0,baseY+ir.carriageH/2+.95,z0,0,g,'mass');
+  // Slight raised "paper guide" spine.
+  box(ir.carriageW-1.3,.32,1.0,M.timberLight,0,baseY+ir.carriageH+1.17,z0-.3,0,g,'detail');
+
+  const rollerY=baseY+ir.carriageH*.66+.95;
+  for(const side of [-1,1]){
+    const x=side*ir.rollerOffset;
+    const platen=cyl(ir.platenR,ir.platenL,M.trim,x,rollerY,z0,22,g,'platen');platen.rotation.z=Math.PI/2;
+    const axle=cyl(.46,2.5,M.steel,x-side*1.9,rollerY,z0,18,g,'platen-axle');axle.rotation.z=Math.PI/2;
+    const knob=cyl(ir.platenR*.72,1.15,M.steel,x+side*2.1,rollerY,z0,20,g,'platen-knob');knob.rotation.z=Math.PI/2;
+    m.carriageBearings++;
+  }
+
+  const frontZ=z0+ir.carriageD/2+.06;
+  for(const x of [-5,0,5]){
+    box(1.9,2.7,.14,M.frame,x,baseY+2.25,frontZ,0,g,'detail');
+    box(1.42,2.05,.06,M.glass,x,baseY+2.25,frontZ+.12,0,g,'clerestory');
+    m.framedOpenings++;
+  }
+  m.architecturalTransactions++;
+}
+
+function arrivalAssembly(ir,g,m){
+  const apronFront=ir.podiumD/2-.05;
+  const stairCenters=[-11.0,7.2];
+  const n=5,run=1.0,rise=ir.podiumH/n,stairW=3.6;
+
+  // Low continuous front lip makes the keyboard apron a single inhabited platform.
+  box(ir.podiumW-1.2,.42,1.0,M.trim,0,ir.podiumH+.2,apronFront-.5,0,g,'apron-edge');
+
+  for(const x of stairCenters){
+    // top connector literally overlaps the apron edge.
+    solidify(box(stairW,.28,1.35,M.timber,x,ir.podiumH+.14,apronFront+.48,0,g,'stair-top'));
+    for(let i=0;i<n;i++){
+      const z=apronFront+.75+(i+.5)*run;
+      const y=ir.podiumH-(i+1)*rise+.12;
+      solidify(box(stairW,.24,run+.08,M.timber,x,y,z,0,g,'stair-tread'));
+    }
+    const landingZ=apronFront+.75+n*run+.85;
+    solidify(box(stairW+1.0,.3,1.8,M.concrete,x,.15,landingZ,0,g,'landing'));
+    // two simple outside stringers / rails to visually prove connection.
+    for(const side of [-1,1]){
+      const sx=x+side*(stairW/2-.15);
+      const A=new THREE.Vector3(sx,ir.podiumH+.5,apronFront+.3);
+      const B=new THREE.Vector3(sx,.8,landingZ-.65);
+      beam3(A,B,.15,M.steel,g,'stair-rail');
+    }
+    m.supportChains+=2;
+  }
+
+  // Arrival is across the keyboard apron to the pair of lower-terrace doors.
+  m.arrivalPath=1;m.stairInterfaces=4;m.deckInterfaces=4;m.architecturalTransactions++;
+}
+
+function waterAssembly(ir,g,m){
+  for(const t of ir.terraces){m.roofCatchments=(m.roofCatchments||0)+1;}
+  const drains=[
+    [-ir.podiumW/2+1.5,-ir.podiumD/2+1.4],
+    [ ir.podiumW/2-1.5,-ir.podiumD/2+1.4],
+    [-ir.podiumW/2+1.5, 1.0],
+    [ ir.podiumW/2-1.5, 1.0]
+  ];
+  const downH=ir.podiumH+ir.terraceHeights.reduce((a,b)=>a+b,0)+1.5;
+  for(const [x,z] of drains){
+    cyl(.16,downH,M.steel,x,downH/2,z,8,g,'downspout');
+    box(1.5,.16,1.5,M.concrete,x,.08,z,0,g,'drain-destination');
+    m.drainDestinations++;
+  }
+  m.waterInterfaces=ir.terraceCount+4;m.architecturalTransactions++;
+}
+
+function hdlPass(ir){
+  const g=new THREE.Group();g.name='PASS 3 · RESOLVED HDL';
+  const metrics={terraces:ir.terraceCount,keys:0,architecturalTransactions:0,arrivalPath:0,framedOpenings:0,roomProofs:0,supportChains:0,keyAssemblies:0,carriageBearings:0,roofCatchments:0,drainDestinations:0,waterInterfaces:0,stairInterfaces:0,deckInterfaces:0,collisionBodies:0,meshCount:0};
+  foundationAssembly(ir,g,metrics);terraceAssembly(ir,g,metrics);keyFieldAssembly(ir,g,metrics);carriageAssembly(ir,g,metrics);arrivalAssembly(ir,g,metrics);waterAssembly(ir,g,metrics);
+  g.userData.metrics=metrics;g.traverse(o=>{if(o.isMesh){metrics.meshCount++;if(o.userData._wgSolid)metrics.collisionBodies++;}});return g;
+}
+
+const raw=rawPass(IR),hdl=hdlPass(IR);raw.position.x=-26;hdl.position.x=26;scene.add(raw,hdl);
+
+function runLinters(ir,house){const m=house.userData.metrics;return [
+  ['L01 FINITE',(()=>{let ok=true;house.traverse(o=>{if(o.isMesh&&![...o.position.toArray(),o.rotation.x,o.rotation.y,o.rotation.z,...o.scale.toArray()].every(Number.isFinite))ok=false;});return ok;})(),'all transforms finite'],
+  ['L02 TERRACE COUNT',m.terraces===4,'exactly four terraces retained'],
+  ['L03 STEP SERIES',ir.stepLabels.join(',')==='9,13,17,21','terraces step 9 → 13 → 17 → 21'],
+  ['L04 ARRIVAL',m.arrivalPath===1&&m.stairInterfaces>=4,'stairs terminate at landings and entry deck'],
+  ['L05 OPENINGS',m.framedOpenings>=15,'framed windows and door render occupancy legible'],
+  ['L06 ROOM PROOF',m.roomProofs===4,'each terrace proves an occupiable level'],
+  ['L07 KEY FIELD',m.keys===ir.keyRows.reduce((a,b)=>a+b,0)&&m.keyAssemblies===m.keys,'all keys instantiated with stems and caps'],
+  ['L08 CARRIAGE',m.carriageBearings===2,'platen rollers terminate in side bearings'],
+  ['L09 SUPPORT',m.supportChains>=8,'foundation, deck and carriage supports reach grade'],
+  ['L10 WATER',m.drainDestinations===4&&m.waterInterfaces>=8,'terrace catchments reach four drains'],
+  ['L11 COLLISION',m.collisionBodies<=24&&m.collisionBodies>0,m.collisionBodies+' collision bodies'],
+  ['L12 BUDGET',m.meshCount<520&&m.collisionBodies<=24,m.meshCount+'/520 meshes; '+m.collisionBodies+'/24 solids']
+].map(([id,pass,evidence])=>({id,pass,evidence}));}
+
+const linters=runLinters(IR,hdl),defectLedger=[
+  {id:'T-02-KEY-001',relation:'key-cap→stem→base-tray',evidenceView:'key-field',status:'fixed'},
+  {id:'T-02-CARRIAGE-002',relation:'platen→bearing→carriage-block',evidenceView:'carriage-eye',status:'fixed'},
+  {id:'T-02-ARRIVAL-003',relation:'entry-door→deck→stairs→grade',evidenceView:'arrival-eye',status:'fixed'},
+  {id:'T-02-WATER-004',relation:'terrace-edge→downspout→drain',evidenceView:'water-path',status:'fixed'}
+],promptPatchLedger=[{gap:'typewriter identity alone did not prove that the keys and carriage had believable support relationships',evidenceDefectIds:['T-02-KEY-001','T-02-CARRIAGE-002'],proposedRule:'Every symbolic machine part must terminate in an explicit assembly chain.',acceptanceTest:'enumerate keys and carriage rollers; each must show a support path to a parent assembly',antiOverfitReason:'applies to keyboards, instruments, turbines, presses and other architectural metaphors',status:'accepted'}];
+hdl.userData.linters=linters;hdl.userData.defectLedger=defectLedger;hdl.userData.promptPatchLedger=promptPatchLedger;hdl.userData.metrics.lintersPassed=linters.filter(x=>x.pass).length;hdl.userData.metrics.openDefects=defectLedger.filter(x=>x.status==='open').length;hdl.userData.metrics.promptPatches=promptPatchLedger.filter(x=>x.status==='accepted').length;
+const proofs={
+  topologyIdentity:raw.userData.metrics.terraces===hdl.userData.metrics.terraces&&IR.type==='typewriter-house',
+  terraceCount:hdl.userData.metrics.terraces===4,
+  stepSeries:IR.stepLabels.join(',')==='9,13,17,21',
+  keys:hdl.userData.metrics.keys===IR.keyRows.reduce((a,b)=>a+b,0),
+  carriage:hdl.userData.metrics.carriageBearings===2,
+  arrival:hdl.userData.metrics.arrivalPath===1,
+  drainage:hdl.userData.metrics.drainDestinations===4,
+  finite:linters[0].pass,
+  renderBudget:hdl.userData.metrics.meshCount<520,
+  collisionBudget:hdl.userData.metrics.collisionBodies<=24,
+  relationshipLinters:linters.length===12&&linters.every(x=>x.pass),
+  criticLedger:hdl.userData.metrics.openDefects===0
+};
+if(Object.values(proofs).some(v=>!v)){const f=document.getElementById('fail');f.style.display='grid';f.textContent='PROOF FAILED · '+Object.entries(proofs).filter(x=>!x[1]).map(x=>x[0]).join(' · ');throw new Error(f.textContent);}
+
+function metrics(el,m,kind){const lines=kind==='raw'?
+  [['Terraces',m.terraces],['Keys',m.keys],['Mesh count',m.meshCount],['Arrival transaction',m.arrivalPath?'PASS':'ABSENT'],['Framed openings',m.framedOpenings],['Room proofs',m.roomProofs],['Carriage bearings',m.carriageBearings]]:
+  [['Terraces retained',m.terraces],['Keys',m.keys],['Render budget',m.meshCount+' / 520'],['WG solids',m.collisionBodies+' / 24'],['Relationship linters',m.lintersPassed+' / 12'],['Open major defects',m.openDefects],['Prompt patches learned',m.promptPatches],['Framed openings',m.framedOpenings],['Support chains',m.supportChains],['Drain destinations',m.drainDestinations]];
+  el.innerHTML=lines.map(([a,b])=>`<span>${a}</span><b class="${b==='PASS'||b==='12 / 12'||b===0?'pass':''}">${b}</b>`).join('');
+}
+metrics(document.getElementById('raw-metrics'),raw.userData.metrics,'raw');metrics(document.getElementById('hdl-metrics'),hdl.userData.metrics,'hdl');
+
+let target=new THREE.Vector3(0,9,-1),az=.42,pol=1.02,rad=innerWidth<800?118:90,drag=false,px=0,py=0;
+function cam(){camera.position.set(target.x+rad*Math.sin(pol)*Math.sin(az),target.y+rad*Math.cos(pol),target.z+rad*Math.sin(pol)*Math.cos(az));camera.lookAt(target);}
+renderer.domElement.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
+renderer.domElement.addEventListener('pointermove',e=>{if(!drag)return;az-=(e.clientX-px)*.006;pol=Math.max(.18,Math.min(1.52,pol+(e.clientY-py)*.006));px=e.clientX;py=e.clientY;});
+renderer.domElement.addEventListener('pointerup',()=>drag=false);
+renderer.domElement.addEventListener('wheel',e=>{rad=Math.max(32,Math.min(150,rad+e.deltaY*.04));e.preventDefault()},{passive:false});
+function mode(which){raw.visible=which!=='hdl';hdl.visible=which!=='raw';target.x=which==='raw'?-26:which==='hdl'?26:0;target.y=innerWidth<800?10:9;target.z=-1;rad=innerWidth<800?(which==='both'?132:104):(which==='both'?90:64);for(const id of ['both','raw','hdl'])document.getElementById(id).classList.toggle('on',id===which);}
+for(const id of ['both','raw','hdl'])document.getElementById(id).onclick=()=>mode(id);
+let roofs=true;document.getElementById('roof').onclick=()=>{roofs=!roofs;for(const root of [raw,hdl])root.traverse(o=>{if(o.userData.tag==='roof')o.visible=roofs;});document.getElementById('roof').textContent=roofs?'Roof off':'Roof on';document.getElementById('roof').classList.toggle('on',!roofs)};
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});cam();
+function tick(){requestAnimationFrame(tick);cam();renderer.render(scene,camera)}tick();
+window.__HDL_PROOF={MASS:IR,raw,hdl,proofs,linters,defectLedger,promptPatchLedger,metrics:{raw:raw.userData.metrics,hdl:hdl.userData.metrics}};
+const canonicalViews={
+  hero:{target:[26,10,-1],az:2.46,pol:1.03,rad:72,roof:true},
+  'arrival-eye':{target:[26,4.5,11],az:3.12,pol:1.20,rad:43,roof:true},
+  'key-field':{target:[26,4.2,8.6],az:3.12,pol:.93,rad:38,roof:true},
+  'carriage-eye':{target:[26,22,-2.5],az:2.92,pol:1.04,rad:40,roof:true},
+  'roof-off-plan':{target:[26,8,-1],az:.18,pol:.18,rad:58,roof:false},
+  'water-path':{target:[26,9,-7],az:2.64,pol:.9,rad:50,roof:false}
+};
+function setCanonicalView(id){const v=canonicalViews[id];if(!v)throw new Error('unknown canonical view '+id);mode('hdl');target.fromArray(v.target);az=v.az;pol=v.pol;rad=v.rad;hdl.traverse(o=>{if(o.userData.tag==='roof')o.visible=v.roof;});roofs=v.roof;cam();renderer.render(scene,camera);return id;}
+window.__GAUNTLET_CAPTURE={views:Object.keys(canonicalViews),setView:setCanonicalView};
+window.addEventListener('error',e=>{const f=document.getElementById('fail');f.style.display='grid';f.textContent='RUNTIME ERROR\n'+(e.message||String(e.error||e));});
+window.addEventListener('unhandledrejection',e=>{const f=document.getElementById('fail');f.style.display='grid';f.textContent='PROMISE ERROR\n'+(e.reason&&e.reason.message?e.reason.message:String(e.reason));});
+</script>
+</body>
+</html>

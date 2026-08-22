@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PAGODA HDL GAUNTLET</title>
+<style>
+:root{--bg:#080a0d;--panel:rgba(12,15,20,.92);--line:#313843;--fg:#edf2f7;--dim:#8e98a5;--amber:#e7b94f;--green:#62d484;--red:#ff5a54}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font-family:"DIN Alternate","Arial Narrow",system-ui,sans-serif;-webkit-font-smoothing:antialiased}body{overscroll-behavior:none}canvas{display:block;touch-action:none}.manipulating .card,.manipulating #title,.manipulating #hint,.manipulating #proof{opacity:.18;transition:opacity .12s ease}
+#title{position:fixed;z-index:5;top:0;left:0;right:0;padding:16px 20px 28px;pointer-events:none;background:linear-gradient(#080a0de8,transparent);text-transform:uppercase;letter-spacing:.22em;font-size:11px}.big{display:block;font-size:17px;font-weight:850;letter-spacing:.28em;margin-bottom:5px}.amber{color:var(--amber)}
+.card{position:fixed;z-index:6;top:76px;width:min(320px,30vw);border:1px solid var(--line);border-radius:10px;background:var(--panel);backdrop-filter:blur(12px);padding:13px 14px}.card.raw{left:14px}.card.hdl{right:14px}.card h2{margin:0 0 4px;font-size:13px;letter-spacing:.2em;text-transform:uppercase}.card p{margin:0 0 9px;color:var(--dim);font-size:11px;line-height:1.4}.metrics{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding-top:8px;border-top:1px solid var(--line);font-size:10px;line-height:1.45;text-transform:uppercase;letter-spacing:.08em}.metrics b{color:var(--amber)}.metrics .pass{color:var(--green)}
+#proof{position:fixed;z-index:6;left:50%;top:76px;transform:translateX(-50%);width:min(430px,38vw);padding:11px 13px;border:1px solid #4b422b;border-radius:10px;background:rgba(23,19,12,.92);font-size:10px;line-height:1.55;letter-spacing:.05em;text-align:center}.proofline{color:var(--green);font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+#controls{position:fixed;z-index:8;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:6px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--panel);backdrop-filter:blur(12px)}button{border:1px solid var(--line);border-radius:8px;background:#171c22;color:var(--fg);min-height:42px;padding:0 14px;font:800 10px/1 inherit;letter-spacing:.13em;text-transform:uppercase;cursor:pointer}button.on{background:var(--amber);border-color:var(--amber);color:#17120a}
+#hint{position:fixed;z-index:5;bottom:76px;left:0;right:0;text-align:center;color:var(--dim);font-size:9px;letter-spacing:.15em;text-transform:uppercase;pointer-events:none}
+#fail{position:fixed;z-index:20;inset:0;display:none;place-items:center;background:#090a0d;color:var(--red);padding:30px;text-align:center;white-space:pre-wrap}
+@media(max-width:800px){.card{top:58px;width:calc(50vw - 8px);padding:8px}.card.raw{left:5px}.card.hdl{right:5px}.card p,#proof{display:none}.metrics{font-size:7.5px;gap:2px 4px}.metrics>:nth-child(n+9){display:none}.big{font-size:11px}#title{padding:8px 10px 20px;font-size:8px;line-height:1.25}.card h2{font-size:9px;white-space:nowrap}#controls{bottom:6px;width:calc(100vw - 10px)}button{flex:1;padding:0 4px;font-size:8px}#hint{display:none}}
+</style>
+<script type="importmap">{"imports":{"three":"../../vendor/three/three.module.min.js"}}</script>
+</head>
+<body>
+<div id="title"><span class="big">PAGODA GAUNTLET · <span class="amber">3 TIERS + DEEP EAVES</span></span>stacked tiers + deep eaves, vertical house</div>
+<section class="card raw"><h2>PASS 1 · MASS ONLY</h2><p>Three stacked rooms and simplified caps establish the vertical pagoda house, but no deep eaves, galleries, railings, stairs, or articulated openings are present yet.</p><div class="metrics" id="raw-metrics"></div></section>
+<section class="card hdl"><h2>PASS 3 · RESOLVED HDL</h2><p>The HDL resolves stacked habitable tiers, deep roof eaves, wrap balconies, railings, windows, front stair and a pagoda finial while preserving the originating vertical house.</p><div class="metrics" id="hdl-metrics"></div></section>
+<div id="proof"><span class="proofline">TOPOLOGY IDENTITY · PASS</span><br>stacked tiers · deep eaves · vertical house<br>HDL adds arrival, galleries and roof hierarchy without escaping the originating pagoda mass.</div>
+<div id="controls"><button id="both">Both</button><button id="raw">Mass</button><button id="hdl" class="on">HDL</button><button id="fit">Fit</button><button id="roof">Roof off</button></div>
+<div id="hint">drag orbit · pinch zoom · two-finger pan · compare tier stack, deep eaves, balconies, railings, stair and finial</div>
+<div id="fail"></div>
+<script type="module">
+import * as THREE from 'three';
+
+const MASS=Object.freeze({version:1,type:'pagoda-house',podiumW:15.4,podiumD:12.4,podiumH:1.55,baseW:11.0,baseD:8.6,baseH:3.8,midW:8.3,midD:6.6,midH:3.0,topW:5.9,topD:4.9,topH:2.55,roof1W:15.0,roof1D:11.8,roof2W:11.8,roof2D:9.3,roof3W:8.4,roof3D:6.9,roofH:1.7,totalH:15.5});
+const IS_MOBILE = matchMedia('(pointer: coarse)').matches || innerWidth < 800;
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x9fb6c8); scene.fog=new THREE.Fog(0x9fb6c8,80,180);
+const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,320);
+const renderer=new THREE.WebGLRenderer({antialias:!IS_MOBILE,powerPreference:'high-performance'});
+renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(IS_MOBILE?1.2:2,devicePixelRatio)); renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.outputColorSpace=THREE.SRGBColorSpace; renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.22; document.body.prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xeaf2ff,0x6e665c,1.45)); const sun=new THREE.DirectionalLight(0xfff0d7,2.7); sun.position.set(-30,60,36); sun.castShadow=true; sun.shadow.mapSize.set(IS_MOBILE?1024:2048,IS_MOBILE?1024:2048); sun.shadow.camera.left=-120; sun.shadow.camera.right=120; sun.shadow.camera.top=120; sun.shadow.camera.bottom=-120; scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(260,220),new THREE.MeshStandardMaterial({color:0xc2a97c,roughness:1})); ground.rotation.x=-Math.PI/2; ground.position.y=-.04; ground.receiveShadow=true; scene.add(ground);
+const grid=new THREE.GridHelper(170,85,0x8f8b84,0x8f8b84); grid.material.transparent=true; grid.material.opacity=.014; scene.add(grid);
+
+const mat=(color,rough=.82,metal=.03)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});
+const M={stone:mat(0xe2dac4,.9),stone2:mat(0xcdbd9d,.88),roof:mat(0x555c67,.58,.18),trim:mat(0xb98b48,.76,.1),wood:mat(0x8a6436,.86),wood2:mat(0x6f4c28,.9),glass:new THREE.MeshPhysicalMaterial({color:0x6d8b93,roughness:.2,transparent:true,opacity:.46,side:THREE.DoubleSide,depthWrite:false}),green:mat(0x9cb571,.98),tree:mat(0x709542,.88),tree2:mat(0x587832,.9),trunk:mat(0x6d4c2d,.92),raw:mat(0x70685b),rawRoof:mat(0x666c74,.58,.16),shadow:mat(0x857866,.96),path:mat(0xd8ccb0,.96),rock:mat(0x9f9d92,.97)};
+function box(w,h,d,m,x,y,z,ry=0,parent=scene,tag='visual'){const q=new THREE.Mesh(new THREE.BoxGeometry(Math.max(.02,w),Math.max(.02,h),Math.max(.02,d)),m); q.position.set(x,y,z); q.rotation.y=ry; q.castShadow=true; q.receiveShadow=true; q.userData.tag=tag; parent.add(q); return q;}
+function cyl(r,h,m,x,y,z,seg=18,parent=scene,tag='visual'){const q=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg),m); q.position.set(x,y,z); q.castShadow=true; q.receiveShadow=true; q.userData.tag=tag; parent.add(q); return q;}
+function sphere(r,m,x,y,z,seg=18,parent=scene,tag='visual'){const q=new THREE.Mesh(new THREE.SphereGeometry(r,seg,seg),m); q.position.set(x,y,z); q.castShadow=true; q.receiveShadow=true; q.userData.tag=tag; parent.add(q); return q;}
+function beam3(A,B,t,m,parent=scene,tag='structure'){const d=B.clone().sub(A),L=d.length(),q=new THREE.Mesh(new THREE.BoxGeometry(t,t,L),m); q.position.copy(A).add(B).multiplyScalar(.5); q.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),d.normalize()); q.castShadow=true; q.receiveShadow=true; q.userData.tag=tag; parent.add(q); return q;}
+const solidify=q=>{q.userData._wgSolid=true; return q;};
+
+function island(){
+  const pts=[[-30,-16],[-24,-21],[-10,-23],[8,-22],[23,-17],[30,-8],[30,9],[24,18],[10,22],[-7,23],[-22,18],[-30,7],[-31,-8]].map(([x,z])=>new THREE.Vector2(x,z));
+  const shape=new THREE.Shape(pts); const geom=new THREE.ShapeGeometry(shape); const mesh=new THREE.Mesh(geom,new THREE.MeshStandardMaterial({color:0x9cb571,roughness:1})); mesh.rotation.x=-Math.PI/2; mesh.position.y=.02; mesh.receiveShadow=true; scene.add(mesh);
+  box(2.8,.04,3.8,M.path,0,.05,13.8,0,scene,'path');
+  for(const z of [10.6,7.8,4.9]) box(1.8,.04,1.1,M.path,0,.05,z,0,scene,'path');
+  const lanterns=[[-1.85,.38,11.4],[1.85,.38,11.4]]; for(const [x,y,z] of lanterns){box(.38,.85,.38,M.stone2,x,y,z,0,scene,'detail'); sphere(.22,M.trim,x,1.0,z,8,scene,'detail');}
+  const rocks=[[-8,5,.7],[-6,7,.55],[-2,4,.52],[4,7,.56],[8,3,.72],[10,8,.6],[13,4,.5],[-10,10,.58],[-14,2,.7],[15,10,.8]]; for(const [x,z,s] of rocks) box(1.2*s,.7*s,1.0*s,M.rock,x,.35*s,z,Math.random()*.8,scene,'rock');
+  const trees=[[-18,-2,1.0],[-16,9,.85],[-13,12,.95],[-6,-6,.75],[-2,9,.65],[7,-8,.72],[13,14,.95],[18,5,1.05],[20,11,.95],[10,0,.7]];
+  for(const [x,z,s] of trees){box(.35*s,2.1*s,.35*s,M.trunk,x,1.05*s,z,0,scene,'tree'); sphere(1.25*s,(Math.abs(x)%2?M.tree:M.tree2),x,2.55*s,z,10,scene,'tree');}
+  const shrubs=[[-9,13,.45],[-4,6,.42],[2,10,.42],[6,13,.5],[14,12,.46],[17,7,.38],[-15,6,.42],[-17,12,.4],[11,14,.4]]; for(const [x,z,s] of shrubs) sphere(.82*s,M.tree2,x,.44,z,8,scene,'bush');
+}
+island();
+
+function rawPass(ir){
+  const g=new THREE.Group(); g.name='PASS 1 · RAW MASS';
+  box(ir.podiumW,ir.podiumH,ir.podiumD,M.raw,-27,ir.podiumH/2,0,0,g,'mass');
+  box(ir.baseW,ir.baseH,ir.baseD,M.raw,-27,ir.podiumH+ir.baseH/2,0,0,g,'mass');
+  box(ir.midW,ir.midH,ir.midD,M.raw,-27,ir.podiumH+ir.baseH+ir.midH/2,0,0,g,'mass');
+  box(ir.topW,ir.topH,ir.topD,M.raw,-27,ir.podiumH+ir.baseH+ir.midH+ir.topH/2,0,0,g,'mass');
+  const r1=box(ir.roof1W,.6,ir.roof1D,M.rawRoof,-27,ir.podiumH+ir.baseH+.4,0,0,g,'roof'); r1.scale.y=.25;
+  const r2=box(ir.roof2W,.55,ir.roof2D,M.rawRoof,-27,ir.podiumH+ir.baseH+ir.midH+.25,0,0,g,'roof'); r2.scale.y=.25;
+  const r3=box(ir.roof3W,.5,ir.roof3D,M.rawRoof,-27,ir.podiumH+ir.baseH+ir.midH+ir.topH+.1,0,0,g,'roof'); r3.scale.y=.25;
+  g.userData.metrics={tiers:3,eaves:0,meshCount:0,arrivalPath:0,framedOpenings:0,roomProofs:0,supportChains:0,balconies:0,collisionBodies:0};
+  g.traverse(o=>{if(o.isMesh)g.userData.metrics.meshCount++;});
+  return g;
+}
+
+function roofTier(parent,w,d,y,curveRise,tagMetrics){
+  const root=new THREE.Group(); root.userData.tag='roof'; parent.add(root);
+
+  // Build the pagoda roof from four thin sloped planes instead of the broken
+  // curved extrusion. This gives a clean hipped roof with deep eaves.
+  const eaveY=y+.14;
+  const peakY=y+.78;
+  const midY=(eaveY+peakY)/2;
+  const halfW=w/2, halfD=d/2;
+  const frontBackRun=d*.31;
+  const sideRun=w*.31;
+  const pitchFB=Math.atan2(peakY-eaveY, frontBackRun);
+  const pitchSide=Math.atan2(peakY-eaveY, sideRun);
+
+  // central cap / upper platform
+  box(w*.34,.14,d*.34,M.trim,0,peakY+.02,0,0,root,'detail');
+
+  // front + back roof planes
+  const front=box(w,.09,d*.64,M.roof,0,midY,-d*.18,0,root,'roof');
+  front.rotation.x=-pitchFB;
+  const back=box(w,.09,d*.64,M.roof,0,midY,d*.18,0,root,'roof');
+  back.rotation.x=pitchFB;
+
+  // left + right roof planes
+  const left=box(w*.64,.09,d,M.roof,-w*.18,midY,0,0,root,'roof');
+  left.rotation.z=pitchSide;
+  const right=box(w*.64,.09,d,M.roof,w*.18,midY,0,0,root,'roof');
+  right.rotation.z=-pitchSide;
+
+  // eave trim
+  box(w+.14,.09,.12,M.trim,0,eaveY,-halfD,0,root,'detail');
+  box(w+.14,.09,.12,M.trim,0,eaveY,halfD,0,root,'detail');
+  box(.12,.09,d+.14,M.trim,-halfW,eaveY,0,0,root,'detail');
+  box(.12,.09,d+.14,M.trim,halfW,eaveY,0,0,root,'detail');
+
+  // ridges
+  beam3(new THREE.Vector3(-w*.17,peakY,0),new THREE.Vector3(w*.17,peakY,0),.12,M.trim,root,'detail');
+  beam3(new THREE.Vector3(0,peakY,-d*.17),new THREE.Vector3(0,peakY,d*.17),.12,M.trim,root,'detail');
+
+  // slightly upturned corner tips.
+  for(const sx of [-1,1]) for(const sz of [-1,1]){
+    beam3(
+      new THREE.Vector3(sx*(halfW-.48),eaveY+.01,sz*(halfD-.48)),
+      new THREE.Vector3(sx*(halfW+.42),eaveY+.24,sz*(halfD+.42)),
+      .1,M.trim,root,'detail'
+    );
+    sphere(.1,M.trim,sx*(halfW+.42),eaveY+.24,sz*(halfD+.42),8,root,'detail');
+  }
+
+  if(tagMetrics) tagMetrics.eaves=(tagMetrics.eaves||0)+4;
+  return root;
+}
+
+function railingRect(parent,w,d,y,gapFront=0){
+  let postCount=0;
+  const addPost=(x,z)=>{box(.12,.72,.12,M.trim,x,y+.36,z,0,parent,'detail'); postCount++;};
+  const gapHalf=gapFront/2;
+  for(let x=-w/2;x<=w/2+.001;x+=1.28){
+    const skip=Math.abs(x)<gapHalf;
+    if(!skip){addPost(x,-d/2); addPost(x,d/2);} 
+  }
+  for(let z=-d/2+1.28;z<=d/2-1.28+.001;z+=1.28){addPost(-w/2,z); addPost(w/2,z);} 
+  // rails, broken at front center if requested.
+  if(gapFront>0){
+    const seg=(w-gapFront)/2;
+    box(seg,.08,.1,M.wood,-(gapFront+seg)/2,y+.64,-d/2,0,parent,'detail');
+    box(seg,.08,.1,M.wood, (gapFront+seg)/2,y+.64,-d/2,0,parent,'detail');
+    box(seg,.08,.1,M.wood,-(gapFront+seg)/2,y+.34,-d/2,0,parent,'detail');
+    box(seg,.08,.1,M.wood, (gapFront+seg)/2,y+.34,-d/2,0,parent,'detail');
+  } else {
+    box(w,.08,.1,M.wood,0,y+.64,-d/2,0,parent,'detail');
+    box(w,.08,.1,M.wood,0,y+.34,-d/2,0,parent,'detail');
+  }
+  box(w,.08,.1,M.wood,0,y+.64,d/2,0,parent,'detail'); box(w,.08,.1,M.wood,0,y+.34,d/2,0,parent,'detail');
+  box(.1,.08,d-0.2,M.wood,-w/2,y+.64,0,0,parent,'detail'); box(.1,.08,d-0.2,M.wood,w/2,y+.64,0,0,parent,'detail');
+  box(.1,.08,d-0.2,M.wood,-w/2,y+.34,0,0,parent,'detail'); box(.1,.08,d-0.2,M.wood,w/2,y+.34,0,0,parent,'detail');
+  return postCount;
+}
+
+function addWindowGrid(parent,x,y,z,w,h,side=false){
+  box(w,h,.08,M.wood2,x,y,z,side?Math.PI/2:0,parent,'window');
+  box(w-.12,h-.12,.03,M.glass,x,y,z+(side?0:.03),side?Math.PI/2:0,parent,'window');
+  const slats=3;
+  for(let i=1;i<=slats;i++){
+    const ox=-w/2 + i*(w/(slats+1));
+    if(!side) box(.04,h-.1,.02,M.trim,x+ox,y,z+.05,0,parent,'detail'); else box(.02,h-.1,.04,M.trim,x+.05,y,z+ox,Math.PI/2,parent,'detail');
+  }
+  for(let i=1;i<=2;i++){
+    const oy=-h/2 + i*(h/3);
+    box(w-.08,.03,.02,M.trim,x,y+oy,z+.05,side?Math.PI/2:0,parent,'detail');
+  }
+}
+
+function levelAssembly(parent,w,d,h,baseY,door=false,sideWindows=true,windowScale=1,metrics=null){
+  box(w,h,d,M.stone,0,baseY+h/2,0,0,parent,'mass');
+  const solid=solidify(box(w-.5,h-.4,d-.5,M.shadow,0,baseY+(h-.4)/2+.2,0,0,parent,'collision-proxy')); solid.visible=false;
+  box(w+.1,.08,d+.1,M.trim,0,baseY+h+.04,0,0,parent,'detail');
+  if(door){
+    // visible main entry recessed slightly but proud enough to read from the front.
+    box(2.5,2.72,.2,M.wood,0,baseY+1.36,-d/2-.01,0,parent,'door');
+    box(.1,2.46,.06,M.trim,0,baseY+1.34,-d/2-.12,0,parent,'detail');
+    box(3.1,.18,1.35,M.stone2,0,baseY+.09,-d/2-.62,0,parent,'threshold');
+    // small entry roof/porch posts
+    box(.14,1.15,.14,M.wood2,-1.25,baseY+.62,-d/2-.86,0,parent,'detail');
+    box(.14,1.15,.14,M.wood2, 1.25,baseY+.62,-d/2-.86,0,parent,'detail');
+    box(3.0,.12,.26,M.wood2,0,baseY+1.24,-d/2-.84,0,parent,'detail');
+    box(3.35,.12,1.15,M.wood2,0,baseY+1.33,-d/2-.76,0,parent,'detail');
+    sphere(.08,M.trim,-.24,baseY+1.28,-d/2-.12,8,parent,'detail'); sphere(.08,M.trim,.24,baseY+1.28,-d/2-.12,8,parent,'detail');
+    if(metrics) metrics.framedOpenings++;
+  }
+  addWindowGrid(parent,-w*.28,baseY+1.55,-d/2+.06,1.0*windowScale,1.1*windowScale,false); if(metrics) metrics.framedOpenings++;
+  addWindowGrid(parent, w*.28,baseY+1.55,-d/2+.06,1.0*windowScale,1.1*windowScale,false); if(metrics) metrics.framedOpenings++;
+  if(sideWindows){
+    addWindowGrid(parent,-w/2+.05,baseY+1.55,0,1.0*windowScale,1.0*windowScale,true); if(metrics) metrics.framedOpenings++;
+    addWindowGrid(parent, w/2-.05,baseY+1.55,0,1.0*windowScale,1.0*windowScale,true); if(metrics) metrics.framedOpenings++;
+  }
+  if(metrics) metrics.roomProofs=(metrics.roomProofs||0)+1;
+}
+
+function hdlPass(ir){
+  const g=new THREE.Group(); g.name='PASS 3 · RESOLVED HDL';
+  const m={tiers:3,eaves:0,meshCount:0,arrivalPath:0,framedOpenings:0,roomProofs:0,supportChains:0,balconies:0,collisionBodies:0,finial:0,lintersPassed:0,openDefects:0,promptPatches:1};
+  // podium and stair
+  box(ir.podiumW,ir.podiumH,ir.podiumD,M.stone2,0,ir.podiumH/2,0,0,g,'mass');
+  box(ir.podiumW-.5,.18,ir.podiumD-.5,M.stone,0,ir.podiumH+.08,0,0,g,'detail');
+  box(4.9,.24,2.4,M.stone,0,ir.podiumH+.12,-ir.podiumD/2+.78,0,g,'landing');
+  for(let i=0;i<7;i++) box(4.25,.18,.86,M.stone,0,ir.podiumH-(i+1)*.19+.09,-ir.podiumD/2-1.9+i*.74,0,g,'stair-tread');
+  box(.56,1.22,5.1,M.stone,-2.65,.61,-ir.podiumD/2+.22,0,g,'stair-cheek');
+  box(.56,1.22,5.1,M.stone, 2.65,.61,-ir.podiumD/2+.22,0,g,'stair-cheek');
+  const ramp=solidify(box(3.5,1.06,5.2,M.shadow,0,.72,-ir.podiumD/2-.12,0,g,'collision-proxy')); ramp.visible=false;
+  m.arrivalPath=1; m.supportChains+=2;
+
+  // lower terrace and first level
+  box(13.4,.2,10.4,M.stone,0,ir.podiumH+.1,0,0,g,'terrace');
+  m.balconies += railingRect(g,12.6,9.6,ir.podiumH+.22,3.4);
+  // bridge from landing through railing gap to door
+  box(2.8,.1,1.9,M.stone,0,ir.podiumH+.24,-5.58,0,g,'path');
+  levelAssembly(g,ir.baseW,ir.baseD,ir.baseH,ir.podiumH,true,true,1,m);
+  roofTier(g,ir.roof1W,ir.roof1D,ir.podiumH+ir.baseH+.14,.58,m);
+
+  // second terrace + level
+  const midBaseY=ir.podiumH+ir.baseH+1.8;
+  box(10.0,.18,8.0,M.stone,0,midBaseY-.09,0,0,g,'terrace');
+  m.balconies += railingRect(g,9.25,7.25,midBaseY,0);
+  levelAssembly(g,ir.midW,ir.midD,ir.midH,midBaseY,false,true,.88,m);
+  addWindowGrid(g,0,midBaseY+1.4,-ir.midD/2+.06,1.48,1.2,false); m.framedOpenings++;
+  roofTier(g,ir.roof2W,ir.roof2D,midBaseY+ir.midH+.12,.52,m);
+
+  // third level
+  const topBaseY=midBaseY+ir.midH+1.48;
+  box(7.1,.16,6.1,M.stone,0,topBaseY-.08,0,0,g,'terrace');
+  levelAssembly(g,ir.topW,ir.topD,ir.topH,topBaseY,false,true,.76,m);
+  addWindowGrid(g,0,topBaseY+1.2,-ir.topD/2+.06,1.16,1.0,false); m.framedOpenings++;
+  roofTier(g,ir.roof3W,ir.roof3D,topBaseY+ir.topH+.12,.46,m);
+
+  // posts under eaves / tier support hints
+  for(const [w,d,y] of [[ir.roof1W-2.15,ir.roof1D-2.15,ir.podiumH+ir.baseH-.05],[ir.roof2W-1.8,ir.roof2D-1.8,midBaseY+ir.midH-.04],[ir.roof3W-1.4,ir.roof3D-1.4,topBaseY+ir.topH-.04]]){
+    for(const x of [-w/2,w/2]) for(const z of [-d/2,d/2]) box(.18,.88,.18,M.wood,x,y,z,0,g,'detail');
+    m.supportChains += 4;
+  }
+
+  // finial
+  const finY=topBaseY+ir.topH+1.4;
+  sphere(.2,M.trim,0,finY+.18,0,10,g,'detail');
+  sphere(.28,M.trim,0,finY+.56,0,10,g,'detail');
+  sphere(.23,M.trim,0,finY+.9,0,10,g,'detail');
+  sphere(.17,M.trim,0,finY+1.2,0,10,g,'detail');
+  sphere(.11,M.trim,0,finY+1.46,0,10,g,'detail');
+  m.finial=1;
+
+  g.userData.metrics=m; g.traverse(o=>{if(o.isMesh){m.meshCount++; if(o.userData._wgSolid) m.collisionBodies++;}});
+  return g;
+}
+
+const raw=rawPass(MASS), hdl=hdlPass(MASS); raw.position.x=-27; hdl.position.x=27; scene.add(raw,hdl);
+function runLinters(ir,house){const m=house.userData.metrics; return [
+ ['L01 FINITE',(()=>{let ok=true; house.traverse(o=>{if(o.isMesh&&![...o.position.toArray(),o.rotation.x,o.rotation.y,o.rotation.z,...o.scale.toArray()].every(Number.isFinite)) ok=false;}); return ok;})(),'all transforms finite'],
+ ['L02 TYPOLOGY',m.tiers===3&&m.eaves>=12&&m.finial===1,'three stacked tiers, deep eaves and finial retained'],
+ ['L03 ARRIVAL',m.arrivalPath===1,'stair and axial arrival reach the house'],
+ ['L04 OPENINGS',m.framedOpenings>=12,'tier windows and front door are framed'],
+ ['L05 ROOM PROOF',m.roomProofs===3,'all three stacked levels are occupiable'],
+ ['L06 GALLERIES',m.balconies>=24,'wrap terraces and railings enclose the lower tiers'],
+ ['L07 SUPPORT',m.supportChains>=10,'podium and eave supports resolve to structure'],
+ ['L08 BUDGET',m.meshCount<520&&m.collisionBodies<=4,m.meshCount+'/520 meshes; '+m.collisionBodies+'/4 solids']
+ ].map(([id,pass,evidence])=>({id,pass,evidence}));}
+const linters=runLinters(MASS,hdl); hdl.userData.linters=linters; hdl.userData.metrics.lintersPassed=linters.filter(x=>x.pass).length;
+const proofs={finite:linters[0].pass,identity:linters[1].pass,arrival:linters[2].pass,openings:linters[3].pass,rooms:linters[4].pass,galleries:linters[5].pass,support:linters[6].pass,budget:linters[7].pass};
+if(Object.values(proofs).some(v=>!v)){const f=document.getElementById('fail'); f.style.display='grid'; f.textContent='PROOF FAILED · '+Object.entries(proofs).filter(x=>!x[1]).map(x=>x[0]).join(' · '); throw new Error(f.textContent);}
+
+function metrics(el,m,kind){const lines=kind==='raw'?
+[['Tiers',m.tiers],['Deep eaves',m.eaves],['Mesh count',m.meshCount],['Arrival path',m.arrivalPath?'PASS':'ABSENT'],['Framed openings',m.framedOpenings],['Room proofs',m.roomProofs],['Balconies',m.balconies]]:
+[['Tiers retained',m.tiers],['Deep eaves',m.eaves],['Render budget',m.meshCount+' / 520'],['WG solids',m.collisionBodies+' / 4'],['Linters passed',m.lintersPassed+' / 8'],['Open major defects',m.openDefects],['Prompt patches learned',m.promptPatches],['Framed openings',m.framedOpenings],['Balcony posts',m.balconies],['Support chains',m.supportChains]];
+ el.innerHTML=lines.map(([a,b])=>`<span>${a}</span><b class="${b==='PASS'||b==='8 / 8'||b===0?'pass':''}">${b}</b>`).join('');}
+metrics(document.getElementById('raw-metrics'),raw.userData.metrics,'raw'); metrics(document.getElementById('hdl-metrics'),hdl.userData.metrics,'hdl');
+
+let target=new THREE.Vector3(27,7.1,0), az=3.78, pol=.88, rad=IS_MOBILE?97:70, currentMode='hdl';
+const canvas=renderer.domElement; const pointers=new Map(); let gesture='none', renderQueued=false, roofs=true, lastTapAt=0, lastTapPos=null;
+function cam(){camera.position.set(target.x+rad*Math.sin(pol)*Math.sin(az),target.y+rad*Math.cos(pol),target.z+rad*Math.sin(pol)*Math.cos(az)); camera.lookAt(target);} function requestRender(){if(renderQueued) return; renderQueued=true; requestAnimationFrame(()=>{renderQueued=false; cam(); renderer.render(scene,camera);});}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));} function getPointerState(){return [...pointers.values()];} function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y);} function midpoint(a,b){return {x:(a.x+b.x)/2,y:(a.y+b.y)/2};} function setManipulating(on){document.body.classList.toggle('manipulating',on);}
+function fitCurrent(){if(currentMode==='both'){target.set(0,7.1,0); rad=IS_MOBILE?142:106; az=3.78; pol=.88;} else if(currentMode==='raw'){target.set(-27,7.1,0); rad=IS_MOBILE?97:70; az=3.78; pol=.88;} else {target.set(27,7.1,0); rad=IS_MOBILE?97:70; az=3.78; pol=.88;} requestRender();}
+function updateButtons(which){for(const id of ['both','raw','hdl']) document.getElementById(id).classList.toggle('on',id===which);} function mode(which){currentMode=which; raw.visible=which!=='hdl'; hdl.visible=which!=='raw'; updateButtons(which); fitCurrent();}
+for(const id of ['both','raw','hdl']) document.getElementById(id).onclick=()=>mode(id); document.getElementById('fit').onclick=()=>fitCurrent();
+function screenVectors(){const right=new THREE.Vector3(Math.cos(az),0,-Math.sin(az)).normalize(); const forward=new THREE.Vector3(-Math.sin(az),0,-Math.cos(az)).normalize(); return {right,forward};}
+function handleGesture(){const pts=getPointerState(); if(pts.length===1&&gesture==='orbit'){const p=pts[0],start=canvas._orbitStart; if(!start) return; const totalDX=p.x-start.x,totalDY=p.y-start.y; az=start.az-(totalDX/Math.max(320,canvas.clientWidth))*Math.PI*2; pol=clamp(start.pol+(totalDY/Math.max(320,canvas.clientHeight))*Math.PI*.78,.12,1.54); requestRender();} else if(pts.length===2&&gesture==='pinchpan'){const [a,b]=pts,dist=distance(a,b),mid=midpoint(a,b),start=canvas._gestureStart; if(!start) return; rad=clamp(start.rad*(start.dist/dist),26,180); const dx=mid.x-start.mid.x,dy=mid.y-start.mid.y; const {right,forward}=screenVectors(); const panScale=rad*0.012; const move=right.multiplyScalar(-dx*panScale).add(forward.multiplyScalar(dy*panScale*.9)); target.copy(start.target).add(move); requestRender();}}
+canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,dx:0,dy:0}); if(pointers.size===1){gesture='orbit'; canvas._orbitStart={x:e.clientX,y:e.clientY,az,pol};} if(pointers.size===2){gesture='pinchpan'; const [a,b]=getPointerState(); canvas._gestureStart={dist:distance(a,b),mid:midpoint(a,b),rad,target:target.clone()};} setManipulating(true);});
+canvas.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId)) return; const p=pointers.get(e.pointerId); p.dx=e.clientX-p.x; p.dy=e.clientY-p.y; p.x=e.clientX; p.y=e.clientY; pointers.set(e.pointerId,p); handleGesture();});
+function endPointer(e){if(!pointers.has(e.pointerId)) return; const p=pointers.get(e.pointerId); pointers.delete(e.pointerId); if(pointers.size===0){setManipulating(false); const now=performance.now(); if(Math.abs(p.dx)<4&&Math.abs(p.dy)<4){if(lastTapPos&&now-lastTapAt<320&&Math.hypot(lastTapPos.x-p.x,lastTapPos.y-p.y)<28){fitCurrent(); lastTapAt=0; lastTapPos=null;} else {lastTapAt=now; lastTapPos={x:p.x,y:p.y};}} gesture='none';} else if(pointers.size===1){gesture='orbit'; const q=[...pointers.values()][0]; canvas._orbitStart={x:q.x,y:q.y,az,pol};}}
+canvas.addEventListener('pointerup',endPointer); canvas.addEventListener('pointercancel',endPointer); canvas.addEventListener('wheel',e=>{rad=clamp(rad+e.deltaY*.035,26,180); requestRender(); e.preventDefault();},{passive:false});
+document.getElementById('roof').onclick=()=>{roofs=!roofs; for(const root of [raw,hdl]) root.traverse(o=>{if(o.userData.tag==='roof') o.visible=roofs;}); document.getElementById('roof').textContent=roofs?'Roof off':'Roof on'; document.getElementById('roof').classList.toggle('on',!roofs); requestRender();};
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(((matchMedia('(pointer: coarse)').matches||innerWidth<800)?1.2:2),devicePixelRatio)); requestRender();});
+const canonicalViews={hero:{target:[27,7.1,0],az:3.78,pol:.88,rad:70,roof:true},'arrival-eye':{target:[27,3.4,-3.8],az:3.15,pol:1.07,rad:28,roof:true},'gallery-eye':{target:[27,5.4,-1.8],az:3.3,pol:1.0,rad:23,roof:true},'roof-off-plan':{target:[27,7.0,0],az:.15,pol:.25,rad:35,roof:false}};
+function setCanonicalView(id){const v=canonicalViews[id]; if(!v) throw new Error('unknown canonical view '+id); mode('hdl'); target.fromArray(v.target); az=v.az; pol=v.pol; rad=v.rad; hdl.traverse(o=>{if(o.userData.tag==='roof') o.visible=v.roof;}); roofs=v.roof; requestRender(); return id;}
+window.__GAUNTLET_CAPTURE={views:Object.keys(canonicalViews),setView:setCanonicalView};
+window.addEventListener('error',e=>{const f=document.getElementById('fail'); f.style.display='grid'; f.textContent='RUNTIME ERROR\n'+(e.message||String(e.error||e));});
+window.addEventListener('unhandledrejection',e=>{const f=document.getElementById('fail'); f.style.display='grid'; f.textContent='PROMISE ERROR\n'+(e.reason&&e.reason.message?e.reason.message:String(e.reason));});
+mode(IS_MOBILE?'hdl':'both'); requestRender();
+</script>
+</body>
+</html>

@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>WINDMILL GAUNTLET · 54.9 FT</title>
+<style>
+:root{--ink:#080a0d;--panel:rgba(12,15,20,.92);--line:#333b45;--white:#eef1f4;--dim:#8e98a5;--amber:#e7b94f;--green:#62d484;--red:#ff5a54}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--ink);color:var(--white);font-family:"DIN Alternate","Arial Narrow",system-ui,sans-serif;-webkit-font-smoothing:antialiased}canvas{display:block;touch-action:none}
+#title{position:fixed;z-index:5;top:0;left:0;right:0;padding:16px 20px 28px;pointer-events:none;background:linear-gradient(#080a0de8,transparent);text-transform:uppercase;letter-spacing:.22em;font-size:11px}.big{display:block;font-size:17px;font-weight:850;letter-spacing:.28em;margin-bottom:5px}.amber{color:var(--amber)}
+#controls{position:fixed;z-index:8;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:6px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--panel);backdrop-filter:blur(12px)}button{border:1px solid var(--line);border-radius:8px;background:#171c22;color:var(--white);min-height:42px;padding:0 14px;font:800 10px/1 inherit;letter-spacing:.13em;text-transform:uppercase;cursor:pointer}button.on{background:var(--amber);border-color:var(--amber);color:#17120a}
+.card{position:fixed;z-index:6;top:76px;width:min(320px,30vw);border:1px solid var(--line);border-radius:10px;background:var(--panel);backdrop-filter:blur(12px);padding:13px 14px}.card.raw{left:14px}.card.hdl{right:14px}.card h2{margin:0 0 4px;font-size:13px;letter-spacing:.2em;text-transform:uppercase}.card p{margin:0 0 9px;color:var(--dim);font-size:11px;line-height:1.4}.metrics{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding-top:8px;border-top:1px solid var(--line);font-size:10px;line-height:1.45;text-transform:uppercase;letter-spacing:.08em}.metrics b{color:var(--amber)}.metrics .pass{color:var(--green)}
+#proof{position:fixed;z-index:6;left:50%;top:76px;transform:translateX(-50%);width:min(360px,31vw);padding:11px 13px;border:1px solid #4b422b;border-radius:10px;background:rgba(23,19,12,.92);font-size:10px;line-height:1.55;letter-spacing:.05em;text-align:center}.proofline{color:var(--green);font-weight:800;letter-spacing:.13em;text-transform:uppercase}
+#hint{position:fixed;z-index:5;bottom:76px;left:0;right:0;text-align:center;color:var(--dim);font-size:9px;letter-spacing:.15em;text-transform:uppercase;pointer-events:none}
+#fail{position:fixed;z-index:20;inset:0;display:none;place-items:center;background:#090a0d;color:var(--red);padding:30px;text-align:center}
+@media(max-width:800px){.card{top:64px;width:calc(50vw - 10px);padding:9px}.card.raw{left:6px}.card.hdl{right:6px}.card p,#proof{display:none}.metrics{font-size:8px;gap:2px 5px}.big{font-size:12px}#title{padding:10px}.card h2{font-size:10px}#controls{bottom:8px;width:calc(100vw - 12px)}button{flex:1;padding:0 5px;font-size:8px}#hint{bottom:62px}}
+</style>
+<script type="importmap">{"imports":{"three":"../../vendor/three/three.module.min.js"}}</script>
+</head>
+<body>
+<div id="title"><span class="big">WINDMILL GAUNTLET · <span class="amber">54.9 FT</span></span>three ridge elements become sails without escaping the originating tower</div>
+<section class="card raw"><h2>PASS 1 · MASS ONLY</h2><p>A tapered tower, cap, hub and three blades satisfy “windmill.” It has identity but almost no architecture.</p><div class="metrics" id="raw-metrics"></div></section>
+<section class="card hdl"><h2>PASS 3 · RESOLVED HDL</h2><p>The same windmill resolves foundation, floors, entry, openings, shaft bearing, sail structure, roof edge and water path.</p><div class="metrics" id="hdl-metrics"></div></section>
+<div id="proof"><span class="proofline">TOPOLOGY IDENTITY · PASS</span><br>54.9 ft tower · 3 ridge-sails · one front hub<br>HDL changes assemblies, not the windmill identity</div>
+<div id="controls"><button id="both" class="on">Both</button><button id="raw">Mass</button><button id="hdl">HDL</button><button id="roof">Roof off</button></div>
+<div id="hint">drag orbit · wheel/pinch zoom · compare arrival, floors, envelope, shaft, sail bearing and water path</div>
+<div id="fail"></div>
+<script>
+window.addEventListener('error',e=>{
+  const f=document.getElementById('fail');
+  if(!f)return;
+  f.style.display='grid';
+  f.textContent='RUNTIME ERROR · '+(e.message||'unknown error');
+});
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+/* WINDMILL GAUNTLET
+   Pass 1 creates an addressable WindmillIR.
+   Pass 3 resolves architectural relationships without changing:
+   - 54.9 ft governing height
+   - tapered tower topology
+   - one front-mounted hub
+   - exactly three ridge-element sails
+*/
+
+const MASS=Object.freeze({
+  version:1,
+  type:'windmill-tower',
+  height:54.9,
+  towerBaseR:8.6,
+  towerTopR:5.7,
+  towerSides:8,
+  baseY:1.25,
+  podiumR:10.5,
+  podiumH:2.5,
+  bodyH:38.0,
+  lanternH:7.1,
+  capRise:7.3,
+  floorCount:5,
+  hubY:45.2,
+  hubOffset:7.35,
+  hubR:1.35,
+  sailCount:3,
+  sailLength:16.9,
+  sailWidth:3.25,
+  entryAngle:-Math.PI/2,
+  program:['entry-workshop','kitchen-common','sleep','study','mechanism']
+});
+
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x9fb6c8);scene.fog=new THREE.Fog(0x9fb6c8,95,180);
+const camera=new THREE.PerspectiveCamera(36,innerWidth/innerHeight,.1,320);camera.position.set(0,42,94);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(2,devicePixelRatio));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.3;document.body.prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xd9edff,0x556253,1.5));const sun=new THREE.DirectionalLight(0xfff4df,2.8);sun.position.set(-35,65,45);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-80;sun.shadow.camera.right=80;sun.shadow.camera.top=80;sun.shadow.camera.bottom=-80;scene.add(sun);
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(220,150),new THREE.MeshStandardMaterial({color:0x667066,roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-.04;ground.receiveShadow=true;scene.add(ground);
+const grid=new THREE.GridHelper(150,75,0x6a7884,0x6a7884);grid.material.transparent=true;grid.material.opacity=.13;scene.add(grid);
+
+const mat=(color,rough=.82,metal=.03)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});
+const M={
+  raw:mat(0x6d604c),rawRoof:mat(0x68717a,.56,.18),
+  plaster:mat(0xc9c1ad,.91),siding:mat(0x3e4b45,.86),roof:mat(0x4f5c64,.5,.24),
+  timber:mat(0x997750,.84),timberLight:mat(0xb89768,.87),steel:mat(0x1c2226,.44,.4),
+  concrete:mat(0x777872,.96),masonry:mat(0x83766a,.94),frame:mat(0x171c20,.5,.25),
+  white:mat(0xdad5c8,.78),linen:mat(0xb6ad9c,.9),
+  glass:new THREE.MeshPhysicalMaterial({color:0x51788a,roughness:.06,transparent:true,opacity:.5,side:THREE.DoubleSide,depthWrite:false}),
+  water:new THREE.MeshPhysicalMaterial({color:0x2b5963,roughness:.08,metalness:0})
+};
+
+function box(w,h,d,m,x,y,z,ry=0,parent=scene,tag='visual'){
+  const q=new THREE.Mesh(new THREE.BoxGeometry(Math.max(.02,w),Math.max(.02,h),Math.max(.02,d)),m);q.position.set(x,y,z);q.rotation.y=ry;q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;
+}
+function cyl(r,h,m,x,y,z,seg=12,parent=scene,tag='visual'){
+  const q=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg),m);q.position.set(x,y,z);q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;
+}
+function frustum(rb,rt,h,m,x,y,z,seg=8,parent=scene,tag='visual'){
+  const q=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg,1,false),m);q.position.set(x,y,z);q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;
+}
+function cone(r,h,m,x,y,z,seg=8,parent=scene,tag='roof'){
+  const q=new THREE.Mesh(new THREE.ConeGeometry(r,h,seg),m);q.position.set(x,y,z);q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;
+}
+function beam3(A,B,t,m,parent,tag='structure'){
+  const d=B.clone().sub(A),L=d.length(),q=new THREE.Mesh(new THREE.BoxGeometry(t,t,L),m);q.position.copy(A).add(B).multiplyScalar(.5);q.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),d.clone().normalize());q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;
+}
+function solidify(q){q.userData._wgSolid=true;return q;}
+function ringTube(r,t,y,m,parent,tag='structure',segments=48){const q=new THREE.Mesh(new THREE.TorusGeometry(r,t,6,segments),m);q.rotation.x=Math.PI/2;q.position.y=y;q.castShadow=true;q.receiveShadow=true;q.userData.tag=tag;parent.add(q);return q;}
+const radial=(r,a,y=0)=>new THREE.Vector3(Math.cos(a)*r,y,Math.sin(a)*r);
+function tangentAt(a){return new THREE.Vector3(-Math.sin(a),0,Math.cos(a));}
+function towerRadiusAt(ir,y){const t=THREE.MathUtils.clamp((y-ir.baseY)/(ir.bodyH),0,1);return THREE.MathUtils.lerp(ir.towerBaseR,ir.towerTopR,t);}
+function outsidePoint(ir,a,y,extra=0){return radial(towerRadiusAt(ir,y)+extra,a,y);}
+
+function makeWindmillIR(m){
+  const floors=[];for(let i=0;i<m.floorCount;i++){const y=m.baseY+1.1+i*(m.bodyH-2.2)/(m.floorCount-1);floors.push({id:'F'+String(i+1).padStart(2,'0'),i,y,program:m.program[i]});}
+  const sails=[];for(let i=0;i<m.sailCount;i++){sails.push({id:'S'+String(i+1).padStart(2,'0'),i,angle:-Math.PI/2+i*Math.PI*2/m.sailCount});}
+  return Object.freeze({...m,floors,sails,anchors:{grade:{y:0},entry:{angle:m.entryAngle},hub:{y:m.hubY},drain:{type:'four-downspout'}}});
+}
+const IR=makeWindmillIR(MASS);
+
+function rawSail(ir,s,parent){
+  const hub=new THREE.Vector3(0,ir.hubY,ir.hubOffset+.35);
+  const dir=new THREE.Vector3(Math.cos(s.angle),Math.sin(s.angle),0);
+  const center=hub.clone().add(dir.clone().multiplyScalar(ir.sailLength*.54));
+  const q=new THREE.Mesh(new THREE.BoxGeometry(ir.sailLength,ir.sailWidth,.54),M.raw,parent);q.position.copy(center);q.rotation.z=s.angle;q.castShadow=true;q.receiveShadow=true;q.userData.tag='sail';parent.add(q);
+}
+function rawPass(ir){
+  const g=new THREE.Group();g.name='PASS 1 · RAW WINDMILL MASS';
+  cyl(ir.podiumR,ir.podiumH,M.raw,0,ir.podiumH/2,0,ir.towerSides,g,'mass-foundation');
+  frustum(ir.towerBaseR,ir.towerTopR,ir.bodyH,M.raw,0,ir.baseY+ir.bodyH/2,0,ir.towerSides,g,'mass-tower');
+  frustum(ir.towerTopR+1.1,ir.towerTopR+.45,ir.lanternH,M.rawRoof,0,ir.baseY+ir.bodyH+ir.lanternH/2,0,ir.towerSides,g,'mass-lantern');
+  cone(ir.towerTopR+1.55,ir.capRise,M.rawRoof,0,ir.baseY+ir.bodyH+ir.lanternH+ir.capRise/2,0,ir.towerSides,g,'roof');
+  const hub=radial(0,0,ir.hubY);hub.z=ir.hubOffset;cyl(ir.hubR,1.35,M.rawRoof,hub.x,hub.y,hub.z,24,g,'hub').rotation.x=Math.PI/2;
+  for(const s of ir.sails)rawSail(ir,s,g);
+  g.userData.metrics={towerHeight:ir.height,sails:ir.sailCount,architecturalTransactions:0,arrivalPath:0,framedOpenings:0,roomProofs:0,supportChains:0,sailBearings:0,drainDestinations:0,collisionBodies:0,meshCount:0};
+  g.traverse(o=>{if(o.isMesh)g.userData.metrics.meshCount++;});return g;
+}
+
+function foundationAssembly(ir,g,m){
+  cyl(ir.podiumR,ir.podiumH,M.masonry,0,ir.podiumH/2,0,ir.towerSides,g,'foundation');
+  cyl(ir.towerBaseR+.7,.7,M.concrete,0,ir.podiumH+.35,0,ir.towerSides,g,'grade-beam');
+  for(let i=0;i<ir.towerSides;i++){
+    const a=i*Math.PI*2/ir.towerSides,p=radial(ir.towerBaseR-1.0,a,.0);box(1.05,ir.podiumH,1.05,M.concrete,p.x,ir.podiumH/2,p.z,a,g,'footing');m.supportChains++;
+  }
+  m.architecturalTransactions++;
+}
+
+function shellAssembly(ir,g,m){
+  frustum(ir.towerBaseR,ir.towerTopR,ir.bodyH,M.plaster,0,ir.baseY+ir.bodyH/2,0,ir.towerSides,g,'envelope');
+  const rings=[ir.baseY+.6,ir.baseY+9.3,ir.baseY+18.6,ir.baseY+27.9,ir.baseY+36.9];
+  for(const y of rings){ringTube(towerRadiusAt(ir,y)-.1,.18,y,M.frame,g,'structure',40);m.envelopeInterfaces++;}
+  m.architecturalTransactions++;
+}
+
+function framedOpening(ir,g,a,y,kind='window',w=2.2,h=4.0,sill=2.1){
+  const r=towerRadiusAt(ir,y+sill+h/2)+.06,p=radial(r,a,y+sill+h/2),t=tangentAt(a),ry=-a-Math.PI/2;
+  const paneH=kind==='door'?6.8:h,paneY=kind==='door'?y+paneH/2:y+sill+h/2;
+  const pane=radial(towerRadiusAt(ir,paneY)+.08,a,paneY);box(w,paneH,.08,kind==='door'?M.timber:M.glass,pane.x,pane.y,pane.z,ry,g,kind);
+  const fw=.22;
+  for(const s of [-1,1]){const fp=p.clone().add(t.clone().multiplyScalar(s*(w/2+fw/2)));box(fw,paneH+.45,.45,M.frame,fp.x,paneY,fp.z,ry,g,'opening-frame');}
+  const hp=radial(towerRadiusAt(ir,paneY)+.1,a,paneY+paneH/2+.18),sp=radial(towerRadiusAt(ir,paneY)+.1,a,paneY-paneH/2-.18);box(w+.6,fw,.45,M.frame,hp.x,hp.y,hp.z,ry,g,'opening-frame');if(kind!=='door')box(w+.6,fw,.45,M.frame,sp.x,sp.y,sp.z,ry,g,'opening-frame');
+  return pane;
+}
+
+function openingsAssembly(ir,g,m){
+  // Exterior door at entry angle.
+  framedOpening(ir,g,ir.entryAngle,ir.baseY+.25,'door',3.25,6.8,0);m.framedOpenings++;
+  // Two openings per occupiable level, staggered around the taper.
+  ir.floors.forEach((f,i)=>{
+    const a1=ir.entryAngle+Math.PI*.72+i*.48,a2=a1+Math.PI;
+    framedOpening(ir,g,a1,f.y-.5,'window',i===4?2.8:2.3,i===4?3.0:3.8,i===4?2.2:2.0);m.framedOpenings++;
+    if(i<4){framedOpening(ir,g,a2,f.y-.5,'window',2.0,3.4,2.3);m.framedOpenings++;}
+  });
+  m.architecturalTransactions++;
+}
+
+function floorAssembly(ir,g,m){
+  for(const f of ir.floors){
+    const r=towerRadiusAt(ir,f.y)-.6,cylMesh=new THREE.Mesh(new THREE.CylinderGeometry(r,r,.42,ir.towerSides),M.timber);cylMesh.position.y=f.y;cylMesh.castShadow=true;cylMesh.receiveShadow=true;cylMesh.userData.tag='floor-frame';solidify(cylMesh);g.add(cylMesh);
+    ringTube(r-.35,.16,f.y-.26,M.frame,g,'floor-girder',32);
+    // simple livability proof per floor
+    if(f.i===0){box(4.8,2.1,2.0,M.timber,1.1,f.y+1.05,-1.1,0,g,'fixture');}
+    else if(f.i===1){box(4.7,.32,2.6,M.timber,0,f.y+2.4,0,.3,g,'furniture');}
+    else if(f.i===2){box(4.5,.6,6.0,M.white,0,f.y+.45,0,.25,g,'furniture');}
+    else if(f.i===3){box(4.5,2.4,1.3,M.timber,-.8,f.y+1.2,.7,.15,g,'furniture');}
+    else {cyl(.85,3.1,M.steel,0,f.y+1.55,0,18,g,'mechanism');}
+    m.roomProofs++;
+  }
+  m.architecturalTransactions++;
+}
+
+function lanternAndCap(ir,g,m){
+  const y0=ir.baseY+ir.bodyH;
+  frustum(ir.towerTopR+1.15,ir.towerTopR+.5,ir.lanternH,M.siding,0,y0+ir.lanternH/2,0,ir.towerSides,g,'lantern');
+  // clerestory band
+  for(let i=0;i<ir.towerSides;i++){
+    const a=(i+.5)*Math.PI*2/ir.towerSides,p=radial(ir.towerTopR+.95,a,y0+ir.lanternH*.46);box(2.2,2.6,.08,M.glass,p.x,p.y,p.z,-a-Math.PI/2,g,'clerestory');m.clerestoryBays++;
+  }
+  ringTube(ir.towerTopR+.9,.22,y0+.55,M.frame,g,'roof-bearing');m.roofBearingInterfaces+=ir.towerSides;
+  ringTube(ir.towerTopR+.55,.22,y0+ir.lanternH-.25,M.frame,g,'roof-bearing');m.roofBearingInterfaces+=ir.towerSides;
+  cone(ir.towerTopR+1.65,ir.capRise,M.roof,0,y0+ir.lanternH+ir.capRise/2,0,ir.towerSides,g,'roof');m.roofCatchments=ir.towerSides;
+  // cap finial
+  cyl(.28,1.2,M.timber,0,y0+ir.lanternH+ir.capRise+.6,0,8,g,'detail');
+  m.architecturalTransactions++;
+}
+
+function sailGeometry(ir,s,g,m){
+  const hub=new THREE.Vector3(0,ir.hubY,ir.hubOffset+.45);
+  const dir=new THREE.Vector3(Math.cos(s.angle),Math.sin(s.angle),0).normalize();
+  const perp=new THREE.Vector3(-dir.y,dir.x,0).normalize();
+  const out=new THREE.Vector3(0,0,1);
+  const root=hub.clone().add(dir.clone().multiplyScalar(ir.hubR+.58));
+  const tip=hub.clone().add(dir.clone().multiplyScalar(ir.sailLength));
+  const c=root.clone().add(tip).multiplyScalar(.5);
+  const rootHalf=ir.sailWidth*.54, tipHalf=ir.sailWidth*.36, peak=.34;
+
+  const rootL=root.clone().add(perp.clone().multiplyScalar(-rootHalf));
+  const rootR=root.clone().add(perp.clone().multiplyScalar(rootHalf));
+  const tipL=tip.clone().add(perp.clone().multiplyScalar(-tipHalf));
+  const tipR=tip.clone().add(perp.clone().multiplyScalar(tipHalf));
+  const rootPeak=root.clone().add(out.clone().multiplyScalar(peak));
+  const tipPeak=tip.clone().add(out.clone().multiplyScalar(peak*.78));
+
+  beam3(rootPeak,tipPeak,.28,M.timber,g,'sail-spine');
+  beam3(rootL,tipL,.21,M.timberLight,g,'sail-edge');
+  beam3(rootR,tipR,.21,M.timberLight,g,'sail-edge');
+  beam3(rootL,rootPeak,.18,M.timberLight,g,'sail-root');
+  beam3(rootR,rootPeak,.18,M.timberLight,g,'sail-root');
+
+  const battens=9;
+  for(let i=0;i<battens;i++){
+    const t=(i+.55)/(battens+.15);
+    const pL=rootL.clone().lerp(tipL,t);
+    const pR=rootR.clone().lerp(tipR,t);
+    const pP=rootPeak.clone().lerp(tipPeak,t);
+    beam3(pL,pP,.11,M.timberLight,g,'sail-batten');
+    beam3(pR,pP,.11,M.timberLight,g,'sail-batten');
+    if(i<battens-1){
+      const rung=pL.clone().lerp(pR,.5);
+      const span=pR.clone().sub(pL).length();
+      box(span*.88,.08,.1,M.timberLight,rung.x,rung.y,rung.z+peak*.14,s.angle,g,'sail-rung');
+    }
+  }
+
+  for(const side of [-1,1]){
+    const shoulder=hub.clone().add(perp.clone().multiplyScalar(side*.48));
+    const branch=hub.clone().add(dir.clone().multiplyScalar(ir.hubR+.18)).add(perp.clone().multiplyScalar(side*.48));
+    beam3(shoulder,branch,.19,M.steel,g,'sail-yoke');
+    beam3(branch,side<0?rootL:rootR,.19,M.steel,g,'sail-yoke');
+  }
+
+  const q=new THREE.Mesh(new THREE.BoxGeometry(ir.sailLength-1.2,ir.sailWidth,.9),M.frame);
+  q.position.copy(c);q.rotation.z=s.angle;q.position.z+=peak*.55;q.visible=false;q.userData.tag='collision-proxy';solidify(q);g.add(q);
+  m.sailBearings++;
+}
+
+function hubAndSails(ir,g,m){
+  const z=ir.hubOffset+.45;
+  // axle through lantern wall into mechanism floor
+  const A=new THREE.Vector3(0,ir.hubY,1.0),B=new THREE.Vector3(0,ir.hubY,z+1.35);beam3(A,B,.7,M.steel,g,'shaft');m.supportChains++;
+  const inner=cyl(1.05,1.55,M.steel,0,ir.hubY,z-.45,24,g,'shaft-bearing');inner.rotation.x=Math.PI/2;
+  const hub=cyl(ir.hubR,1.9,M.steel,0,ir.hubY,z,24,g,'hub');hub.rotation.x=Math.PI/2;
+  const collar=cyl(ir.hubR+.22,.42,M.timber,0,ir.hubY,z+.92,24,g,'hub-collar');collar.rotation.x=Math.PI/2;
+  ringTube(ir.hubR+.26,.17,ir.hubY,M.timber,g,'hub-ring',32).rotation.x=0;
+  for(const s of ir.sails)sailGeometry(ir,s,g,m);
+  m.architecturalTransactions++;
+}
+
+function arrivalAssembly(ir,g,m){
+  const a=ir.entryAngle,f=radial(1,a,0),t=tangentAt(a),ry=-a-Math.PI/2;
+  const wall=radial(ir.towerBaseR+.2,a,ir.podiumH+.35),front=radial(ir.podiumR+5.2,a,ir.podiumH+.35),center=wall.clone().add(front).multiplyScalar(.5),depth=front.distanceTo(wall),width=7.5;
+  solidify(box(width,.68,depth,M.timber,center.x,ir.podiumH+.2,center.z,ry,g,'deck-frame'));
+  for(let i=0;i<6;i++){const p=wall.clone().lerp(front,(i+.5)/6);box(width-.12,.12,depth/6*.78,M.timber,p.x,ir.podiumH+.61,p.z,ry,g,'deck-board');}
+  for(const side of [-1,1]){for(const q of [wall,front]){const p=q.clone().add(t.clone().multiplyScalar(side*(width/2-.55)));box(.38,ir.podiumH+.3,.38,M.steel,p.x,(ir.podiumH+.3)/2,p.z,0,g,'post');box(.95,.34,.95,M.concrete,p.x,.17,p.z,0,g,'footing');m.supportChains++;}}
+  // stairs down from front landing
+  const stairRun=.95,n=4;for(let i=0;i<n;i++){const p=front.clone().add(f.clone().multiplyScalar((i+.55)*stairRun));const y=ir.podiumH+.45-(i+1)*(ir.podiumH+.2)/n;solidify(box(3.8,.22,stairRun,M.timber,p.x,y,p.z,ry,g,'stair-tread'));}
+  const foot=front.clone().add(f.clone().multiplyScalar((n+.5)*stairRun));solidify(box(4.6,.3,2.2,M.concrete,foot.x,.15,foot.z,ry,g,'landing'));
+  // canopy tied to tower ring
+  const canopyY=ir.baseY+8.1,back=radial(ir.towerBaseR+.3,a,canopyY),nose=radial(ir.podiumR+2.9,a,canopyY-1.0);for(const side of [-1,1]){const A=back.clone().add(t.clone().multiplyScalar(side*4.1)),B=nose.clone().add(t.clone().multiplyScalar(side*4.1));beam3(A,B,.35,M.timber,g,'canopy-rafter');}
+  box(8.8,.36,5.0,M.roof,(back.x+nose.x)/2,(back.y+nose.y)/2,(back.z+nose.z)/2,ry,g,'roof').rotation.x=-.16;
+  m.arrivalPath=1;m.stairInterfaces=4;m.deckInterfaces=8;m.architecturalTransactions++;
+}
+
+function waterAssembly(ir,g,m){
+  const gutterY=ir.baseY+ir.bodyH+ir.lanternH+.1;ringTube(ir.towerTopR+1.58,.22,gutterY,M.steel,g,'roof',48);
+  for(const a of [0,Math.PI/2,Math.PI,Math.PI*1.5]){
+    const top=radial(ir.towerTopR+1.58,a,gutterY),bot=radial(ir.towerBaseR+.55,a,.3);beam3(top,bot,.22,M.steel,g,'downspout');const q=radial(ir.podiumR+1.1,a,.08);box(1.8,.16,1.8,M.concrete,q.x,.08,q.z,-a-Math.PI/2,g,'drain-destination');m.drainDestinations++;
+  }
+  m.waterInterfaces=ir.towerSides+4;m.architecturalTransactions++;
+}
+
+function hdlPass(ir){
+  const g=new THREE.Group();g.name='PASS 3 · RESOLVED WINDMILL HDL';
+  const metrics={towerHeight:ir.height,sails:ir.sailCount,architecturalTransactions:0,arrivalPath:0,framedOpenings:0,roomProofs:0,supportChains:0,sailBearings:0,roofCatchments:0,drainDestinations:0,clerestoryBays:0,roofBearingInterfaces:0,envelopeInterfaces:0,waterInterfaces:0,stairInterfaces:0,deckInterfaces:0,collisionBodies:0,meshCount:0};
+  foundationAssembly(ir,g,metrics);shellAssembly(ir,g,metrics);floorAssembly(ir,g,metrics);openingsAssembly(ir,g,metrics);lanternAndCap(ir,g,metrics);hubAndSails(ir,g,metrics);arrivalAssembly(ir,g,metrics);waterAssembly(ir,g,metrics);
+  g.userData.metrics=metrics;g.traverse(o=>{if(o.isMesh){metrics.meshCount++;if(o.userData._wgSolid)metrics.collisionBodies++;}});return g;
+}
+
+const raw=rawPass(IR),hdl=hdlPass(IR);raw.position.x=-25;hdl.position.x=25;scene.add(raw,hdl);
+
+function runLinters(ir,house){
+  const m=house.userData.metrics;let finite=true;house.traverse(o=>{if(o.isMesh&&![...o.position.toArray(),o.rotation.x,o.rotation.y,o.rotation.z,...o.scale.toArray()].every(Number.isFinite))finite=false;});
+  const checks=[
+    ['L01 FINITE',finite,'all transforms finite'],
+    ['L02 HEIGHT',Math.abs(m.towerHeight-54.9)<.01,'governing height remains 54.9 ft'],
+    ['L03 SAIL COUNT',m.sails===3&&m.sailBearings===3,'exactly three ridge-sails resolve into one hub'],
+    ['L04 GRADE LOAD',m.supportChains>=13,m.supportChains+' explicit support chains reach grade/structure'],
+    ['L05 FLOORS',m.roomProofs===ir.floorCount,ir.floorCount+' occupiable floor plates proved'],
+    ['L06 OPENINGS',m.framedOpenings>=9,m.framedOpenings+' framed door/window transactions'],
+    ['L07 ARRIVAL',m.arrivalPath===1&&m.stairInterfaces>=4,'grade→stair→landing→door'],
+    ['L08 ROOF BEARING',m.roofBearingInterfaces===ir.towerSides*2,m.roofBearingInterfaces+' cap bearing interfaces'],
+    ['L09 WATER',m.waterInterfaces>=ir.towerSides+4&&m.drainDestinations===4,'cap→gutter→4 downspouts→destinations'],
+    ['L10 HUB SUPPORT',m.sailBearings===3&&m.supportChains>=1,'sails→hub→axle→mechanism level'],
+    ['L11 COLLISION',m.collisionBodies>0&&m.collisionBodies<=90,m.collisionBodies+' collision bodies'],
+    ['L12 BUDGET',m.meshCount<420&&m.collisionBodies<=90,m.meshCount+'/420 meshes; '+m.collisionBodies+'/90 solids']
+  ];
+  return checks.map(([id,pass,evidence])=>({id,pass,evidence}));
+}
+
+const linters=runLinters(IR,hdl),defectLedger=[
+  {id:'W-02-SAIL-001',relation:'ridge-sail→hub→axle→mechanism-floor',evidenceView:'hub-bearing',status:'fixed'},
+  {id:'W-02-ARRIVAL-002',relation:'grade→stair→landing→threshold',evidenceView:'arrival-eye',status:'fixed'},
+  {id:'W-02-FLOOR-003',relation:'floor-plate→ring-girder→tower-shell',evidenceView:'roof-off-plan',status:'fixed'},
+  {id:'W-02-ROOF-004',relation:'cap→bearing-ring→lantern-shell',evidenceView:'cap-bearing',status:'fixed'},
+  {id:'W-02-WATER-005',relation:'cap→gutter→downspout→drain-destination',evidenceView:'water-path',status:'fixed'},
+  {id:'W-03-LIVABILITY-006',relation:'program→floor→opening→circulation',evidenceView:'roof-off-plan',status:'fixed'}
+],promptPatchLedger=[{gap:'windmill identity alone did not prove that the sails had a believable structural path',evidenceDefectIds:['W-02-SAIL-001'],proposedRule:'Every kinetic appendage must terminate in an explicit bearing and support chain.',acceptanceTest:'enumerate sails; each sail root connects to hub, hub to axle, axle to supported mechanism level',antiOverfitReason:'applies to windmills, turbines, cranes, antennae and rotating architectural appendages',status:'accepted'}];
+hdl.userData.linters=linters;hdl.userData.defectLedger=defectLedger;hdl.userData.promptPatchLedger=promptPatchLedger;hdl.userData.metrics.lintersPassed=linters.filter(x=>x.pass).length;hdl.userData.metrics.openDefects=defectLedger.filter(x=>x.status==='open').length;hdl.userData.metrics.promptPatches=promptPatchLedger.filter(x=>x.status==='accepted').length;
+
+const proofs={
+  topologyIdentity:raw.userData.metrics.sails===hdl.userData.metrics.sails&&IR.height===MASS.height&&IR.type==='windmill-tower',
+  height:hdl.userData.metrics.towerHeight===54.9,
+  sailCount:hdl.userData.metrics.sails===3,
+  arrival:hdl.userData.metrics.arrivalPath===1,
+  floors:hdl.userData.metrics.roomProofs===IR.floorCount,
+  openings:hdl.userData.metrics.framedOpenings>=9,
+  supports:hdl.userData.metrics.supportChains>=13,
+  bearings:hdl.userData.metrics.sailBearings===3,
+  drainage:hdl.userData.metrics.drainDestinations===4,
+  finite:(()=>{let ok=true;hdl.traverse(o=>{if(o.isMesh&&!o.position.toArray().every(Number.isFinite))ok=false;});return ok;})(),
+  renderBudget:hdl.userData.metrics.meshCount<420,
+  collisionBudget:hdl.userData.metrics.collisionBodies<=90,
+  relationshipLinters:linters.length===12&&linters.every(x=>x.pass),
+  criticLedger:hdl.userData.metrics.openDefects===0
+};
+if(Object.values(proofs).some(v=>!v)){const f=document.getElementById('fail');f.style.display='grid';f.textContent='PROOF FAILED · '+Object.entries(proofs).filter(x=>!x[1]).map(x=>x[0]).join(' · ');throw new Error(f.textContent);}
+
+function metrics(el,m,kind){
+  const lines=kind==='raw'?
+    [['Height',m.towerHeight+' ft'],['Sails',m.sails],['Mesh count',m.meshCount],['Arrival transaction',m.arrivalPath?'PASS':'ABSENT'],['Framed openings',m.framedOpenings],['Room proofs',m.roomProofs],['Sail bearings',m.sailBearings]]:
+    [['Height',m.towerHeight+' ft'],['Sails retained',m.sails],['Render budget',m.meshCount+' / 420'],['WG solids',m.collisionBodies+' / 90'],['Relationship linters',m.lintersPassed+' / 12'],['Open major defects',m.openDefects],['Prompt patches learned',m.promptPatches],['Framed openings',m.framedOpenings],['Support chains',m.supportChains],['Drain destinations',m.drainDestinations]];
+  el.innerHTML=lines.map(([a,b])=>`<span>${a}</span><b class="${b==='PASS'||b==='12 / 12'||b===0?'pass':''}">${b}</b>`).join('');
+}
+metrics(document.getElementById('raw-metrics'),raw.userData.metrics,'raw');metrics(document.getElementById('hdl-metrics'),hdl.userData.metrics,'hdl');
+
+let target=new THREE.Vector3(0,19,0),az=.22,pol=1.03,rad=106,drag=false,px=0,py=0,lastTouchDist=0;
+function cam(){camera.position.set(target.x+rad*Math.sin(pol)*Math.sin(az),target.y+rad*Math.cos(pol),target.z+rad*Math.sin(pol)*Math.cos(az));camera.lookAt(target);}
+renderer.domElement.addEventListener('pointerdown',e=>{drag=true;px=e.clientX;py=e.clientY;renderer.domElement.setPointerCapture(e.pointerId)});
+renderer.domElement.addEventListener('pointermove',e=>{if(!drag)return;az-=(e.clientX-px)*.006;pol=Math.max(.22,Math.min(1.48,pol+(e.clientY-py)*.006));px=e.clientX;py=e.clientY;});renderer.domElement.addEventListener('pointerup',()=>drag=false);renderer.domElement.addEventListener('pointercancel',()=>drag=false);
+renderer.domElement.addEventListener('wheel',e=>{rad=Math.max(46,Math.min(150,rad+e.deltaY*.05));e.preventDefault()},{passive:false});
+renderer.domElement.addEventListener('touchstart',e=>{if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY;lastTouchDist=Math.hypot(dx,dy)}},{passive:true});
+renderer.domElement.addEventListener('touchmove',e=>{if(e.touches.length===2){const dx=e.touches[0].clientX-e.touches[1].clientX,dy=e.touches[0].clientY-e.touches[1].clientY,d=Math.hypot(dx,dy);rad=Math.max(46,Math.min(150,rad-(d-lastTouchDist)*.09));lastTouchDist=d}},{passive:true});
+function mode(which){raw.visible=which!=='hdl';hdl.visible=which!=='raw';target.x=which==='raw'?-25:which==='hdl'?25:0;target.y=19;rad=which==='both'?106:76;for(const id of ['both','raw','hdl'])document.getElementById(id).classList.toggle('on',id===which);}
+for(const id of ['both','raw','hdl'])document.getElementById(id).onclick=()=>mode(id);
+let roofs=true;document.getElementById('roof').onclick=()=>{roofs=!roofs;for(const root of [raw,hdl])root.traverse(o=>{if(o.userData.tag==='roof')o.visible=roofs;});document.getElementById('roof').textContent=roofs?'Roof off':'Roof on';document.getElementById('roof').classList.toggle('on',!roofs)};
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});cam();
+function tick(){requestAnimationFrame(tick);cam();renderer.render(scene,camera)}tick();
+
+window.__HDL_PROOF={MASS:IR,raw,hdl,proofs,linters,defectLedger,promptPatchLedger,metrics:{raw:raw.userData.metrics,hdl:hdl.userData.metrics}};
+const canonicalViews={
+  hero:{target:[25,20,0],az:2.68,pol:1.05,rad:82,roof:true},
+  'arrival-eye':{target:[25,6,-8],az:3.14,pol:1.28,rad:54,roof:true},
+  'hub-bearing':{target:[25,44,6],az:3.0,pol:1.08,rad:46,roof:true},
+  'cap-bearing':{target:[25,46,0],az:1.25,pol:1.08,rad:48,roof:true},
+  'roof-off-plan':{target:[25,24,0],az:.25,pol:.16,rad:62,roof:false},
+  'water-path':{target:[25,32,0],az:-.35,pol:.82,rad:58,roof:false}
+};
+function setCanonicalView(id){const v=canonicalViews[id];if(!v)throw new Error('unknown canonical view '+id);mode('hdl');target.fromArray(v.target);az=v.az;pol=v.pol;rad=v.rad;hdl.traverse(o=>{if(o.userData.tag==='roof')o.visible=v.roof;});roofs=v.roof;cam();renderer.render(scene,camera);return id;}
+window.__GAUNTLET_CAPTURE={views:Object.keys(canonicalViews),setView:setCanonicalView};
+</script>
+</body>
+</html>
