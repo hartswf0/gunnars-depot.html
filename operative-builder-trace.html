@@ -679,6 +679,7 @@ const worldGroup = new THREE.Group(), rings = new THREE.Group(); scene.add(world
 // Open for inspection: the argument of this whole project is that you should be able
 // to check a claim rather than take it, and that includes this page.
 window.__wg = worldGroup; window.__rings = rings; window.camera = camera; window.scene = scene;
+setTimeout(() => { window.__orbit = orbit; }, 0);   // for the verification harness
 // Open for inspection. The argument of this whole project is that you should be able
 // to check a claim rather than take it, and that includes this page.
 window.trace = {
@@ -820,7 +821,13 @@ async function drawScene(sc, { animate = true } = {}) {
   }
   frameOn(sc.parts);
 
-  if (!animate) { for (const p of fresh) { const m = born(p); applyNow(m, p); ring(m, sc, p); } drawBoxes(); return; }
+  // Framed once here so the camera is right as the parts arrive, and again below once
+  // they are standing. Only the first pass would frame the build as it was before this
+  // turn added to it, so a growing build walks off the edge one turn at a time.
+  if (!animate) {
+    for (const p of fresh) { const m = born(p); applyNow(m, p); ring(m, sc, p); }
+    frameOn(sc.parts); drawBoxes(); return;
+  }
 
   // Fast enough to feel like assembly, slow enough to see. The per-part pause shrinks
   // as the pile grows, so a hundred and five parts is a couple of seconds, not twelve.
@@ -833,6 +840,7 @@ async function drawScene(sc, { animate = true } = {}) {
     ring(m, sc, p);
     await new Promise(r => setTimeout(r, step));
   }
+  frameOn(sc.parts);
   drawBoxes();
   if (doc && doc.builder === 'correspondence') {
     const [, , r] = viewAngles(paint._v);
@@ -1104,6 +1112,12 @@ function paint({ animate = false } = {}) {
     if (sc) flashChanged([...(sc.added || []), ...(sc.changed || [])]);
     drawScene(sc, { animate });
   }
+  // Framed on every turn, not only the ones that change the scene. A turn that adds
+  // nothing still skipped the reframe, so the camera kept whatever aim it happened to
+  // have — on a correspondence run that is the clinic's fixed point, and the build
+  // sits off to one side of it. Framing only ever opens out, so doing it every turn
+  // costs nothing and cannot crop.
+  frameOn(sc ? sc.parts : []);
   // Stand where the camera stood. Every picture records its view, so the geometry
   // above the message is the shot the critic was handed rather than a different angle
   // on the same thing.
