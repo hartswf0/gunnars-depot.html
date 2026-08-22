@@ -687,23 +687,26 @@ window.trace = {
   // what actually ended up on the stage.
   goto(i) { stop(); show(i); },
   stage() {
-    if (!artPasses) return null;
-    const vis = g => g.children.filter(m => g.visible && m.material.opacity > .05).length;
+    // Only what is actually being drawn: a pass on its way out still has meshes in
+    // the group, and counting those would measure a frame nobody is looking at.
     const b = new THREE.Box3();
-    for (const g of [artPasses.mass, artPasses.built])
-      if (g.visible) for (const m of g.children)
-        if (m.material.opacity > .05) b.expandByObject(m);
-    let onscreen = true;
-    if (!b.isEmpty()) {
-      const pts = [];
-      for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z])
-        pts.push(new THREE.Vector3(x, y, z).project(camera));
-      onscreen = pts.every(p => Math.abs(p.x) <= 1.02 && Math.abs(p.y) <= 1.02);
-    }
-    return { file: artPasses.file, mass: artPasses.mass.children.length, built: artPasses.built.children.length,
-             shown: vis(artPasses.mass) + vis(artPasses.built), onscreen,
-             total: artPasses.mass.children.length + artPasses.built.children.length,
-             note: $('#stopNote').classList.contains('on') ? $('#stopNote').textContent : null };
+    let shown = 0;
+    const collect = (o) => { if (o.isMesh && o.visible && (!o.material || o.material.opacity > .05)) {
+      shown++; b.expandByObject(o); } };
+    if (artPasses) for (const g of [artPasses.mass, artPasses.built]) { if (g.visible) g.children.forEach(collect); }
+    else worldGroup.traverse(collect);
+    if (!shown) return null;
+
+    const pts = [];
+    for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z])
+      pts.push(new THREE.Vector3(x, y, z).project(camera));
+    const onscreen = pts.every(p => Math.abs(p.x) <= 1.02 && Math.abs(p.y) <= 1.02);
+
+    return artPasses
+      ? { file: artPasses.file, mass: artPasses.mass.children.length, built: artPasses.built.children.length,
+          shown, onscreen, total: artPasses.mass.children.length + artPasses.built.children.length,
+          note: $('#stopNote').classList.contains('on') ? $('#stopNote').textContent : null }
+      : { file: null, shown, onscreen, total: shown, note: null };
   }
 };
 
@@ -921,14 +924,46 @@ function lightFocus(ids) {
 }
 
 /** How far back this panel has to be to hold everything standing, at this aspect. */
+/**
+ * How far back the camera has to sit for a box to be wholly inside this panel.
+ *
+ * Measuring a footprint as max(x, z) is only right when you are looking down an axis.
+ * A long, shallow building seen from three-quarters projects wider than either of its
+ * sides, so that measure quietly under-reports and the ends of the building hang off
+ * the frame — which is what a phone, where there is no spare width to absorb it,
+ * shows first. So all eight corners go through the camera basis, and the distance is
+ * the one that holds the worst of them inside both fields at once. Exact, and exact
+ * at any angle.
+ */
+function distanceToFrame(b, target) {
+  if (b.isEmpty()) return 0;
+  const aspect = Math.max(0.3, camera.aspect || 1);
+  const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const tanH = tanV * aspect;
+
+  const sp = Math.sin(orbit.phi);
+  const back = new THREE.Vector3(sp * Math.cos(orbit.theta), Math.cos(orbit.phi), sp * Math.sin(orbit.theta)).normalize();
+  const right = new THREE.Vector3().crossVectors(new THREE.Vector3(0, 1, 0), back);
+  if (right.lengthSq() < 1e-6) right.set(1, 0, 0); else right.normalize();
+  const up = new THREE.Vector3().crossVectors(back, right).normalize();
+
+  let dist = 0;
+  const p = new THREE.Vector3();
+  for (const x of [b.min.x, b.max.x]) for (const y of [b.min.y, b.max.y]) for (const z of [b.min.z, b.max.z]) {
+    p.set(x, y, z).sub(target);
+    const depth = p.dot(back);
+    dist = Math.max(dist, depth + Math.abs(p.dot(right)) / tanH,
+                          depth + Math.abs(p.dot(up)) / tanV);
+  }
+  // A little air, and more of it on a short panel where the transport bar takes the
+  // bottom of the frame.
+  return dist * (aspect < 1.5 ? 1.26 : 1.18);
+}
+
 function fitDistance() {
   const b = new THREE.Box3().setFromObject(worldGroup);
   if (b.isEmpty()) return 0;
-  const s = b.getSize(new THREE.Vector3());
-  const aspect = Math.max(0.35, camera.aspect || 1);
-  const half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const span = Math.max(s.x, s.z);
-  return Math.max((span / 2) / (half * aspect), (Math.max(s.y, span * .55) / 2) / half) * 1.18;
+  return Math.max(distanceToFrame(b, orbit.target), b.getSize(new THREE.Vector3()).length() * .6);
 }
 
 function frameOn(parts) {
@@ -1261,22 +1296,17 @@ function fade(m, to, ms, done) {
 }
 
 /** Centre it and back off until all of it is inside this panel, whatever shape it is. */
+/** Centre one pass and back off until all of it is inside this panel. */
 function fitTo(g) {
   const b = new THREE.Box3().setFromObject(g);
   if (b.isEmpty()) return;
   const c = b.getCenter(new THREE.Vector3()), s = b.getSize(new THREE.Vector3());
   orbit.target.copy(c);
-  const aspect = Math.max(0.3, camera.aspect || 1);
-  const half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const span = Math.max(s.x, s.z);
-  // Generous, and generous on the short axis too: the transport bar covers the bottom
-  // fifty-odd pixels of the panel, and a model fitted to the exact frame loses its
-  // footings behind it.
-  orbit.dist = framed = Math.max((span / 2) / (half * aspect), (s.y / 2) / half) * 1.75 + span * .12;
   orbit.target.y += s.y * .06;
+  orbit.dist = framed = Math.max(distanceToFrame(b, orbit.target), s.length() * .6);
 }
 
-// The last turn that produced a page.// The last turn that produced a page. A turn with no artifact leaves the last one up,
+// The last turn that produced a page. A turn with no artifact leaves the last one up,
 // which is what was on the screen at the time.
 const modelFor = (i) => { for (let k = i; k >= 0; k--) { const m = msgs[k];
   if (m.kind === 'builder' && m.model) return m; } return null; };
