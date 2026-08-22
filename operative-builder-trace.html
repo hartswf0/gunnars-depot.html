@@ -107,6 +107,12 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
   background:var(--accent);margin-top:-4.5px}
 #fadeWrap input::-moz-range-track{height:2px;background:var(--rule)}
 #fadeWrap input::-moz-range-thumb{width:11px;height:11px;border:0;border-radius:50%;background:var(--accent)}
+#viewTag{position:absolute;z-index:5;left:16px;bottom:64px;font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--faint)}
+#viewTag b{color:var(--soft);font-weight:400}
+#boxes{font-size:11px;color:var(--soft);border:1px solid var(--rule);background:#fff;
+  border-radius:99px;padding:4px 9px;flex:none}
+#boxes.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 #emptyPlate{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:24px;
   color:var(--faint);z-index:2}
 #emptyPlate.on{display:grid}
@@ -236,6 +242,8 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
   .wide{display:none}.narrow{display:inline}
   #fadeWrap span{display:none}
   #fadeWrap input{width:52px}
+  #viewTag{bottom:60px;left:12px;font-size:9px}
+  #boxes{padding:4px 7px}
   #ref{width:76px;top:12px;left:12px}
   #meter{top:12px;right:12px}
   #score{font-size:32px}
@@ -270,6 +278,8 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
       <div class="cap" id="refname">reference</div>
     </div>
 
+    <div id="viewTag">camera · <b id="viewName">front 3/4</b></div>
+
     <div id="meter">
       <div class="cap">suck score</div>
       <div id="score">—</div>
@@ -290,6 +300,7 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
       <button class="round" id="play">▶</button>
       <input id="seek" type="range" min="0" max="0" value="0">
       <button id="speed" title="how fast to replay it">4×</button>
+      <button id="boxes" title="show every part's bounding box">boxes</button>
       <label id="fadeWrap" title="fade the reference over the build">
         <span>fade</span><input id="fade" type="range" min="0" max="100" value="0"></label>
       <span id="tick">—</span>
@@ -535,7 +546,8 @@ function adaptCorrespondence(t) {
 const renderer = new THREE.WebGLRenderer({ canvas: $('#gl'), antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 900);
+// 42°, which is the clinic's lens. A different focal length is a different picture.
+const camera = new THREE.PerspectiveCamera(42, 1, 0.03, 900);
 scene.add(new THREE.HemisphereLight(0xffffff, 0xb9bdb4, 1.25));
 const sun = new THREE.DirectionalLight(0xfffaf0, .95); sun.position.set(28, 44, 22); scene.add(sun);
 const rim = new THREE.DirectionalLight(0xd7e4f2, .35); rim.position.set(-30, 18, -28); scene.add(rim);
@@ -545,10 +557,32 @@ shadowPlane.rotation.x = -Math.PI / 2; shadowPlane.position.y = -0.05; scene.add
 const worldGroup = new THREE.Group(), rings = new THREE.Group(); scene.add(worldGroup, rings);
 // Open for inspection: the argument of this whole project is that you should be able
 // to check a claim rather than take it, and that includes this page.
-window.__wg = worldGroup; window.__rings = rings;
+window.__wg = worldGroup; window.__rings = rings; window.camera = camera; window.scene = scene;
 
-const orbit = { az: -0.72, el: 0.33, dist: 46, target: new THREE.Vector3(0, 3, 0) };
-let spin = true, framed = null;
+// The eight cameras the loop actually uses, lifted from the clinic that took these
+// pictures. Every snapshot records which one it was shot from, so the model can be
+// stood exactly where the camera stood — the picture in the message and the geometry
+// above it are then the same view, and you can hold one against the other.
+//
+// A slow orbit was the wrong idea. It looks alive and it means the render is never
+// the shot the critic was handed, which is the one thing the whole page is for.
+// theta, phi and the distance, exactly as the clinic holds them. A correspondence
+// scene is in the same metric space the clinic works in, so using its numbers whole —
+// including the target at (0, 1.15, 0) — puts this camera where that camera was, and
+// the render and the photograph become the same shot rather than two views that
+// happen to face the same way.
+const VIEWS = {
+  'front 3/4': [0.78, 1.07, 10.8], 'left side': [1.57, 1.18, 10.6],
+  'rear 3/4': [2.36, 1.08, 10.8], 'rear': [3.14, 1.18, 10.8],
+  'right side': [4.71, 1.18, 10.6], 'front': [0, 1.18, 10.8],
+  'high 3/4': [0.90, 0.64, 11.2], 'plan': [0.01, 0.16, 12.5]
+};
+const viewAngles = (name) => VIEWS[String(name || '').toLowerCase().trim()] || VIEWS['front 3/4'];
+
+// theta is the compass bearing, phi the angle down from straight up — the clinic's
+// own spherical convention, so the numbers above mean here what they mean there.
+const orbit = { theta: 0.78, phi: 1.07, dist: 46, target: new THREE.Vector3(0, 3, 0) };
+let framed = null, camTween = 0;
 
 function meshFor(o) {
   const [sx, sy, sz] = o.size || [1, 1, 1];
@@ -633,7 +667,7 @@ async function drawScene(sc, { animate = true } = {}) {
   }
   frameOn(sc.parts);
 
-  if (!animate) { for (const p of fresh) { const m = born(p); applyNow(m, p); ring(m, sc, p); } return; }
+  if (!animate) { for (const p of fresh) { const m = born(p); applyNow(m, p); ring(m, sc, p); } drawBoxes(); return; }
 
   // Fast enough to feel like assembly, slow enough to see. The per-part pause shrinks
   // as the pile grows, so a hundred and five parts is a couple of seconds, not twelve.
@@ -645,6 +679,11 @@ async function drawScene(sc, { animate = true } = {}) {
     ease(m, { scale: p.scale }, 200);
     ring(m, sc, p);
     await new Promise(r => setTimeout(r, step));
+  }
+  drawBoxes();
+  if (doc && doc.builder === 'correspondence') {
+    const [, , r] = viewAngles(paint._v);
+    orbit.dist = framed = Math.max(r, fitDistance());
   }
 }
 
@@ -676,6 +715,39 @@ function ease(m, to, ms, done) {
   })();
 }
 
+// The clinic marks a change on the part itself: amber, hot, for a second and a half
+// after a move lands; red and breathing for whatever the critic has named as its
+// target. Outlines alone are a diagram of a difference; this is the difference.
+let flashIds = new Set(), flashUntil = 0, focusIds = new Set();
+function pulse() {
+  const t = performance.now();
+  const breathe = .78 + .46 * (.5 + .5 * Math.sin(t * .0065));
+  for (const [id, m] of live) {
+    const e = m.material && m.material.emissive;
+    if (!e) continue;
+    if (flashIds.has(id) && t < flashUntil) {
+      e.setHex(0xffb52e); m.material.emissiveIntensity = 1.15 + .45 * Math.sin(t * .018);
+    } else if (focusIds.has(id)) {
+      e.setHex(0xff3426); m.material.emissiveIntensity = breathe;
+    } else if (m.material.emissiveIntensity) {
+      e.setHex(0x000000); m.material.emissiveIntensity = 0;
+    }
+  }
+}
+function flashChanged(ids) { flashIds = new Set(ids || []); flashUntil = performance.now() + 1450; }
+
+/** Every part's box, when you want to see the geometry rather than the render. */
+let boxesOn = false;
+const boxGroup = new THREE.Group(); scene.add(boxGroup);
+function drawBoxes() {
+  boxGroup.clear();
+  if (!boxesOn) return;
+  for (const [, m] of live) {
+    const h = new THREE.Box3Helper(new THREE.Box3().setFromObject(m), new THREE.Color(0x4b5560));
+    h.material.transparent = true; h.material.opacity = .5; boxGroup.add(h);
+  }
+}
+
 function ring(m, sc, p) {
   const col = sc.added.has(p.id) ? cssColour('--added') : sc.changed.has(p.id) ? cssColour('--changed') : null;
   if (!col || sc.final) return;
@@ -688,17 +760,31 @@ const cssColour = (v) => getComputedStyle(document.documentElement).getPropertyV
 /** Light the parts the critic named as its target. Correspondence traces carry the ids. */
 function lightFocus(ids) {
   rings.clear();
-  if (!ids || !ids.length) return;
-  const want = new Set(ids);
-  for (const m of worldGroup.children) {
-    if (!want.has(m.userData.id)) continue;
-    const hx = new THREE.Box3Helper(new THREE.Box3().setFromObject(m), new THREE.Color(cssColour('--alarm')));
-    hx.material.depthTest = false; hx.material.transparent = true; hx.renderOrder = 5;
-    rings.add(hx);
-  }
+  focusIds = new Set(ids || []);
+  if (!focusIds.size) return;
+  // One box round the whole target, not one per part: the critic named a region, and
+  // a region is what it should read as.
+  const box = new THREE.Box3();
+  for (const [id, m] of live) if (focusIds.has(id)) box.expandByObject(m);
+  if (box.isEmpty()) return;
+  const hx = new THREE.Box3Helper(box, new THREE.Color(0xff4b3e));
+  hx.material.transparent = true; hx.material.opacity = .9; hx.material.depthTest = false;
+  hx.renderOrder = 6; rings.add(hx);
+}
+
+/** How far back this panel has to be to hold everything standing, at this aspect. */
+function fitDistance() {
+  const b = new THREE.Box3().setFromObject(worldGroup);
+  if (b.isEmpty()) return 0;
+  const s = b.getSize(new THREE.Vector3());
+  const aspect = Math.max(0.35, camera.aspect || 1);
+  const half = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const span = Math.max(s.x, s.z);
+  return Math.max((span / 2) / (half * aspect), (Math.max(s.y, span * .55) / 2) / half) * 1.18;
 }
 
 function frameOn(parts) {
+  if (doc && doc.builder === 'correspondence') return;   // the clinic's own framing stands
   const b = new THREE.Box3().setFromObject(worldGroup);
   if (b.isEmpty()) {
     // Nothing is standing yet, so measure the parts that are about to be.
@@ -776,10 +862,17 @@ function effort(m) {
 function paint({ animate = false } = {}) {
   $('#log').innerHTML = msgs.slice(0, at + 1).map((m, i) => bubble(m, i)).join('');
   const sc = sceneFor(at);
-  if (sc !== paint._s) { paint._s = sc; drawScene(sc, { animate }); }
-  // A correspondence trace has only the finished scene, so what a cycle can honestly
-  // show is not what changed but what the critic was pointing at.
-  if (doc && !doc.perCycleWorlds) lightFocus(focusFor(at));
+  if (sc !== paint._s) {
+    paint._s = sc;
+    if (sc) flashChanged([...(sc.added || []), ...(sc.changed || [])]);
+    drawScene(sc, { animate });
+  }
+  // Stand where the camera stood. Every picture records its view, so the geometry
+  // above the message is the shot the critic was handed rather than a different angle
+  // on the same thing.
+  const v = viewFor(at);
+  if (v && v !== paint._v) { paint._v = v; goToView(v, { snap: !animate }); }
+  lightFocus(focusFor(at));
   const score = lastScore(at);
   $('#score').textContent = score ?? '—';
   $('#score').style.color = scoreInk(score);
@@ -788,6 +881,7 @@ function paint({ animate = false } = {}) {
 }
 const sceneFor = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].scene) return msgs[k].scene; return null; };
 const focusFor = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].kind === 'critic') return msgs[k].focusIds || []; return []; };
+const viewFor = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].kind === 'shoot' || msgs[k].view) return msgs[k].view; return null; };
 const lastScore = (i) => { for (let k = i; k >= 0; k--) if (msgs[k].kind === 'critic' && msgs[k].score != null) return msgs[k].score; return null; };
 
 const atBottom = () => { const t = $('#thread'); return t.scrollHeight - t.scrollTop - t.clientHeight < 90; };
@@ -885,6 +979,7 @@ $('#speed').onclick = () => { pace = (pace + 1) % PACE.length; rate = PACE[pace]
 $('#play').onclick = () => playing ? stop() : play();
 $('#seek').oninput = e => { stop(); show(+e.target.value); };
 $('#fade').oninput = e => { $('#ghost').style.opacity = (+e.target.value / 100) * 0.85; };
+$('#boxes').onclick = () => { boxesOn = !boxesOn; $('#boxes').classList.toggle('on', boxesOn); drawBoxes(); };
 addEventListener('keydown', e => {
   if (/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
   if (e.key === ' ') { e.preventDefault(); playing ? stop() : play(); }
@@ -933,19 +1028,45 @@ $('#docsClose').onclick = () => $('#docs').classList.remove('on');
 
 let drag = null;
 const gl = $('#gl');
-gl.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; spin = false; gl.setPointerCapture(e.pointerId); });
+gl.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; camTween++; gl.setPointerCapture(e.pointerId); });
 gl.addEventListener('pointerup', () => { drag = null; });
 gl.addEventListener('pointermove', e => { if (!drag) return;
-  orbit.az -= (e.clientX - drag.x) * .007;
-  orbit.el = Math.max(0, Math.min(1.3, orbit.el + (e.clientY - drag.y) * .006));
+  orbit.theta -= (e.clientX - drag.x) * .007;
+  orbit.phi = Math.max(.1, Math.min(Math.PI - .12, orbit.phi - (e.clientY - drag.y) * .006));
   drag = { x: e.clientX, y: e.clientY }; });
 
 function placeCamera() {
-  const c = Math.cos(orbit.el);
-  camera.position.set(orbit.target.x + orbit.dist * Math.cos(orbit.az) * c,
-                      orbit.target.y + orbit.dist * Math.sin(orbit.el),
-                      orbit.target.z + orbit.dist * Math.sin(orbit.az) * c);
+  const s = Math.sin(orbit.phi);
+  camera.position.set(orbit.target.x + orbit.dist * s * Math.cos(orbit.theta),
+                      orbit.target.y + orbit.dist * Math.cos(orbit.phi),
+                      orbit.target.z + orbit.dist * s * Math.sin(orbit.theta));
   camera.lookAt(orbit.target);
+}
+
+/** Swing to a named camera. Eased, because a cut tells you nothing about where you went. */
+function goToView(name, { snap = false } = {}) {
+  const [th, ph, r] = viewAngles(name);
+  $('#viewName').textContent = String(name || 'front 3/4');
+  // Only for the builder whose units these are. An operative castle is twenty units
+  // across in nobody's metres, so it keeps the framing derived from its own bounds.
+  if (doc && doc.builder === 'correspondence') {
+    orbit.target.set(0, 1.15, 0);
+    // The clinic's distance, unless this panel is narrower than the clinic's canvas —
+    // in which case the same distance would crop the lander, so it backs off just far
+    // enough to hold the whole thing. Never closer than the shot was taken.
+    orbit.dist = framed = Math.max(r, fitDistance());
+  }
+  if (snap) { orbit.theta = th; orbit.phi = ph; return; }
+  const from = { th: orbit.theta, ph: orbit.phi }, t0 = performance.now(), mine = ++camTween;
+  // Always the short way round the compass.
+  let d = th - from.th; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+  (function step(now) {
+    if (mine !== camTween) return;
+    const f = Math.min(1, ((now || performance.now()) - t0) / 850), e = 1 - Math.pow(1 - f, 3);
+    orbit.theta = from.th + d * e;
+    orbit.phi = from.ph + (ph - from.ph) * e;
+    if (f < 1) requestAnimationFrame(step);
+  })();
 }
 function resize() {
   const r = $('#stage').getBoundingClientRect();
@@ -953,15 +1074,15 @@ function resize() {
   renderer.setSize(r.width, r.height, false);
   const was = camera.aspect;
   camera.aspect = r.width / r.height; camera.updateProjectionMatrix();
-  if (Math.abs((was || 0) - camera.aspect) > .01) { framed = null; drawScene(paint._s, { animate: false }); }
+  if (Math.abs((was || 0) - camera.aspect) > .01) {
+    framed = null;
+    if (doc && doc.builder === 'correspondence') { const [, , r] = viewAngles(paint._v);
+      orbit.dist = framed = Math.max(r, fitDistance()); }
+    else drawScene(paint._s, { animate: false });
+  }
 }
 addEventListener('resize', resize);
-let last = 0;
-(function tick(now) {
-  const dt = Math.min(.05, ((now || 0) - last) / 1000); last = now || 0;
-  if (spin) orbit.az += dt * .1;
-  placeCamera(); renderer.render(scene, camera); requestAnimationFrame(tick);
-})();
+(function tick() { placeCamera(); pulse(); renderer.render(scene, camera); requestAnimationFrame(tick); })();
 
 // ------------------------------------------------------------------ loading
 function curtain(msg) { const b = $('#boot'); if (!b) return;
@@ -970,7 +1091,8 @@ function curtain(msg) { const b = $('#boot'); if (!b) return;
 function open(raw, { autoplay = false } = {}) {
   stop();
   doc = adapt(raw);
-  msgs = doc.msgs; at = 0; framed = null; paint._s = undefined; spin = true;
+  msgs = doc.msgs; at = 0; framed = null; paint._s = undefined; paint._v = undefined;
+  focusIds = new Set(); flashIds = new Set();
   worldGroup.clear(); rings.clear(); live.clear();
   document.documentElement.dataset.builder = doc.builder;
   $('#badge').textContent = doc.builder === 'operative' ? 'operative builder' : 'correspondence builder';
@@ -1018,6 +1140,20 @@ function renderDocs() {
   and a 94 on the landing legs are answers to different questions.</p>
   <p>They are shown in different colours for that reason. The reader is the same; what
   each can honestly show is not.</p>
+
+  <h3>Standing where the camera stood</h3>
+  <p>The model does not turn on its own. Every picture in a trace records which of the
+  loop's eight cameras took it — front, front 3/4, left side, rear, plan and so on —
+  and the model is swung to that camera when the picture is taken, using the loop's own
+  angles and, for correspondence traces, its own target and lens. The render above the
+  message and the photograph inside it are then <em>the same shot</em>, which is the
+  only way to hold one against the other. Drag if you want to look elsewhere; the next
+  picture puts it back.</p>
+  <p><b>The diff, as the clinic shows it.</b> A part that just changed burns amber for
+  a second and a half. Whatever the critic has named as its target breathes red, with a
+  single box round the whole region rather than one per part, because a region is what
+  it named. <b>Boxes</b> draws every part's bounding box, for when you want the
+  geometry rather than the render.</p>
 
   <h3>Taking your time</h3>
   <p>The pace button starts at 4×. Its first stop is <b>as it happened</b>, which
