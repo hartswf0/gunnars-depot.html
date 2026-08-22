@@ -135,7 +135,7 @@ header select{max-width:min(46vw,300px);letter-spacing:0;min-width:0}
 #passRow button{font-size:11px;color:var(--soft);padding:4px 10px;border-right:1px solid var(--rule)}
 #passRow button:last-child{border-right:0}
 #passRow button.on{background:var(--ink);color:var(--paper)}
-#passName{position:absolute;z-index:6;left:16px;bottom:88px;display:none;font-size:10px;
+#passName{position:absolute;z-index:6;right:16px;bottom:64px;left:auto;display:none;font-size:10px;
   letter-spacing:.13em;text-transform:uppercase;color:var(--soft);background:#fffffff2;
   border-radius:99px;padding:4px 10px}
 #boxes{font-size:11px;color:var(--soft);border:1px solid var(--rule);background:#fff;
@@ -1022,8 +1022,10 @@ function paint({ animate = false } = {}) {
          failed, because a repaired archive would be a worse one.`;
       $('#artName').textContent = m ? m.artifact : '';
       $('#artTag').style.display = m ? '' : 'none';
-      $('#passRow').style.display = m ? '' : 'none';
-      $('#passName').style.display = m ? '' : 'none';
+      // `''` falls back to the stylesheet, and the stylesheet says none — so the
+      // control that switches the passes was never once visible.
+      $('#passRow').style.display = m ? 'flex' : 'none';
+      $('#passName').style.display = m ? 'block' : 'none';
     }
   }
   const sc = sceneFor(at);
@@ -1348,6 +1350,11 @@ function open(raw, { autoplay = false } = {}) {
   resize(); paint(); $('#thread').scrollTop = 0;
   // A trace of a person typing wants a person's pace. The machine loops carry their
   // own thinking times and are already slow where it matters.
+  // The artifact pages lay their two passes out side by side and were composed for a
+  // landscape window. In a 52% column they come up cropped, so the human traces open
+  // with more of the width — the divider still moves.
+  if (doc.builder === 'human' && !localStorage.getItem('trace.split'))
+    try { document.documentElement.style.setProperty('--split', '64%'); } catch {}
   pace = doc.builder === 'human' ? 0 : 1;
   rate = PACE[pace].r; $('#speed').textContent = PACE[pace].label;
   if (autoplay) setTimeout(play, 700);
@@ -1416,7 +1423,12 @@ function renderDocs() {
   geometry rather than the render.</p>
 
   <h3>Taking your time</h3>
-  <p>The pace button starts at 4×. Its first stop is <b>as it happened</b>, which
+  <p>How long a message sits before the next arrives is measured from how much there
+  is to take in — reading runs at about fifteen characters a second, and a picture is
+  worth a breath of its own. A flat beat hurried a four-line criticism and dawdled on
+  <em>Cook.</em>; the human trace suffered worst, since its turns carry the longest
+  prompts and a screenshot each, and it opens at <b>read it</b> for that reason.</p>
+  <p>The pace button starts at brisk on the machine traces. Its first stop is <b>as it happened</b>, which
   replays the run at the speed it actually ran — and most of a run is waiting. The
   castle took seven and a half minutes, the lunar lander nearly nine, and while
   something is thinking you get the real clock climbing: <em>builder thinking · 12s of
