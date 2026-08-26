@@ -1,0 +1,106 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The loop, running</title>
+<style>
+:root{--paper:#f7f5f2;--ink:#17150f;--soft:#6e6656;--rule:#dcd6cb;--accent:#a85a34}
+@media(prefers-color-scheme:dark){:root{--paper:#14130f;--ink:#ece7dd;--soft:#948b7a;--rule:#2e2b24}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 ui-sans-serif,-apple-system,system-ui,sans-serif}
+#app{display:grid;grid-template-rows:auto 44vh 1fr;height:100dvh}
+@media(min-width:900px){#app{grid-template-rows:auto 1fr;grid-template-columns:minmax(0,1fr) minmax(0,420px)}
+  #setup{grid-column:1/-1}#stage{grid-row:2}#thread{grid-row:2;border-top:0;border-left:1px solid var(--rule)}}
+#setup{display:flex;flex-wrap:wrap;gap:8px;padding:10px 12px;border-bottom:1px solid var(--rule);align-items:center}
+input,select,button{font:inherit;color:inherit;background:transparent;border:1px solid var(--rule);
+  border-radius:8px;padding:7px 10px;min-height:38px}
+input{background:color-mix(in srgb,var(--paper) 80%,var(--ink) 4%)}
+#intent{flex:1 1 240px;min-width:0}#key{flex:0 1 190px;min-width:0}
+button{cursor:pointer}button.go{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button:disabled{opacity:.45;cursor:default}
+#stage{position:relative;background:#9fb6c8;overflow:hidden;min-height:0}
+#stage canvas{width:100%;height:100%;display:block;object-fit:contain}
+#thread{overflow-y:auto;padding:12px;border-top:1px solid var(--rule);min-height:0}
+.msg{margin:0 0 10px;padding:9px 11px;border-radius:12px;max-width:92%;font-size:13.5px}
+.build{background:color-mix(in srgb,var(--accent) 12%,transparent);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent)}
+.crit{background:color-mix(in srgb,var(--ink) 6%,transparent);border:1px solid var(--rule);margin-left:auto}
+.pol{color:var(--soft);font-size:12px;border:0;padding:2px 4px;font-style:italic}
+.err{color:#b4442f;border:1px solid currentColor}
+.who{display:block;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--soft);margin-bottom:3px}
+.msg img{display:block;width:100%;border-radius:7px;margin-top:7px;border:1px solid var(--rule)}
+#note{color:var(--soft);font-size:12px;padding:0 12px 10px}
+</style>
+
+<div id="app">
+  <div id="setup">
+    <input id="intent" placeholder="what to build — e.g. a small stone chapel with a bell tower">
+    <select id="provider"><option value="claude">Claude</option><option value="openai">OpenAI</option></select>
+    <input id="key" type="password" placeholder="api key">
+    <label><input type="file" id="ref" accept="image/*" hidden><button onclick="ref.click()">reference…</button></label>
+    <button class="go" id="go">run 6 cycles</button>
+    <button id="stepBtn">step</button>
+  </div>
+  <div id="stage"></div>
+  <div id="thread"><div id="note">The key stays in this tab and goes straight to the provider — fine for a
+    tool you run yourself, not for anything you deploy. For that, point <code>ask</code> at your own
+    endpoint; the loop cannot tell the difference. See <code>operative/kit/README.md</code>.</div></div>
+</div>
+
+<script type="importmap">{"imports":{"three":"./vendor/three/three.module.min.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { createLoop } from './operative/kit/loop.js';
+import { claudeAsk, openaiAsk, threeStage } from './operative/kit/adapters.js';
+
+const $ = s => document.querySelector(s);
+const thread = $('#thread');
+let reference = null, loop = null, busy = false;
+
+$('#ref').onchange = e => { const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader(); r.onload = () => { reference = r.result;
+    say('you', 'reference attached', 'pol', reference); }; r.readAsDataURL(f); };
+
+function say(who, text, cls, img) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  d.innerHTML = '<span class="who"></span><span class="body"></span>';
+  d.querySelector('.who').textContent = who;
+  d.querySelector('.body').textContent = text;
+  if (img) { const i = new Image(); i.src = img; d.appendChild(i); }
+  thread.appendChild(d); thread.scrollTop = thread.scrollHeight;
+}
+
+const stage = threeStage(THREE, { width: 900, height: 650 });
+$('#stage').appendChild(stage.canvas);
+
+function begin() {
+  const intent = $('#intent').value.trim(), key = $('#key').value.trim();
+  if (!intent) return say('', 'Say what to build first.', 'err');
+  if (!key) return say('', 'A key is needed to call a model. The loop itself runs without one — see selftest.mjs.', 'err');
+  const ask = $('#provider').value === 'claude' ? claudeAsk({ apiKey: key }) : openaiAsk({ apiKey: key });
+  loop = createLoop({ intent, reference, ask, stage, onEvent: show });
+  return loop;
+}
+
+function show(e) {
+  if (e.kind === 'build')
+    say('builder · cycle ' + e.cycle, e.summary + '\n' + e.receipts.slice(0, 8).join(' · '), 'build', e.afterShot);
+  else if (e.kind === 'critique')
+    say('critic · ' + e.view, 'suck ' + e.score + ' — ' + e.criticism, 'crit', e.shot);
+  else if (e.kind === 'policy')
+    say('', e.from + ' → ' + e.to + ' · ' + e.why, 'pol');
+}
+
+async function guard(fn) {
+  if (busy) return; busy = true; $('#go').disabled = $('#stepBtn').disabled = true;
+  try { await fn(); } catch (err) { say('', String(err.message || err), 'err'); }
+  finally { busy = false; $('#go').disabled = $('#stepBtn').disabled = false; }
+}
+
+$('#go').onclick = () => guard(async () => {
+  const l = loop || begin(); if (!l) return;
+  const out = await l.run({ cycles: 6 });
+  say('', out.settled ? 'settled — every view quiet on this world'
+                      : 'stopped at ' + out.cycles + ' cycles, still unsettled', 'pol');
+});
+$('#stepBtn').onclick = () => guard(async () => { const l = loop || begin(); if (l) await l.step(); });
+window.loop = () => loop;
+</script>
